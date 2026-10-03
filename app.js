@@ -149,6 +149,21 @@ function renderPitch() {
   const mids = starters.filter(p => p.pos === 'MID');
   const fwds = starters.filter(p => p.pos === 'FWD');
 
+  // If starters are fewer than 11, fill with plus placeholder cards
+  const totalStartersCount = starters.length;
+  const missingStarters = Math.max(0, 11 - totalStartersCount);
+
+  let plusCardsHtml = '';
+  for (let i = 0; i < missingStarters; i++) {
+    plusCardsHtml += `
+      <div onclick="switchTab('transfers')" 
+        class="bg-[#242f3d]/50 border-2 border-dashed border-gray-500 hover:border-blue-400 rounded p-1 text-center min-w-[58px] max-w-[65px] min-h-[64px] shadow-sm cursor-pointer transition flex flex-col items-center justify-center">
+        <div class="text-base font-black text-blue-400 leading-none">+</div>
+        <div class="text-[8px] text-gray-400 uppercase mt-1">Empty</div>
+      </div>
+    `;
+  }
+
   container.innerHTML = `
     <div class="flex flex-col justify-between w-full h-full p-1 space-y-1 text-xs">
       ${pendingSubPlayerId ? `
@@ -163,7 +178,7 @@ function renderPitch() {
         <div class="flex justify-center gap-1">${gkps.map(createPlayerCard).join('')}</div>
         <div class="flex justify-center gap-1 flex-wrap">${defs.map(createPlayerCard).join('')}</div>
         <div class="flex justify-center gap-1 flex-wrap">${mids.map(createPlayerCard).join('')}</div>
-        <div class="flex justify-center gap-1 flex-wrap">${fwds.map(createPlayerCard).join('')}</div>
+        <div class="flex justify-center gap-1 flex-wrap">${fwds.map(createPlayerCard).join('')}${plusCardsHtml}</div>
       </div>
 
       <!-- Bench Area -->
