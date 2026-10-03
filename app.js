@@ -69,23 +69,69 @@ function saveUserData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
 
-// 4. Match Simulation Engine
+// 4. Substitution & Formation Validation Rules
+function validateFormation(proposedSquad) {
+  const starters = proposedSquad.filter(p => p.isStarter);
+  const gkps = starters.filter(p => p.pos === 'GKP').length;
+  const defs = starters.filter(p => p.pos === 'DEF').length;
+  const mids = starters.filter(p => p.pos === 'MID').length;
+  const fwds = starters.filter(p => p.pos === 'FWD').length;
+
+  if (gkps !== 1) return "Must have exactly 1 Goalkeeper on the pitch.";
+  if (defs < 3 || defs > 5) return "Starting formation must have between 3 and 5 Defenders.";
+  if (mids < 2 || mids > 5) return "Starting formation must have between 2 and 5 Midfielders.";
+  if (fwds < 1 || fwds > 3) return "Starting formation must have between 1 and 3 Forwards.";
+
+  return null; // Valid
+}
+
+function executeSwap(id1, id2) {
+  const p1 = mySquad.find(p => p.id === id1);
+  const p2 = mySquad.find(p => p.id === id2);
+  if (!p1 || !p2) return;
+
+  // GKP Swap Restriction
+  if ((p1.pos === 'GKP' || p2.pos === 'GKP') && p1.pos !== p2.pos) {
+    alert("Goalkeepers can only be swapped with another Goalkeeper!");
+    return;
+  }
+
+  // Create speculative squad state
+  const testSquad = mySquad.map(p => {
+    if (p.id === id1) return { ...p, isStarter: p2.isStarter };
+    if (p.id === id2) return { ...p, isStarter: p1.isStarter };
+    return p;
+  });
+
+  const error = validateFormation(testSquad);
+  if (error) {
+    alert(`Invalid Substitution!\n${error}`);
+    return;
+  }
+
+  // Apply Swap
+  const tempStarter = p1.isStarter;
+  p1.isStarter = p2.isStarter;
+  p2.isStarter = tempStarter;
+
+  saveUserData();
+  renderPitch();
+}
+
+// 5. Simulation Engine
 function simulateGameweek() {
   let currentGwPoints = 0;
 
   mySquad.forEach(player => {
-    let pts = 2; // Appearance points
-    
-    // Random chance for goals/assists/clean sheets based on position
+    let pts = 2;
     const rand = Math.random();
-    if (player.pos === 'FWD' && rand > 0.4) pts += 4; // Goal
-    if (player.pos === 'MID' && rand > 0.5) pts += 5; // Goal
-    if (player.pos === 'MID' && rand > 0.3) pts += 3; // Assist
-    if ((player.pos === 'DEF' || player.pos === 'GKP') && rand > 0.5) pts += 4; // Clean Sheet
+    if (player.pos === 'FWD' && rand > 0.4) pts += 4;
+    if (player.pos === 'MID' && rand > 0.5) pts += 5;
+    if (player.pos === 'MID' && rand > 0.3) pts += 3;
+    if ((player.pos === 'DEF' || player.pos === 'GKP') && rand > 0.5) pts += 4;
 
     player.gwPoints = pts;
 
-    // Apply multipliers for starters or Bench Boost
     if (player.isStarter || activeChip === 'bb') {
       let multiplier = 1;
       if (player.isCaptain) {
@@ -108,7 +154,7 @@ function simulateGameweek() {
   alert(`Gameweek Simulated!\nYour Squad earned ${currentGwPoints} points! 🚀`);
 }
 
-// 5. Render Pitch
+// 6. Render Pitch
 function renderPitch() {
   const container = document.getElementById('pitch-container');
   if (!container) return;
@@ -161,7 +207,7 @@ function createPlayerCard(p) {
   `;
 }
 
-// 6. UI & Action Handlers
+// 7. Navigation & Event Handlers
 function switchTab(tab) {
   ['pitch', 'transfers', 'league'].forEach(t => {
     document.getElementById(`tab-${t}`).classList.add('hidden');
@@ -218,17 +264,6 @@ function closeModal() {
 
 function prepareSub() { pendingSubId = selectedPlayerId; closeModal(); renderPitch(); }
 
-function executeSwap(id1, id2) {
-  const p1 = mySquad.find(p => p.id === id1);
-  const p2 = mySquad.find(p => p.id === id2);
-  if (!p1 || !p2) return;
-  const tempStarter = p1.isStarter;
-  p1.isStarter = p2.isStarter;
-  p2.isStarter = tempStarter;
-  saveUserData();
-  renderPitch();
-}
-
 function setCaptain() {
   mySquad.forEach(p => { p.isCaptain = (p.id === selectedPlayerId); });
   const currentVC = mySquad.find(p => p.isViceCaptain);
@@ -269,6 +304,11 @@ function renderMarket() {
 function buyPlayer(id) {
   const p = playerMarket.find(item => item.id === id);
   if (mySquad.length >= 15) return alert("Squad full! Sell a player first.");
+  
+  // Max 3 players per club rule
+  const clubCount = mySquad.filter(item => item.club === p.club).length;
+  if (clubCount >= 3) return alert(`Limit reached! You can only have 3 players from ${p.club}.`);
+
   if (bankBalance < p.price && activeChip !== 'wc' && activeChip !== 'fh') return alert("Not enough budget!");
 
   mySquad.push({ ...p, isStarter: mySquad.length < 11, isCaptain: false, isViceCaptain: false, gwPoints: 0 });
