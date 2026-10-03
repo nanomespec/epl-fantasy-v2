@@ -29,9 +29,18 @@
   </header>
 
   <!-- CONTENT TABS -->
-  <main class="flex-1 overflow-y-auto p-3">
+  <main class="flex-1 overflow-y-auto p-3 flex flex-col justify-between">
     <!-- PITCH TAB -->
-    <div id="tab-pitch" class="h-full flex flex-col justify-between">
+    <div id="tab-pitch" class="h-full flex flex-col justify-between space-y-3">
+      <!-- CHIPS SECTION -->
+      <div class="bg-[#242f3d]/80 border border-gray-700 p-2 rounded-xl flex justify-between gap-1 text-[10px]">
+        <button id="chip-wc" onclick="playChip('wc')" class="flex-1 py-1.5 bg-gray-700/50 rounded font-bold hover:bg-blue-600 transition">Wildcard</button>
+        <button id="chip-tc" onclick="playChip('tc')" class="flex-1 py-1.5 bg-gray-700/50 rounded font-bold hover:bg-yellow-600 transition">3x Captain</button>
+        <button id="chip-bb" onclick="playChip('bb')" class="flex-1 py-1.5 bg-gray-700/50 rounded font-bold hover:bg-green-600 transition">Bench Boost</button>
+        <button id="chip-fh" onclick="playChip('fh')" class="flex-1 py-1.5 bg-gray-700/50 rounded font-bold hover:bg-purple-600 transition">Free Hit</button>
+      </div>
+
+      <!-- PITCH CONTAINER -->
       <div id="pitch-container" class="flex-1 flex flex-col justify-around py-2"></div>
     </div>
 
