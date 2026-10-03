@@ -193,8 +193,8 @@ function createPlayerCard(p) {
       <div class="text-[8px] text-blue-300 font-bold uppercase truncate">${badgeText}</div>
       <div class="text-[10px] font-bold text-white my-0.5 truncate">${p.name}</div>
       <div class="bg-[#17212b] border border-gray-700 rounded px-0.5 py-0.5 mt-0.5">
-        <div class="text-[8px] text-gray-400 uppercase leading-none">Pts</div>
-        <div class="text-[10px] font-black text-green-400 leading-tight">${p.gwPoints || 0}</div>
+        <div class="text-[8px] text-gray-400 uppercase leading-none">Price</div>
+        <div class="text-[10px] font-black text-amber-400 leading-tight">${p.price}M</div>
       </div>
     </div>
   `;
