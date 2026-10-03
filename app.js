@@ -1,7 +1,7 @@
 // ==========================================
 // 1. STATE & INITIALIZATION
 // ==========================================
-const STORAGE_KEY = 'epl_fantasy_clean_v4';
+const STORAGE_KEY = 'epl_fantasy_clean_v5';
 
 const playerMarket = [
   { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, form: 5.2 },
@@ -31,6 +31,7 @@ let chipsUsed = { wc: false, tc: false, bb: false, fh: false };
 let activeModalId = null;
 let pendingSubId = null;
 let chipConfirmModal = null;
+let gwHistory = []; // Stores past gameweek scores for the Points tab
 
 const defaultStarters = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
 
@@ -45,6 +46,7 @@ function loadData() {
     gameweek = data.gameweek ?? 1;
     chipsUsed = data.chipsUsed || chipsUsed;
     activeChip = data.activeChip || null;
+    gwHistory = data.gwHistory || [];
   } else {
     resetSquad();
   }
@@ -53,7 +55,7 @@ function loadData() {
 
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ 
-    mySquad, preFreeHitSquad, bankBalance, totalPoints, gameweek, chipsUsed, activeChip 
+    mySquad, preFreeHitSquad, bankBalance, totalPoints, gameweek, chipsUsed, activeChip, gwHistory 
   }));
 }
 
@@ -71,21 +73,29 @@ function resetSquad() {
   chipsUsed = { wc: false, tc: false, bb: false, fh: false };
   activeChip = null;
   preFreeHitSquad = null;
+  gwHistory = [];
   saveData();
 }
 
 // ==========================================
-// 2. NAVIGATION TABS
+// 2. NAVIGATION TABS (Pick Team, Transfers, Leagues, Points)
 // ==========================================
 function switchTab(tab) {
-  ['pitch', 'transfers', 'points'].forEach(t => {
+  // Hide all tabs
+  ['pitch', 'transfers', 'leagues', 'points'].forEach(t => {
     const el = document.getElementById(`tab-${t}`);
     if (el) el.classList.add('hidden');
   });
-  const target = document.getElementById(`tab-${tab}`);
-  if (target) target.classList.remove('hidden');
 
+  // Show target tab
+  const target = document.getElementById(`tab-${tab}`);
+  if (target) {
+    target.classList.remove('hidden');
+  }
+
+  // Render specific tab contents
   if (tab === 'transfers') renderMarket();
+  if (tab === 'leagues') renderLeagues();
   if (tab === 'points') renderPoints();
 }
 
@@ -264,23 +274,36 @@ function setCap(id, isC) {
 }
 
 // ==========================================
-// 6. TRANSFERS MARKET
+// 6. TRANSFERS MARKET TAB
 // ==========================================
 function renderMarket() {
-  const list = document.getElementById('market-list');
-  if (!list) return;
+  const container = document.getElementById('tab-transfers');
+  if (!container) return;
 
-  list.innerHTML = playerMarket.map(p => {
-    const owned = mySquad.some(s => s.id === p.id);
-    return `
-      <div class="bg-gray-800 p-2 rounded flex justify-between items-center text-xs mb-1">
-        <div>${p.name} (${p.club}) - <span class="text-emerald-400">${p.price}M</span></div>
-        <button onclick="${owned ? `sellPlayer(${p.id})` : `buyPlayer(${p.id})`}" class="px-2 py-1 rounded font-bold ${owned ? 'bg-red-600/30 text-red-400' : 'bg-emerald-600/30 text-emerald-400'}">
-          ${owned ? 'Sell' : 'Buy'}
-        </button>
+  container.innerHTML = `
+    <div class="bg-gray-900 border border-gray-700 rounded-xl p-3 text-white">
+      <div class="flex justify-between items-center mb-3">
+        <div class="text-xs font-bold uppercase text-gray-400">Player Market</div>
+        <div class="text-xs text-emerald-400 font-bold">Bank: ${bankBalance}M | Squad: ${mySquad.length}/15</div>
       </div>
-    `;
-  }).join('');
+      <div class="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+        ${playerMarket.map(p => {
+          const owned = mySquad.some(s => s.id === p.id);
+          return `
+            <div class="bg-gray-800 p-2 rounded-lg flex justify-between items-center text-xs">
+              <div>
+                <div class="font-bold">${p.name} <span class="text-[9px] text-gray-400">(${p.pos} -${p.club})</span></div>
+                <div class="text-emerald-400 font-bold">${p.price}M <span class="text-[9px] text-gray-400">Form: ${p.form}</span></div>
+              </div>
+              <button onclick="${owned ? `sellPlayer(${p.id})` : `buyPlayer(${p.id})`}" class="px-3 py-1 rounded font-bold ${owned ? 'bg-red-600/30 text-red-400 hover:bg-red-600/50' : 'bg-emerald-600/30 text-emerald-400 hover:bg-emerald-600/50'}">
+                ${owned ? 'Sell' : 'Buy'}
+              </button>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
 }
 
 function buyPlayer(id) {
@@ -312,7 +335,40 @@ function sellPlayer(id) {
 }
 
 // ==========================================
-// 7. SIMULATION & CHIP EXECUTION
+// 7. LEAGUES TAB
+// ==========================================
+function renderLeagues() {
+  const container = document.getElementById('tab-leagues');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="bg-gray-900 border border-gray-700 rounded-xl p-4 text-white text-xs">
+      <div class="font-bold text-sm text-amber-400 mb-2">Global & Mini Leagues</div>
+      <p class="text-gray-400 mb-4">Compete against other managers in overall rankings.</p>
+      <div class="bg-gray-800 rounded-lg p-3 space-y-2">
+        <div class="flex justify-between font-bold text-gray-300 border-b border-gray-700 pb-1">
+          <span>Rank & Team</span>
+          <span>Total Points</span>
+        </div>
+        <div class="flex justify-between items-center text-emerald-400 font-bold bg-emerald-950/40 p-2 rounded">
+          <span>1. Gulit FC (You)</span>
+          <span>${totalPoints} pts</span>
+        </div>
+        <div class="flex justify-between items-center text-gray-300 p-2">
+          <span>2. Addis Star XI</span>
+          <span>${Math.max(0, totalPoints - 12)} pts</span>
+        </div>
+        <div class="flex justify-between items-center text-gray-300 p-2">
+          <span>3. Coffee Kings</span>
+          <span>${Math.max(0, totalPoints - 25)} pts</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ==========================================
+// 8. POINTS TAB & SIMULATION
 // ==========================================
 function simulateGameweek() {
   mySquad.forEach(p => {
@@ -346,6 +402,7 @@ function simulateGameweek() {
   });
 
   totalPoints += gwTotal;
+  gwHistory.push({ gameweek, points: gwTotal });
   gameweek++;
 
   if (activeChip === 'fh' && preFreeHitSquad) {
@@ -366,6 +423,30 @@ function simulateGameweek() {
   alert(`Gameweek simulated! You scored ${gwTotal} points.`);
 }
 
+function renderPoints() {
+  const container = document.getElementById('tab-points');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="bg-gray-900 border border-gray-700 rounded-xl p-4 text-white text-xs">
+      <div class="flex justify-between items-center mb-3">
+        <div class="font-bold text-sm text-emerald-400">Gameweek History</div>
+        <div class="text-gray-400">Total Season: <b class="text-white">${totalPoints} pts</b></div>
+      </div>
+      ${gwHistory.length === 0 ? '<div class="text-gray-500 text-center py-6">No gameweeks simulated yet. Click "Simulate Gameweek" from the Pick Team screen!</div>' : `
+        <div class="space-y-2">
+          ${gwHistory.map(h => `
+            <div class="bg-gray-800 p-2.5 rounded-lg flex justify-between items-center">
+              <span>Gameweek ${h.gameweek}</span>
+              <span class="text-emerald-400 font-bold">${h.points} Points</span>
+            </div>
+          `).join('')}
+        </div>
+      `}
+    </div>
+  `;
+}
+
 function updateHeader() {
   const bankEl = document.getElementById('bank-balance');
   const countEl = document.getElementById('squad-count');
@@ -376,13 +457,6 @@ function updateHeader() {
   if (countEl) countEl.innerText = `${mySquad.length}/15`;
   if (totalEl) totalEl.innerText = totalPoints;
   if (gwEl) gwEl.innerText = gameweek;
-}
-
-function renderPoints() {
-  const listEl = document.getElementById('points-list');
-  if (listEl) {
-    listEl.innerHTML = `<div class="text-xs text-gray-300">Total Season Points: <b class="text-emerald-400">${totalPoints}</b></div>`;
-  }
 }
 
 // Initialize on load
