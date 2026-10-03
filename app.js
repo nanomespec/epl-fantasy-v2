@@ -2,6 +2,10 @@
 const tg = window.Telegram ? window.Telegram.WebApp : null;
 if (tg) { tg.expand(); tg.ready(); }
 
+// Extract Telegram User ID or fallback to guest key
+const userId = tg?.initDataUnsafe?.user?.id || 'guest_user';
+const STORAGE_KEY = `epl_fantasy_squad_${userId}`;
+
 // 1. Extended Market Dataset
 const playerMarket = [
   { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, fixture: "NEG (H)" },
@@ -21,22 +25,53 @@ const playerMarket = [
   { id: 15, name: "B. Gugsa", club: "Fasil Kenema", pos: "FWD", price: 8.0, fixture: "WOL (A)" }
 ];
 
-// 2. User State & Active Chips Tracking
-let mySquad = playerMarket.slice(0, 15).map((p, idx) => ({
-  ...p,
-  isStarter: idx < 11,
-  isCaptain: idx === 11,
-  isViceCaptain: idx === 12
-}));
-let bankBalance = 100.0 - mySquad.reduce((sum, p) => sum + p.price, 0);
-
+// 2. User State Variables
+let mySquad = [];
+let bankBalance = 100.0;
 let activeChip = null; // 'wc', 'tc', 'bb', 'fh'
 let chipsUsed = { wc: false, tc: false, bb: false, fh: false };
 
 let selectedPlayerId = null;
 let pendingSubId = null;
 
-// 3. Tab Switcher
+// 3. Save & Load Data Mechanics
+function loadUserData() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      mySquad = data.mySquad || [];
+      bankBalance = data.bankBalance !== undefined ? data.bankBalance : 0.0;
+      activeChip = data.activeChip || null;
+      chipsUsed = data.chipsUsed || { wc: false, tc: false, bb: false, fh: false };
+      return;
+    } catch (e) {
+      console.error("Failed to parse local storage", e);
+    }
+  }
+  
+  // Default Initial Squad if no saved state exists
+  mySquad = playerMarket.slice(0, 15).map((p, idx) => ({
+    ...p,
+    isStarter: idx < 11,
+    isCaptain: idx === 11,
+    isViceCaptain: idx === 12
+  }));
+  bankBalance = 100.0 - mySquad.reduce((sum, p) => sum + p.price, 0);
+  saveUserData();
+}
+
+function saveUserData() {
+  const payload = {
+    mySquad,
+    bankBalance,
+    activeChip,
+    chipsUsed
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+
+// 4. Tab Switcher
 function switchTab(tab) {
   ['pitch', 'transfers', 'league'].forEach(t => {
     document.getElementById(`tab-${t}`).classList.add('hidden');
@@ -49,15 +84,16 @@ function switchTab(tab) {
   if (tab === 'league') renderLeague();
 }
 
-// 4. Chip Logic
+// 5. Chip Logic
 function playChip(chipKey) {
   if (chipsUsed[chipKey]) return alert("You have already used this chip this season!");
 
   if (activeChip === chipKey) {
-    activeChip = null; // Toggle off
+    activeChip = null;
   } else {
     activeChip = chipKey;
   }
+  saveUserData();
   updateChipUI();
   renderPitch();
 }
@@ -77,7 +113,7 @@ function updateChipUI() {
   });
 }
 
-// 5. Render Pitch
+// 6. Render Pitch
 function renderPitch() {
   const container = document.getElementById('pitch-container');
   if (!container) return;
@@ -130,7 +166,7 @@ function createPlayerCard(p) {
   `;
 }
 
-// 6. Interactive Actions
+// 7. Interactive Actions
 function handlePlayerClick(id) {
   if (pendingSubId) {
     if (pendingSubId === id) {
@@ -172,6 +208,7 @@ function executeSwap(id1, id2) {
   p1.isStarter = p2.isStarter;
   p2.isStarter = tempStarter;
 
+  saveUserData();
   renderPitch();
 }
 
@@ -179,6 +216,8 @@ function setCaptain() {
   mySquad.forEach(p => { p.isCaptain = (p.id === selectedPlayerId); });
   const currentVC = mySquad.find(p => p.isViceCaptain);
   if (currentVC && currentVC.id === selectedPlayerId) currentVC.isViceCaptain = false;
+  
+  saveUserData();
   closeModal();
   renderPitch();
 }
@@ -187,11 +226,13 @@ function setViceCaptain() {
   mySquad.forEach(p => { p.isViceCaptain = (p.id === selectedPlayerId); });
   const currentC = mySquad.find(p => p.isCaptain);
   if (currentC && currentC.id === selectedPlayerId) currentC.isCaptain = false;
+
+  saveUserData();
   closeModal();
   renderPitch();
 }
 
-// 7. Transfer Market
+// 8. Transfer Market
 function renderMarket() {
   const list = document.getElementById('market-list');
   list.innerHTML = playerMarket.map(p => {
@@ -218,6 +259,7 @@ function buyPlayer(id) {
 
   mySquad.push({ ...p, isStarter: mySquad.length < 11, isCaptain: false, isViceCaptain: false });
   bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
+  saveUserData();
   renderPitch();
   renderMarket();
 }
@@ -227,15 +269,20 @@ function sellPlayer(id) {
   if (!p) return;
   mySquad = mySquad.filter(item => item.id !== id);
   bankBalance = parseFloat((bankBalance + p.price).toFixed(1));
+  saveUserData();
   renderPitch();
   renderMarket();
 }
 
-// 8. Render Leagues
+// 9. Render Leagues
 function renderLeague() {
   const list = document.getElementById('league-list');
+  const userName = tg?.initDataUnsafe?.user?.first_name 
+    ? `${tg.initDataUnsafe.user.first_name}'s Team` 
+    : "Gulit FC (You)";
+
   const leaderboard = [
-    { rank: 1, name: "Gulit FC (You)", pts: 0 },
+    { rank: 1, name: userName, pts: 0 },
     { rank: 2, name: "Sheger Warriors", pts: 0 },
     { rank: 3, name: "Addis Strikers", pts: 0 },
     { rank: 4, name: "Fasil Dynasty", pts: 0 }
@@ -258,7 +305,11 @@ function updateHeader() {
 }
 
 // Boot
-document.addEventListener('DOMContentLoaded', () => { renderPitch(); });
+document.addEventListener('DOMContentLoaded', () => {
+  loadUserData();
+  renderPitch();
+});
+loadUserData();
 renderPitch();
 
 
