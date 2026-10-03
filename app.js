@@ -374,8 +374,19 @@ function sellPlayer(id) {
   if (!p) return;
   if (mySquad.length <= 11) return alert("You must keep at least 11 players!");
 
+  const wasStarter = p.isStarter;
+
+  // Remove player from squad
   mySquad = mySquad.filter(item => item.id !== id);
   bankBalance = parseFloat((bankBalance + p.price).toFixed(1));
+
+  // If the sold player was a starter and we have benched players available, promote the first bench player automatically
+  if (wasStarter) {
+    const benchPlayer = mySquad.find(item => !item.isStarter);
+    if (benchPlayer) {
+      benchPlayer.isStarter = true;
+    }
+  }
 
   saveUserData();
   renderPitch();
@@ -563,3 +574,4 @@ document.addEventListener('DOMContentLoaded', initApp);
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
   initApp();
 }
+
