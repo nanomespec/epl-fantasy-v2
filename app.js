@@ -10,7 +10,7 @@ if (tg) { tg.expand(); tg.ready(); }
 const userId = tg?.initDataUnsafe?.user?.id || 'guest_user';
 const STORAGE_KEY = `epl_fantasy_squad_${userId}`;
 
-// 1. Extended Dataset with Player Stats, FDR, and Purchase/Market Prices
+// 1. Dataset with Player Stats, FDR, and Market Prices
 const playerMarket = [
   { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, goals: 0, assists: 0, cleans: 3, form: 5.2, fdr: [{ opp: "NEG (H)", diff: 2 }, { opp: "SHE (A)", diff: 4 }, { opp: "CBE (H)", diff: 3 }] },
   { id: 2, name: "A. Nuri", club: "Ethiopian Coffee", pos: "GKP", price: 5.0, goals: 0, assists: 0, cleans: 2, form: 4.1, fdr: [{ opp: "SHE (H)", diff: 3 }, { opp: "STG (H)", diff: 5 }, { opp: "FAS (A)", diff: 4 }] },
@@ -46,7 +46,7 @@ let pendingSubId = null;
 
 const defaultStarterIds = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
 
-// 3. Save & Load Data (with Cloud Sync)
+// 3. Save & Load Data
 function loadUserData() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
@@ -124,7 +124,7 @@ function saveUserData() {
   syncToCloud();
 }
 
-// 4. Substitution & Formation Rules
+// 4. Formation Rules & Swaps
 function validateFormation(proposedSquad) {
   const starters = proposedSquad.filter(p => p.isStarter);
   const gkps = starters.filter(p => p.pos === 'GKP').length;
@@ -170,7 +170,7 @@ function executeSwap(id1, id2) {
   renderPitch();
 }
 
-// 5. Player Click & Detailed Modal Handler
+// 5. Modal & Player Handlers
 function handlePlayerClick(id) {
   if (pendingSubId) {
     if (pendingSubId === id) { pendingSubId = null; renderPitch(); return; }
@@ -229,7 +229,7 @@ function setViceCaptain() {
   renderPitch();
 }
 
-// 6. Simulation Engine & Dynamic Price Shifts
+// 6. Simulation Engine
 function simulateGameweek() {
   let currentGwPoints = 0;
   let autoSubLogs = [];
@@ -333,7 +333,7 @@ function simulateGameweek() {
   alert(`Gameweek Simulated!\nGross Points: ${currentGwPoints}\nTransfer Hits: -${hitsCost} pts\nNet Points Earned: ${netGwPoints} 🚀${autoSubMsg}`);
 }
 
-// 7. Transfer Market Actions & FPL Selling Profit Mechanics
+// 7. Market Actions
 function renderMarket() {
   const list = document.getElementById('market-list');
   if (!list) return;
@@ -441,9 +441,7 @@ function createPlayerCard(p) {
   let captainBadge = '';
 
   if (p.isCaptain) {
-    captainBadge = activeChip === 'tc' 
-      ? ' <span class="text-yellow-400 font-black">(3xC)</span>' 
-      : ' <span class="text-yellow-400 font-black">(C)</span>';
+    captainBadge = activeChip === 'tc' ? ' <span class="text-yellow-400 font-black">(3xC)</span>' : ' <span class="text-yellow-400 font-black">(C)</span>';
   } else if (p.isViceCaptain) {
     captainBadge = ' <span class="text-gray-300 font-black">(VC)</span>';
   }
@@ -460,7 +458,7 @@ function createPlayerCard(p) {
   `;
 }
 
-// 9. League Mechanics & Navigation
+// 9. League & Navigation
 function createLeague() {
   const code = 'ETH-' + Math.floor(100 + Math.random() * 900);
   const name = prompt("Enter League Name:", "Ethiopian Super League");
@@ -560,9 +558,7 @@ function updateHeader() {
   if (countElem) countElem.innerText = `${mySquad.length}/15`;
   if (totalPtsElem) totalPtsElem.innerText = totalPoints;
   
-  const hits = (activeChip === 'wc' || activeChip === 'fh') 
-    ? 0 
-    : Math.max(0, transfersMadeInGW - freeTransfers) * 4;
+  const hits = (activeChip === 'wc' || activeChip === 'fh') ? 0 : Math.max(0, transfersMadeInGW - freeTransfers) * 4;
 
   if (ftElem) ftElem.innerText = freeTransfers;
   if (hitsElem) hitsElem.innerText = `-${hits} pts`;
@@ -580,8 +576,11 @@ function updateHeader() {
   if (gwElem) gwElem.innerText = gameweek;
 }
 
-// Boot
-document.addEventListener('DOMContentLoaded', () => { loadUserData(); renderPitch(); });
+// Initial Boot Initialization
+document.addEventListener('DOMContentLoaded', () => { 
+  loadUserData(); 
+  renderPitch(); 
+});
 loadUserData();
 renderPitch();
 
