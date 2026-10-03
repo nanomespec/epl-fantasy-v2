@@ -42,7 +42,7 @@ let gameweek = 1;
 let freeTransfers = 1;
 let transfersMadeInGW = 0;
 let myLeagues = ["Overall League"];
-let selectedPlayerForSub = null;
+let activePlayerModalId = null;
 
 const defaultStarterIds = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
 
@@ -128,7 +128,7 @@ function switchTab(tab) {
 }
 
 // ==========================================
-// 5. PITCH RENDERING & SUBSTITUTIONS
+// 5. PITCH RENDERING & FPL MODAL ACTIONS
 // ==========================================
 function renderPitch() {
   const container = document.getElementById('pitch-container') || 
@@ -151,7 +151,7 @@ function renderPitch() {
   const fwds = starters.filter(p => p.pos === 'FWD');
 
   container.innerHTML = `
-    <div class="flex flex-col justify-around h-full space-y-2 w-full p-2">
+    <div class="flex flex-col justify-around h-full space-y-2 w-full p-2 relative">
       <div class="flex justify-center gap-2">${gkps.map(createPlayerCard).join('')}</div>
       <div class="flex justify-center gap-2 flex-wrap">${defs.map(createPlayerCard).join('')}</div>
       <div class="flex justify-center gap-2 flex-wrap">${mids.map(createPlayerCard).join('')}</div>
@@ -163,6 +163,7 @@ function renderPitch() {
       </p>
       <div class="flex justify-center gap-2 flex-wrap">${bench.map(createPlayerCard).join('')}</div>
     </div>
+    ${renderPlayerModal()}
   `;
   updateHeader();
   updateChipUI();
@@ -170,10 +171,8 @@ function renderPitch() {
 
 function createPlayerCard(p) {
   let captainBadge = p.isCaptain ? ' <span class="text-yellow-400 font-black">(C)</span>' : (p.isViceCaptain ? ' <span class="text-gray-300 font-black">(VC)</span>' : '');
-  const isSelectedForSub = selectedPlayerForSub && selectedPlayerForSub.id === p.id;
-  
   return `
-    <div onclick="handlePlayerClick(${p.id})" class="bg-[#242f3d] border ${isSelectedForSub ? 'border-yellow-400 ring-2 ring-yellow-400/50' : 'border-gray-600'} rounded-lg p-1.5 text-center min-w-[68px] shadow-md cursor-pointer hover:border-blue-400 transition">
+    <div onclick="openPlayerModal(${p.id})" class="bg-[#242f3d] border border-gray-600 rounded-lg p-1.5 text-center min-w-[68px] shadow-md cursor-pointer hover:border-blue-400 transition">
       <div class="text-[9px] text-blue-300 font-bold uppercase">${p.pos}${captainBadge}</div>
       <div class="text-[11px] font-bold text-white my-0.5 truncate max-w-[64px]">${p.name}</div>
       <div class="text-[10px] font-black text-green-400">${p.gwPoints || 0} pts</div>
@@ -181,31 +180,90 @@ function createPlayerCard(p) {
   `;
 }
 
-function handlePlayerClick(id) {
-  const clickedPlayer = mySquad.find(p => p.id === id);
-  if (!clickedPlayer) return;
+function openPlayerModal(id) {
+  activePlayerModalId = id;
+  renderPitch();
+}
 
-  if (!selectedPlayerForSub) {
-    selectedPlayerForSub = clickedPlayer;
-    renderPitch();
-  } else {
-    // Perform substitution swap between starter and bench status
-    const tempStatus = selectedPlayerForSub.isStarter;
-    selectedPlayerForSub.isStarter = clickedPlayer.isStarter;
-    clickedPlayer.isStarter = tempStatus;
+function closePlayerModal() {
+  activePlayerModalId = null;
+  renderPitch();
+}
 
-    selectedPlayerForSub = null;
-    saveUserData();
-    renderPitch();
+function renderPlayerModal() {
+  if (!activePlayerModalId) return '';
+  const p = mySquad.find(item => item.id === activePlayerModalId);
+  if (!p) return '';
+
+  return `
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-[#17212b] border border-gray-600 rounded-xl p-4 w-full max-w-xs shadow-2xl text-center">
+        <div class="text-xs text-blue-400 font-bold uppercase">${p.pos} • ${p.club}</div>
+        <div class="text-lg font-extrabold text-white my-1">${p.name}</div>
+        <div class="text-xs text-gray-400 mb-4">Price: ${p.price}M ETB | Form: ${p.form}</div>
+        
+        <div class="space-y-2">
+          <button onclick="togglePlayerPosition(${p.id})" class="w-full py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-bold text-white shadow">
+            ${p.isStarter ? '🔄 Move to Bench' : '⬆️ Substitute to Pitch'}
+          </button>
+          <button onclick="setCaptain(${p.id})" class="w-full py-2 bg-yellow-600/30 hover:bg-yellow-600/55 border border-yellow-500/50 rounded-lg text-xs font-bold text-yellow-400 shadow">
+            👑 Make Captain (C)
+          </button>
+          <button onclick="setViceCaptain(${p.id})" class="w-full py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs font-bold text-gray-300 shadow">
+            ⭐ Make Vice-Captain (VC)
+          </button>
+          <button onclick="closePlayerModal()" class="w-full py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-bold text-gray-400 mt-2">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function togglePlayerPosition(id) {
+  const p = mySquad.find(item => item.id === id);
+  if (!p) return;
+
+  const startersCount = mySquad.filter(item => item.isStarter).length;
+  if (p.isStarter && startersCount <= 11) {
+    alert("You must maintain at least 11 starting players!");
+    return;
   }
+  if (!p.isStarter && startersCount >= 11) {
+    // Auto-swap with first matching position bench/starter rule or direct flip
+    const benchPlayer = mySquad.find(item => !item.isStarter && item.pos === p.pos);
+    if (benchPlayer) {
+      benchPlayer.isStarter = true;
+    }
+  }
+
+  p.isStarter = !p.isStarter;
+  activePlayerModalId = null;
+  saveUserData();
+  renderPitch();
+}
+
+function setCaptain(id) {
+  mySquad.forEach(item => item.isCaptain = (item.id === id));
+  activePlayerModalId = null;
+  saveUserData();
+  renderPitch();
+}
+
+function setViceCaptain(id) {
+  mySquad.forEach(item => item.isViceCaptain = (item.id === id));
+  activePlayerModalId = null;
+  saveUserData();
+  renderPitch();
 }
 
 // ==========================================
-// 6. CHIPS ENGINE
+// 6. REAL FPL CHIPS ENGINE
 // ==========================================
 function activateChip(chipName) {
   if (chipsUsed[chipName]) {
-    return alert(`You have already used the ${chipName.toUpperCase()} chip this season!`);
+    return alert(`You have already used the ${chipName.toUpperCase()} chip this season! FPL rules allow each chip only once.`);
   }
   
   if (activeChip === chipName) {
@@ -226,9 +284,11 @@ function updateChipUI() {
     const btn = document.getElementById(`btn-chip-${chip}`) || document.getElementById(`chip-${chip}`);
     if (btn) {
       if (activeChip === chip) {
-        btn.classList.add('border-green-400', 'bg-green-950/60');
+        btn.className = "flex-1 py-1.5 px-2 bg-green-950/80 border border-green-400 text-green-400 rounded-lg text-xs font-bold shadow transition";
+      } else if (chipsUsed[chip]) {
+        btn.className = "flex-1 py-1.5 px-2 bg-gray-900/40 border border-gray-800 text-gray-600 rounded-lg text-xs font-bold cursor-not-allowed";
       } else {
-        btn.classList.remove('border-green-400', 'bg-green-950/60');
+        btn.className = "flex-1 py-1.5 px-2 bg-[#242f3d] border border-gray-700 text-gray-300 rounded-lg text-xs font-bold hover:border-gray-500 transition";
       }
     }
   });
@@ -342,15 +402,18 @@ function simulateGameweek() {
     p.gwPoints = pts;
     
     let multiplier = 1;
-    if (p.isCaptain) multiplier = (activeChip === 'tc' ? 3 : 2);
+    if (p.isCaptain) {
+      multiplier = (activeChip === 'tc' ? 3 : 2);
+    }
 
-    if (p.isStarter || (activeChip === 'bb')) {
+    if (p.isStarter || activeChip === 'bb') {
       gwPts += pts * multiplier;
     }
   });
 
   totalPoints += gwPts;
   gameweek++;
+  activeChip = null; // Reset chip after gameweek completion
   saveUserData();
   renderPitch();
   alert(`Gameweek Simulated! Earned ${gwPts} points.`);
@@ -387,7 +450,9 @@ function initApp() {
   // Wire up chips
   ['wc', 'tc', 'bb', 'fh'].forEach(chip => {
     const chipBtn = document.getElementById(`btn-chip-${chip}`) || document.getElementById(`chip-${chip}`);
-    if (chipBtn) chipBtn.addEventListener('click', () => activateChip(chip));
+    if (chipBtn) {
+      chipBtn.addEventListener('click', () => activateChip(chip));
+    }
   });
 }
 
