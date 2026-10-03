@@ -35,7 +35,8 @@ const playerMarket = [
 // ==========================================
 let mySquad = [];
 let bankBalance = 100.0;
-let activeChip = null;
+let stagedChip = null;      // Selected before confirmation
+let activeChip = null;      // Locked in when gameweek triggers
 let chipsUsed = { wc: false, tc: false, bb: false, fh: false };
 let totalPoints = 0;
 let gameweek = 1;
@@ -53,8 +54,7 @@ function setDefaultSquad() {
     isStarter: defaultStarterIds.includes(p.id),
     isCaptain: p.id === 12,
     isViceCaptain: p.id === 13,
-    gwPoints: 0,
-    dnp: false
+    gwPoints: 0
   }));
   bankBalance = parseFloat((100.0 - mySquad.reduce((sum, p) => sum + p.price, 0)).toFixed(1));
   freeTransfers = 1;
@@ -69,6 +69,7 @@ function loadUserData() {
       const data = JSON.parse(saved);
       mySquad = data.mySquad || [];
       bankBalance = data.bankBalance !== undefined ? data.bankBalance : 100.0;
+      stagedChip = data.stagedChip || null;
       activeChip = data.activeChip || null;
       chipsUsed = data.chipsUsed || { wc: false, tc: false, bb: false, fh: false };
       totalPoints = data.totalPoints || 0;
@@ -88,7 +89,7 @@ function loadUserData() {
 
 function saveUserData() {
   try {
-    const payload = { mySquad, bankBalance, activeChip, chipsUsed, totalPoints, gameweek, freeTransfers, transfersMadeInGW, myLeagues };
+    const payload = { mySquad, bankBalance, stagedChip, activeChip, chipsUsed, totalPoints, gameweek, freeTransfers, transfersMadeInGW, myLeagues };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch (e) {
     console.error("Storage save issue:", e);
@@ -99,6 +100,7 @@ function resetSquadData() {
   localStorage.removeItem(STORAGE_KEY);
   totalPoints = 0;
   gameweek = 1;
+  stagedChip = null;
   activeChip = null;
   chipsUsed = { wc: false, tc: false, bb: false, fh: false };
   setDefaultSquad();
@@ -151,17 +153,24 @@ function renderPitch() {
   const fwds = starters.filter(p => p.pos === 'FWD');
 
   container.innerHTML = `
-    <div class="flex flex-col justify-around h-full space-y-2 w-full p-2 relative">
-      <div class="flex justify-center gap-2">${gkps.map(createPlayerCard).join('')}</div>
-      <div class="flex justify-center gap-2 flex-wrap">${defs.map(createPlayerCard).join('')}</div>
-      <div class="flex justify-center gap-2 flex-wrap">${mids.map(createPlayerCard).join('')}</div>
-      <div class="flex justify-center gap-2 flex-wrap">${fwds.map(createPlayerCard).join('')}</div>
-    </div>
-    <div class="mt-2 p-2 bg-[#17212b]/90 border ${activeChip === 'bb' ? 'border-green-400 bg-green-950/40' : 'border-gray-700'} rounded-xl text-center w-full">
-      <p class="text-[10px] font-bold ${activeChip === 'bb' ? 'text-green-400' : 'text-gray-300'} uppercase tracking-wider mb-1">
-        Bench ${activeChip === 'bb' ? '(Bench Boost Active! 🚀)' : ''}
-      </p>
-      <div class="flex justify-center gap-2 flex-wrap">${bench.map(createPlayerCard).join('')}</div>
+    <div class="flex flex-col justify-between w-full h-full p-2 space-y-1 overflow-y-auto">
+      <!-- Pitch Area -->
+      <div class="bg-gradient-to-b from-emerald-800 to-emerald-950 border border-emerald-600/50 rounded-xl p-2 flex flex-col justify-around min-h-[320px] shadow-inner relative">
+        <div class="flex justify-center gap-2">${gkps.map(createPlayerCard).join('')}</div>
+        <div class="flex justify-center gap-2 flex-wrap">${defs.map(createPlayerCard).join('')}</div>
+        <div class="flex justify-center gap-2 flex-wrap">${mids.map(createPlayerCard).join('')}</div>
+        <div class="flex justify-center gap-2 flex-wrap">${fwds.map(createPlayerCard).join('')}</div>
+      </div>
+
+      <!-- Bench Area -->
+      <div class="bg-[#17212b]/95 border ${stagedChip === 'bb' || activeChip === 'bb' ? 'border-green-400 bg-green-950/30' : 'border-gray-700'} rounded-xl p-2 text-center w-full">
+        <div class="flex justify-between items-center mb-1 px-1">
+          <span class="text-[10px] font-bold ${stagedChip === 'bb' || activeChip === 'bb' ? 'text-green-400' : 'text-gray-300'} uppercase tracking-wider">
+            Bench ${stagedChip === 'bb' ? '(Bench Boost Staged 🚀)' : (activeChip === 'bb' ? '(Bench Boost Active! 🚀)' : '')}
+          </span>
+        </div>
+        <div class="flex justify-center gap-2 flex-wrap">${bench.map(createPlayerCard).join('')}</div>
+      </div>
     </div>
     ${renderPlayerModal()}
   `;
@@ -170,12 +179,18 @@ function renderPitch() {
 }
 
 function createPlayerCard(p) {
-  let captainBadge = p.isCaptain ? ' <span class="text-yellow-400 font-black">(C)</span>' : (p.isViceCaptain ? ' <span class="text-gray-300 font-black">(VC)</span>' : '');
+  let badgeText = p.pos;
+  if (p.isCaptain) badgeText += ' (C)';
+  else if (p.isViceCaptain) badgeText += ' (VC)';
+
   return `
-    <div onclick="openPlayerModal(${p.id})" class="bg-[#242f3d] border border-gray-600 rounded-lg p-1.5 text-center min-w-[68px] shadow-md cursor-pointer hover:border-blue-400 transition">
-      <div class="text-[9px] text-blue-300 font-bold uppercase">${p.pos}${captainBadge}</div>
-      <div class="text-[11px] font-bold text-white my-0.5 truncate max-w-[64px]">${p.name}</div>
-      <div class="text-[10px] font-black text-green-400">${p.gwPoints || 0} pts</div>
+    <div onclick="openPlayerModal(${p.id})" class="bg-[#242f3d] border border-gray-600 hover:border-blue-400 rounded-lg p-1.5 text-center min-w-[70px] shadow-md cursor-pointer transition flex flex-col justify-between">
+      <div class="text-[9px] text-blue-300 font-bold uppercase truncate">${badgeText}</div>
+      <div class="text-[11px] font-bold text-white my-0.5 truncate max-w-[70px]">${p.name}</div>
+      <div class="bg-[#17212b] border border-gray-700 rounded px-1 py-0.5 mt-0.5">
+        <span class="text-[9px] text-gray-400 uppercase">Pts</span>
+        <div class="text-[11px] font-black text-green-400">${p.gwPoints || 0}</div>
+      </div>
     </div>
   `;
 }
@@ -231,7 +246,6 @@ function togglePlayerPosition(id) {
     return;
   }
   if (!p.isStarter && startersCount >= 11) {
-    // Auto-swap with first matching position bench/starter rule or direct flip
     const benchPlayer = mySquad.find(item => !item.isStarter && item.pos === p.pos);
     if (benchPlayer) {
       benchPlayer.isStarter = true;
@@ -259,22 +273,21 @@ function setViceCaptain(id) {
 }
 
 // ==========================================
-// 6. REAL FPL CHIPS ENGINE
+// 6. REAL FPL CHIPS (STAGED UNTIL CONFIRMED)
 // ==========================================
-function activateChip(chipName) {
+function stageChip(chipName) {
   if (chipsUsed[chipName]) {
     return alert(`You have already used the ${chipName.toUpperCase()} chip this season! FPL rules allow each chip only once.`);
   }
-  
-  if (activeChip === chipName) {
-    activeChip = null;
-    alert(`Deactivated ${chipName.toUpperCase()} chip.`);
+
+  if (stagedChip === chipName) {
+    stagedChip = null;
+    alert(`Unselected ${chipName.toUpperCase()} chip.`);
   } else {
-    activeChip = chipName;
-    chipsUsed[chipName] = true;
-    alert(`Chip Activated: ${chipName.toUpperCase()}! 🚀`);
+    stagedChip = chipName;
+    alert(`Chip Staged: ${chipName.toUpperCase()}. Click 'Simulate Gameweek' to confirm and lock it in! 🚀`);
   }
-  
+
   saveUserData();
   renderPitch();
 }
@@ -283,8 +296,8 @@ function updateChipUI() {
   ['wc', 'tc', 'bb', 'fh'].forEach(chip => {
     const btn = document.getElementById(`btn-chip-${chip}`) || document.getElementById(`chip-${chip}`);
     if (btn) {
-      if (activeChip === chip) {
-        btn.className = "flex-1 py-1.5 px-2 bg-green-950/80 border border-green-400 text-green-400 rounded-lg text-xs font-bold shadow transition";
+      if (stagedChip === chip) {
+        btn.className = "flex-1 py-1.5 px-2 bg-amber-950/80 border border-amber-400 text-amber-300 rounded-lg text-xs font-bold shadow transition animate-pulse";
       } else if (chipsUsed[chip]) {
         btn.className = "flex-1 py-1.5 px-2 bg-gray-900/40 border border-gray-800 text-gray-600 rounded-lg text-xs font-bold cursor-not-allowed";
       } else {
@@ -323,7 +336,7 @@ function buyPlayer(id) {
   if (mySquad.length >= 15) return alert("Squad full! Sell a player first.");
   if (bankBalance < p.price) return alert("Not enough budget!");
 
-  mySquad.push({ ...p, purchasePrice: p.price, isStarter: mySquad.length < 11, isCaptain: false, isViceCaptain: false, gwPoints: 0, dnp: false });
+  mySquad.push({ ...p, purchasePrice: p.price, isStarter: mySquad.length < 11, isCaptain: false, isViceCaptain: false, gwPoints: 0 });
   bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
   transfersMadeInGW++;
 
@@ -393,9 +406,16 @@ function joinLeague() {
 }
 
 // ==========================================
-// 9. SIMULATION ENGINE
+// 9. SIMULATION & CHIP CONFIRMATION ENGINE
 // ==========================================
 function simulateGameweek() {
+  // Confirm staged chip on simulation
+  if (stagedChip) {
+    activeChip = stagedChip;
+    chipsUsed[stagedChip] = true;
+    stagedChip = null;
+  }
+
   let gwPts = 0;
   mySquad.forEach(p => {
     let pts = 2 + Math.floor(Math.random() * 5);
@@ -413,7 +433,7 @@ function simulateGameweek() {
 
   totalPoints += gwPts;
   gameweek++;
-  activeChip = null; // Reset chip after gameweek completion
+  activeChip = null; // Reset active chip after gameweek completion
   saveUserData();
   renderPitch();
   alert(`Gameweek Simulated! Earned ${gwPts} points.`);
@@ -451,7 +471,7 @@ function initApp() {
   ['wc', 'tc', 'bb', 'fh'].forEach(chip => {
     const chipBtn = document.getElementById(`btn-chip-${chip}`) || document.getElementById(`chip-${chip}`);
     if (chipBtn) {
-      chipBtn.addEventListener('click', () => activateChip(chip));
+      chipBtn.addEventListener('click', () => stageChip(chip));
     }
   });
 }
