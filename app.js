@@ -2,7 +2,7 @@
 const tg = window.Telegram ? window.Telegram.WebApp : null;
 if (tg) { tg.expand(); tg.ready(); }
 
-// 1. Extended Market Dataset with Prices & Clubs
+// 1. Extended Market Dataset
 const playerMarket = [
   { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, fixture: "NEG (H)" },
   { id: 2, name: "A. Nuri", club: "Ethiopian Coffee", pos: "GKP", price: 5.0, fixture: "SHE (H)" },
@@ -21,9 +21,17 @@ const playerMarket = [
   { id: 15, name: "B. Gugsa", club: "Fasil Kenema", pos: "FWD", price: 8.0, fixture: "WOL (A)" }
 ];
 
-// 2. User State
-let mySquad = playerMarket.slice(0, 15).map((p, idx) => ({ ...p, isStarter: idx < 11, isCaptain: idx === 11 }));
+// 2. User State & Selection Tracking
+let mySquad = playerMarket.slice(0, 15).map((p, idx) => ({
+  ...p,
+  isStarter: idx < 11,
+  isCaptain: idx === 11,
+  isViceCaptain: idx === 12
+}));
 let bankBalance = 100.0 - mySquad.reduce((sum, p) => sum + p.price, 0);
+
+let selectedPlayerId = null;
+let pendingSubId = null;
 
 // 3. Tab Switcher
 function switchTab(tab) {
@@ -67,16 +75,86 @@ function renderPitch() {
 }
 
 function createPlayerCard(p) {
+  const isPending = pendingSubId === p.id;
+  const badge = p.isCaptain ? ' <span class="text-yellow-400 font-black">(C)</span>' : (p.isViceCaptain ? ' <span class="text-gray-300 font-black">(VC)</span>' : '');
+
   return `
-    <div class="bg-[#242f3d] border border-gray-700 rounded-lg p-2 text-center min-w-[72px] shadow-md">
-      <div class="text-[9px] text-blue-400 font-bold uppercase">${p.pos} ${p.isCaptain ? '⭐' : ''}</div>
+    <div onclick="handlePlayerClick(${p.id})" 
+      class="bg-[#242f3d] border ${isPending ? 'border-yellow-400 animate-pulse' : 'border-gray-700'} rounded-lg p-2 text-center min-w-[72px] shadow-md cursor-pointer active:scale-95 transition-all">
+      <div class="text-[9px] text-blue-400 font-bold uppercase">${p.pos}${badge}</div>
       <div class="text-xs font-bold text-white my-0.5 truncate max-w-[68px]">${p.name}</div>
       <div class="text-[9px] text-gray-400">${p.price}M ETB</div>
     </div>
   `;
 }
 
-// 5. Render Transfer Market
+// 5. Interactive Substitution & Captain Modal
+function handlePlayerClick(id) {
+  if (pendingSubId) {
+    if (pendingSubId === id) {
+      pendingSubId = null; // Cancel selection
+      renderPitch();
+      return;
+    }
+    executeSwap(pendingSubId, id);
+    pendingSubId = null;
+    return;
+  }
+
+  selectedPlayerId = id;
+  const player = mySquad.find(p => p.id === id);
+
+  document.getElementById('modal-player-name').innerText = player.name;
+  document.getElementById('modal-player-details').innerText = `${player.pos} • ${player.club} • ${player.price}M ETB`;
+  document.getElementById('player-modal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('player-modal').classList.add('hidden');
+  selectedPlayerId = null;
+}
+
+function prepareSub() {
+  pendingSubId = selectedPlayerId;
+  closeModal();
+  renderPitch();
+}
+
+function executeSwap(id1, id2) {
+  const p1 = mySquad.find(p => p.id === id1);
+  const p2 = mySquad.find(p => p.id === id2);
+
+  if (!p1 || !p2) return;
+
+  // Swap starter statuses
+  const tempStarter = p1.isStarter;
+  p1.isStarter = p2.isStarter;
+  p2.isStarter = tempStarter;
+
+  renderPitch();
+}
+
+function setCaptain() {
+  mySquad.forEach(p => { p.isCaptain = (p.id === selectedPlayerId); });
+  // If vice-captain was captain, clear vice-captain
+  const currentVC = mySquad.find(p => p.isViceCaptain);
+  if (currentVC && currentVC.id === selectedPlayerId) currentVC.isViceCaptain = false;
+  
+  closeModal();
+  renderPitch();
+}
+
+function setViceCaptain() {
+  mySquad.forEach(p => { p.isViceCaptain = (p.id === selectedPlayerId); });
+  // If captain was vice-captain, clear captain
+  const currentC = mySquad.find(p => p.isCaptain);
+  if (currentC && currentC.id === selectedPlayerId) currentC.isCaptain = false;
+
+  closeModal();
+  renderPitch();
+}
+
+// 6. Transfer Market
 function renderMarket() {
   const list = document.getElementById('market-list');
   list.innerHTML = playerMarket.map(p => {
@@ -96,13 +174,12 @@ function renderMarket() {
   }).join('');
 }
 
-// 6. Buy / Sell Actions
 function buyPlayer(id) {
   const p = playerMarket.find(item => item.id === id);
   if (mySquad.length >= 15) return alert("Squad full! Sell a player first.");
   if (bankBalance < p.price) return alert("Not enough budget!");
 
-  mySquad.push({ ...p, isStarter: mySquad.length < 11, isCaptain: false });
+  mySquad.push({ ...p, isStarter: mySquad.length < 11, isCaptain: false, isViceCaptain: false });
   bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
   renderPitch();
   renderMarket();
@@ -146,5 +223,6 @@ function updateHeader() {
 // Boot
 document.addEventListener('DOMContentLoaded', () => { renderPitch(); });
 renderPitch();
+
 
 
