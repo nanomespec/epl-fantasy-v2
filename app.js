@@ -5,23 +5,23 @@ if (tg) { tg.expand(); tg.ready(); }
 const userId = tg?.initDataUnsafe?.user?.id || 'guest_user';
 const STORAGE_KEY = `epl_fantasy_squad_${userId}`;
 
-// 1. Extended Market Dataset
+// 1. Extended Dataset with Player Stats & Upcoming Fixture Difficulty (FDR)
 const playerMarket = [
-  { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, fixture: "NEG (H)" },
-  { id: 2, name: "A. Nuri", club: "Ethiopian Coffee", pos: "GKP", price: 5.0, fixture: "SHE (H)" },
-  { id: 3, name: "A. K. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, fixture: "NEG (H)" },
-  { id: 4, name: "E. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, fixture: "NEG (H)" },
-  { id: 5, name: "A. Tefera", club: "Ethiopian Coffee", pos: "DEF", price: 5.0, fixture: "SHE (H)" },
-  { id: 6, name: "S. Bereket", club: "CBE SA", pos: "DEF", price: 5.0, fixture: "SID (A)" },
-  { id: 7, name: "Y. Endale", club: "Fasil Kenema", pos: "DEF", price: 5.0, fixture: "WOL (A)" },
-  { id: 8, name: "B. Belay", club: "Saint George", pos: "MID", price: 7.0, fixture: "NEG (H)" },
-  { id: 9, name: "E. Tadesse", club: "Ethiopian Coffee", pos: "MID", price: 7.5, fixture: "SHE (H)" },
-  { id: 10, name: "A. Gidey", club: "CBE SA", pos: "MID", price: 7.5, fixture: "SID (A)" },
-  { id: 11, name: "G. Panom", club: "Mechal", pos: "MID", price: 7.0, fixture: "HAW (A)" },
-  { id: 12, name: "A. Okutu", club: "Saint George", pos: "FWD", price: 9.0, fixture: "NEG (H)" },
-  { id: 13, name: "H. Konkoni", club: "Ethiopian Coffee", pos: "FWD", price: 8.0, fixture: "SHE (H)" },
-  { id: 14, name: "D. Nathaniel", club: "CBE SA", pos: "FWD", price: 8.5, fixture: "SID (A)" },
-  { id: 15, name: "B. Gugsa", club: "Fasil Kenema", pos: "FWD", price: 8.0, fixture: "WOL (A)" }
+  { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, goals: 0, assists: 0, cleans: 3, form: 5.2, fdr: [{ opp: "NEG (H)", diff: 2 }, { opp: "SHE (A)", diff: 4 }, { opp: "CBE (H)", diff: 3 }] },
+  { id: 2, name: "A. Nuri", club: "Ethiopian Coffee", pos: "GKP", price: 5.0, goals: 0, assists: 0, cleans: 2, form: 4.1, fdr: [{ opp: "SHE (H)", diff: 3 }, { opp: "STG (H)", diff: 5 }, { opp: "FAS (A)", diff: 4 }] },
+  { id: 3, name: "A. K. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, goals: 1, assists: 1, cleans: 3, form: 6.0, fdr: [{ opp: "NEG (H)", diff: 2 }, { opp: "SHE (A)", diff: 4 }, { opp: "CBE (H)", diff: 3 }] },
+  { id: 4, name: "E. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, goals: 0, assists: 2, cleans: 3, form: 5.8, fdr: [{ opp: "NEG (H)", diff: 2 }, { opp: "SHE (A)", diff: 4 }, { opp: "CBE (H)", diff: 3 }] },
+  { id: 5, name: "A. Tefera", club: "Ethiopian Coffee", pos: "DEF", price: 5.0, goals: 0, assists: 1, cleans: 2, form: 4.5, fdr: [{ opp: "SHE (H)", diff: 3 }, { opp: "STG (H)", diff: 5 }, { opp: "FAS (A)", diff: 4 }] },
+  { id: 6, name: "S. Bereket", club: "CBE SA", pos: "DEF", price: 5.0, goals: 1, assists: 0, cleans: 2, form: 4.8, fdr: [{ opp: "SID (A)", diff: 3 }, { opp: "WOL (H)", diff: 2 }, { opp: "STG (A)", diff: 5 }] },
+  { id: 7, name: "Y. Endale", club: "Fasil Kenema", pos: "DEF", price: 5.0, goals: 0, assists: 0, cleans: 1, form: 3.5, fdr: [{ opp: "WOL (A)", diff: 3 }, { opp: "HAW (H)", diff: 2 }, { opp: "COF (H)", diff: 4 }] },
+  { id: 8, name: "B. Belay", club: "Saint George", pos: "MID", price: 7.0, goals: 3, assists: 2, cleans: 0, form: 7.2, fdr: [{ opp: "NEG (H)", diff: 2 }, { opp: "SHE (A)", diff: 4 }, { opp: "CBE (H)", diff: 3 }] },
+  { id: 9, name: "E. Tadesse", club: "Ethiopian Coffee", pos: "MID", price: 7.5, goals: 4, assists: 1, cleans: 0, form: 7.8, fdr: [{ opp: "SHE (H)", diff: 3 }, { opp: "STG (H)", diff: 5 }, { opp: "FAS (A)", diff: 4 }] },
+  { id: 10, name: "A. Gidey", club: "CBE SA", pos: "MID", price: 7.5, goals: 2, assists: 4, cleans: 0, form: 6.9, fdr: [{ opp: "SID (A)", diff: 3 }, { opp: "WOL (H)", diff: 2 }, { opp: "STG (A)", diff: 5 }] },
+  { id: 11, name: "G. Panom", club: "Mechal", pos: "MID", price: 7.0, goals: 2, assists: 2, cleans: 0, form: 6.1, fdr: [{ opp: "HAW (A)", diff: 2 }, { opp: "NEG (H)", diff: 2 }, { opp: "SHE (H)", diff: 3 }] },
+  { id: 12, name: "A. Okutu", club: "Saint George", pos: "FWD", price: 9.0, goals: 6, assists: 1, cleans: 0, form: 8.5, fdr: [{ opp: "NEG (H)", diff: 2 }, { opp: "SHE (A)", diff: 4 }, { opp: "CBE (H)", diff: 3 }] },
+  { id: 13, name: "H. Konkoni", club: "Ethiopian Coffee", pos: "FWD", price: 8.0, goals: 4, assists: 2, cleans: 0, form: 7.0, fdr: [{ opp: "SHE (H)", diff: 3 }, { opp: "STG (H)", diff: 5 }, { opp: "FAS (A)", diff: 4 }] },
+  { id: 14, name: "D. Nathaniel", club: "CBE SA", pos: "FWD", price: 8.5, goals: 5, assists: 0, cleans: 0, form: 7.4, fdr: [{ opp: "SID (A)", diff: 3 }, { opp: "WOL (H)", diff: 2 }, { opp: "STG (A)", diff: 5 }] },
+  { id: 15, name: "B. Gugsa", club: "Fasil Kenema", pos: "FWD", price: 8.0, goals: 3, assists: 1, cleans: 0, form: 5.9, fdr: [{ opp: "WOL (A)", diff: 3 }, { opp: "HAW (H)", diff: 2 }, { opp: "COF (H)", diff: 4 }] }
 ];
 
 // 2. User State Variables
@@ -141,17 +141,77 @@ function executeSwap(id1, id2) {
   renderPitch();
 }
 
-// 5. Simulation Engine
+// 5. Player Click & Detailed Modal Handler
+function handlePlayerClick(id) {
+  if (pendingSubId) {
+    if (pendingSubId === id) { pendingSubId = null; renderPitch(); return; }
+    executeSwap(pendingSubId, id);
+    pendingSubId = null;
+    return;
+  }
+
+  selectedPlayerId = id;
+  const player = mySquad.find(p => p.id === id);
+
+  document.getElementById('modal-player-name').innerText = player.name;
+  document.getElementById('modal-player-details').innerText = `${player.pos} • ${player.club} • ${player.price}M ETB`;
+  
+  // Update Player Stats
+  document.getElementById('stat-goals').innerText = player.goals || 0;
+  document.getElementById('stat-assists').innerText = player.assists || 0;
+  document.getElementById('stat-cleans').innerText = player.cleans || 0;
+  document.getElementById('stat-form').innerText = player.form || '0.0';
+
+  // Render Fixture Difficulty Rating (FDR)
+  const fdrColors = { 2: 'bg-green-600', 3: 'bg-gray-600', 4: 'bg-pink-600', 5: 'bg-red-600' };
+  const fdrContainer = document.getElementById('fdr-container');
+  if (fdrContainer && player.fdr) {
+    fdrContainer.innerHTML = player.fdr.map(f => `
+      <div class="flex-1 py-1 px-1 rounded ${fdrColors[f.diff]} text-white text-center font-bold">
+        ${f.opp}
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('player-modal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('player-modal').classList.add('hidden');
+  selectedPlayerId = null;
+}
+
+function prepareSub() { pendingSubId = selectedPlayerId; closeModal(); renderPitch(); }
+
+function setCaptain() {
+  mySquad.forEach(p => { p.isCaptain = (p.id === selectedPlayerId); });
+  const currentVC = mySquad.find(p => p.isViceCaptain);
+  if (currentVC && currentVC.id === selectedPlayerId) currentVC.isViceCaptain = false;
+  saveUserData();
+  closeModal();
+  renderPitch();
+}
+
+function setViceCaptain() {
+  mySquad.forEach(p => { p.isViceCaptain = (p.id === selectedPlayerId); });
+  const currentC = mySquad.find(p => p.isCaptain);
+  if (currentC && currentC.id === selectedPlayerId) currentC.isCaptain = false;
+  saveUserData();
+  closeModal();
+  renderPitch();
+}
+
+// 6. Simulation Engine
 function simulateGameweek() {
   let currentGwPoints = 0;
 
   mySquad.forEach(player => {
     let pts = 2;
     const rand = Math.random();
-    if (player.pos === 'FWD' && rand > 0.4) pts += 4;
-    if (player.pos === 'MID' && rand > 0.5) pts += 5;
-    if (player.pos === 'MID' && rand > 0.3) pts += 3;
-    if ((player.pos === 'DEF' || player.pos === 'GKP') && rand > 0.5) pts += 4;
+    if (player.pos === 'FWD' && rand > 0.4) { pts += 4; player.goals = (player.goals || 0) + 1; }
+    if (player.pos === 'MID' && rand > 0.5) { pts += 5; player.goals = (player.goals || 0) + 1; }
+    if (player.pos === 'MID' && rand > 0.3) { pts += 3; player.assists = (player.assists || 0) + 1; }
+    if ((player.pos === 'DEF' || player.pos === 'GKP') && rand > 0.5) { pts += 4; player.cleans = (player.cleans || 0) + 1; }
 
     player.gwPoints = pts;
 
@@ -191,7 +251,7 @@ function simulateGameweek() {
   alert(`Gameweek Simulated!\nGross Points: ${currentGwPoints}\nTransfer Hits: -${hitsCost} pts\nNet Points Earned: ${netGwPoints} 🚀`);
 }
 
-// 6. Transfer Market Actions
+// 7. Transfer Market Actions
 function renderMarket() {
   const list = document.getElementById('market-list');
   list.innerHTML = playerMarket.map(p => {
@@ -200,7 +260,7 @@ function renderMarket() {
       <div class="bg-[#242f3d] p-3 rounded-lg border border-gray-700 flex justify-between items-center">
         <div>
           <div class="font-bold text-sm text-white">${p.name} <span class="text-xs font-normal text-gray-400">(${p.club})</span></div>
-          <div class="text-xs text-blue-400 font-semibold">${p.pos} • ${p.price}M ETB • ${p.fixture}</div>
+          <div class="text-xs text-blue-400 font-semibold">${p.pos} • ${p.price}M ETB</div>
         </div>
         <button onclick="${inSquad ? `sellPlayer(${p.id})` : `buyPlayer(${p.id})`}" 
           class="px-3 py-1 rounded text-xs font-bold ${inSquad ? 'bg-red-500/20 text-red-400 border border-red-500/50' : 'bg-green-500/20 text-green-400 border border-green-500/50'}">
@@ -240,7 +300,7 @@ function sellPlayer(id) {
   renderMarket();
 }
 
-// 7. Render Pitch
+// 8. Render Pitch
 function renderPitch() {
   const container = document.getElementById('pitch-container');
   if (!container) return;
@@ -293,7 +353,7 @@ function createPlayerCard(p) {
   `;
 }
 
-// 8. League Creation & Join Logic
+// 9. League Mechanics & Navigation
 function createLeague() {
   const code = 'ETH-' + Math.floor(100 + Math.random() * 900);
   const name = prompt("Enter League Name:", "Ethiopian Super League");
@@ -340,7 +400,6 @@ function renderLeague() {
   `;
 }
 
-// 9. Navigation & Event Handlers
 function switchTab(tab) {
   ['pitch', 'transfers', 'league'].forEach(t => {
     document.getElementById(`tab-${t}`).classList.add('hidden');
@@ -376,45 +435,6 @@ function updateChipUI() {
   });
 }
 
-function handlePlayerClick(id) {
-  if (pendingSubId) {
-    if (pendingSubId === id) { pendingSubId = null; renderPitch(); return; }
-    executeSwap(pendingSubId, id);
-    pendingSubId = null;
-    return;
-  }
-  selectedPlayerId = id;
-  const player = mySquad.find(p => p.id === id);
-  document.getElementById('modal-player-name').innerText = player.name;
-  document.getElementById('modal-player-details').innerText = `${player.pos} • ${player.club} • ${player.price}M ETB`;
-  document.getElementById('player-modal').classList.remove('hidden');
-}
-
-function closeModal() {
-  document.getElementById('player-modal').classList.add('hidden');
-  selectedPlayerId = null;
-}
-
-function prepareSub() { pendingSubId = selectedPlayerId; closeModal(); renderPitch(); }
-
-function setCaptain() {
-  mySquad.forEach(p => { p.isCaptain = (p.id === selectedPlayerId); });
-  const currentVC = mySquad.find(p => p.isViceCaptain);
-  if (currentVC && currentVC.id === selectedPlayerId) currentVC.isViceCaptain = false;
-  saveUserData();
-  closeModal();
-  renderPitch();
-}
-
-function setViceCaptain() {
-  mySquad.forEach(p => { p.isViceCaptain = (p.id === selectedPlayerId); });
-  const currentC = mySquad.find(p => p.isCaptain);
-  if (currentC && currentC.id === selectedPlayerId) currentC.isCaptain = false;
-  saveUserData();
-  closeModal();
-  renderPitch();
-}
-
 function updateHeader() {
   document.getElementById('bank-balance').innerText = `${bankBalance.toFixed(1)}M ETB`;
   document.getElementById('squad-count').innerText = `${mySquad.length}/15`;
@@ -444,5 +464,4 @@ function updateHeader() {
 document.addEventListener('DOMContentLoaded', () => { loadUserData(); renderPitch(); });
 loadUserData();
 renderPitch();
- 
 
