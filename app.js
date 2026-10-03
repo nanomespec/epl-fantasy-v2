@@ -144,7 +144,7 @@ function updateHeader() {
 }
 
 // Boot
-document.addEventListener('DOMContentLoaded', ()attr => { renderPitch(); });
+document.addEventListener('DOMContentLoaded', () => { renderPitch(); });
 renderPitch();
 
 
