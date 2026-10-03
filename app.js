@@ -35,6 +35,9 @@ let gameweek = 1;
 let selectedPlayerId = null;
 let pendingSubId = null;
 
+// Starting Indices for standard 1 GKP, 4 DEF, 4 MID, 2 FWD formation
+const defaultStarterIds = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
+
 // 3. Save & Load Data
 function loadUserData() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -52,16 +55,30 @@ function loadUserData() {
       console.error("Failed to parse local storage", e);
     }
   }
-  
-  mySquad = playerMarket.slice(0, 15).map((p, idx) => ({
+  setDefaultSquad();
+}
+
+function setDefaultSquad() {
+  mySquad = playerMarket.map((p) => ({
     ...p,
-    isStarter: idx < 11,
-    isCaptain: idx === 11,
-    isViceCaptain: idx === 12,
+    isStarter: defaultStarterIds.includes(p.id),
+    isCaptain: p.id === 12,
+    isViceCaptain: p.id === 13,
     gwPoints: 0
   }));
   bankBalance = 100.0 - mySquad.reduce((sum, p) => sum + p.price, 0);
   saveUserData();
+}
+
+function resetSquadData() {
+  localStorage.removeItem(STORAGE_KEY);
+  totalPoints = 0;
+  gameweek = 1;
+  activeChip = null;
+  chipsUsed = { wc: false, tc: false, bb: false, fh: false };
+  setDefaultSquad();
+  renderPitch();
+  alert("Squad reset to default formation!");
 }
 
 function saveUserData() {
@@ -82,7 +99,7 @@ function validateFormation(proposedSquad) {
   if (mids < 2 || mids > 5) return "Starting formation must have between 2 and 5 Midfielders.";
   if (fwds < 1 || fwds > 3) return "Starting formation must have between 1 and 3 Forwards.";
 
-  return null; // Valid
+  return null;
 }
 
 function executeSwap(id1, id2) {
@@ -96,7 +113,6 @@ function executeSwap(id1, id2) {
     return;
   }
 
-  // Create speculative squad state
   const testSquad = mySquad.map(p => {
     if (p.id === id1) return { ...p, isStarter: p2.isStarter };
     if (p.id === id2) return { ...p, isStarter: p1.isStarter };
@@ -109,7 +125,6 @@ function executeSwap(id1, id2) {
     return;
   }
 
-  // Apply Swap
   const tempStarter = p1.isStarter;
   p1.isStarter = p2.isStarter;
   p2.isStarter = tempStarter;
@@ -305,7 +320,6 @@ function buyPlayer(id) {
   const p = playerMarket.find(item => item.id === id);
   if (mySquad.length >= 15) return alert("Squad full! Sell a player first.");
   
-  // Max 3 players per club rule
   const clubCount = mySquad.filter(item => item.club === p.club).length;
   if (clubCount >= 3) return alert(`Limit reached! You can only have 3 players from ${p.club}.`);
 
@@ -361,6 +375,5 @@ function updateHeader() {
 document.addEventListener('DOMContentLoaded', () => { loadUserData(); renderPitch(); });
 loadUserData();
 renderPitch();
-
-
+ 
 
