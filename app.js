@@ -43,9 +43,6 @@ let freeTransfers = 1;
 let transfersMadeInGW = 0;
 let myLeagues = ["Overall League"];
 
-let selectedPlayerId = null;
-let pendingSubId = null;
-
 const defaultStarterIds = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
 
 function setDefaultSquad() {
@@ -105,22 +102,40 @@ function resetSquadData() {
   chipsUsed = { wc: false, tc: false, bb: false, fh: false };
   setDefaultSquad();
   renderPitch();
+  renderMarket();
+  renderLeague();
 }
 
 // ==========================================
-// 4. PITCH RENDERING (FALLBACK SELECTORS)
+// 4. NAVIGATION & TABS
+// ==========================================
+function switchTab(tab) {
+  ['pitch', 'transfers', 'league'].forEach(t => {
+    const el = document.getElementById(`tab-${t}`);
+    const btn = document.getElementById(`btn-${t}`);
+    if (el) el.classList.add('hidden');
+    if (btn) btn.className = "flex-1 py-1 text-gray-400 font-bold";
+  });
+  
+  const targetTab = document.getElementById(`tab-${tab}`);
+  const targetBtn = document.getElementById(`btn-${tab}`);
+  if (targetTab) targetTab.classList.remove('hidden');
+  if (targetBtn) targetBtn.className = "flex-1 py-1 text-blue-400 font-bold";
+
+  if (tab === 'transfers') renderMarket();
+  if (tab === 'league') renderLeague();
+}
+
+// ==========================================
+// 5. PITCH RENDERING
 // ==========================================
 function renderPitch() {
-  // Find container across different possible ID names in index.html
   const container = document.getElementById('pitch-container') || 
                     document.getElementById('squad-pitch') || 
                     document.querySelector('.green-pitch-container') ||
                     document.querySelector('main div');
 
-  if (!container) {
-    console.error("No pitch container found in DOM.");
-    return;
-  }
+  if (!container) return;
 
   if (!mySquad || mySquad.length === 0) {
     setDefaultSquad();
@@ -161,14 +176,112 @@ function createPlayerCard(p) {
 }
 
 // ==========================================
-// 5. SIMULATION ENGINE
+// 6. MARKET & TRANSFERS
+// ==========================================
+function renderMarket() {
+  const list = document.getElementById('market-list');
+  if (!list) return;
+
+  list.innerHTML = playerMarket.map(p => {
+    const inSquad = mySquad.some(s => s.id === p.id);
+    return `
+      <div class="bg-[#242f3d] p-3 rounded-lg border border-gray-700 flex justify-between items-center mb-2">
+        <div>
+          <div class="font-bold text-sm text-white">${p.name} <span class="text-xs font-normal text-gray-400">(${p.club})</span></div>
+          <div class="text-xs text-blue-400 font-semibold">${p.pos} • ${p.price}M ETB</div>
+        </div>
+        <button onclick="${inSquad ? `sellPlayer(${p.id})` : `buyPlayer(${p.id})`}" 
+          class="px-3 py-1 rounded text-xs font-bold ${inSquad ? 'bg-red-500/20 text-red-400 border border-red-500/50' : 'bg-green-500/20 text-green-400 border border-green-500/50'}">
+          ${inSquad ? 'Sell' : 'Buy'}
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+function buyPlayer(id) {
+  const p = playerMarket.find(item => item.id === id);
+  if (mySquad.length >= 15) return alert("Squad full! Sell a player first.");
+  if (bankBalance < p.price) return alert("Not enough budget!");
+
+  mySquad.push({ ...p, purchasePrice: p.price, isStarter: mySquad.length < 11, isCaptain: false, isViceCaptain: false, gwPoints: 0, dnp: false });
+  bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
+  transfersMadeInGW++;
+
+  saveUserData();
+  renderPitch();
+  renderMarket();
+}
+
+function sellPlayer(id) {
+  const p = mySquad.find(item => item.id === id);
+  if (!p) return;
+  if (mySquad.length <= 11) return alert("You must keep at least 11 players!");
+
+  mySquad = mySquad.filter(item => item.id !== id);
+  bankBalance = parseFloat((bankBalance + p.price).toFixed(1));
+
+  saveUserData();
+  renderPitch();
+  renderMarket();
+}
+
+// ==========================================
+// 7. LEAGUES
+// ==========================================
+function renderLeague() {
+  const list = document.getElementById('league-list');
+  if (!list) return;
+
+  const leaderboard = [
+    { rank: 1, name: "Gulit FC (You)", pts: totalPoints },
+    { rank: 2, name: "Sheger Warriors", pts: Math.max(0, totalPoints - 12) },
+    { rank: 3, name: "Addis Strikers", pts: Math.max(0, totalPoints - 24) }
+  ];
+
+  list.innerHTML = `
+    <div class="mb-3 text-xs text-blue-400 font-bold">Active Leagues: ${myLeagues.join(', ')}</div>
+    ${leaderboard.map(user => `
+      <div class="flex justify-between items-center py-2 border-b border-gray-700/50">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold text-gray-400 w-4">#${user.rank}</span>
+          <span class="text-sm font-semibold text-white">${user.name}</span>
+        </div>
+        <span class="text-sm font-bold text-green-400">${user.pts} pts</span>
+      </div>
+    `).join('')}
+  `;
+}
+
+function createLeague() {
+  const code = 'ETH-' + Math.floor(100 + Math.random() * 900);
+  const name = prompt("Enter League Name:", "Ethiopian Super League");
+  if (!name) return;
+  myLeagues.push(`${name} (${code})`);
+  saveUserData();
+  renderLeague();
+  alert(`League created! Code: ${code}`);
+}
+
+function joinLeague() {
+  const input = document.getElementById('league-code-input');
+  if (!input || !input.value) return alert("Please enter a valid league code.");
+  myLeagues.push(`Private League (${input.value.trim().toUpperCase()})`);
+  input.value = '';
+  saveUserData();
+  renderLeague();
+  alert("Successfully joined league!");
+}
+
+// ==========================================
+// 8. SIMULATION ENGINE
 // ==========================================
 function simulateGameweek() {
   let gwPts = 0;
   mySquad.forEach(p => {
     let pts = 2 + Math.floor(Math.random() * 5);
     p.gwPoints = pts;
-    if (p.isStarter || activeChip === 'bb') {
+    if (p.isStarter) {
       gwPts += p.isCaptain ? pts * 2 : pts;
     }
   });
@@ -193,7 +306,7 @@ function updateHeader() {
 }
 
 // ==========================================
-// 6. INITIALIZATION HOOK
+// 9. BOOTSTRAPPER
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   loadUserData();
