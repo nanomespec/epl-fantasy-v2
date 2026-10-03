@@ -1,7 +1,7 @@
 // ==========================================
 // 1. STATE & INITIALIZATION
 // ==========================================
-const STORAGE_KEY = 'epl_fantasy_clean_v10';
+const STORAGE_KEY = 'efpl_official_v1';
 
 const playerMarket = [
   { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, form: 5.2 },
@@ -82,25 +82,23 @@ function resetSquad() {
 // 2. TAB SWITCHING SYSTEM
 // ==========================================
 function switchTab(tabName) {
+  // Hide all sections
   ['pitch', 'transfers', 'leagues', 'points'].forEach(t => {
-    const el = document.getElementById(`tab-${t}`);
-    if (el) {
-      el.classList.add('hidden');
-      el.style.display = 'none';
-    }
+    document.getElementById(`tab-${t}`).classList.add('hidden');
+    // Reset Nav styling
+    const navItem = document.getElementById(`nav-${t}`);
+    navItem.classList.remove('text-fpl-purple', 'border-t-2', 'border-fpl-purple');
+    navItem.classList.add('text-gray-500', 'border-transparent');
   });
 
-  const target = document.getElementById(`tab-${tabName}`);
-  if (target) {
-    target.classList.remove('hidden');
-    target.style.display = 'block';
-  } else {
-    // Fallback if container uses 'pitch-container' directly
-    const pitchCont = document.getElementById('pitch-container');
-    if (pitchCont && tabName === 'pitch') {
-      pitchCont.style.display = 'block';
-    }
-  }
+  // Show target
+  document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+  
+  // Style active nav
+  const activeNav = document.getElementById(`nav-${tabName}`);
+  activeNav.classList.remove('text-gray-500', 'border-transparent');
+  activeNav.classList.add('text-fpl-purple', 'border-t-2', 'border-fpl-purple');
+  
   renderAll();
 }
 
@@ -113,39 +111,27 @@ function renderAll() {
 }
 
 // ==========================================
-// 3. CHIPS SYSTEM
+// 3. CHIPS & MODALS
 // ==========================================
 function promptChip(chipName) {
-  if (chipsUsed[chipName]) {
-    return alert(`You have already used the ${chipName.toUpperCase()} chip this season!`);
-  }
-  if (activeChip) {
-    return alert(`You already have an active chip (${activeChip.toUpperCase()}) for this gameweek!`);
-  }
+  if (chipsUsed[chipName]) return alert(`You have already used the ${chipName.toUpperCase()} chip this season!`);
+  if (activeChip) return alert(`You already have an active chip (${activeChip.toUpperCase()}) for this gameweek!`);
   chipConfirmModal = chipName;
   renderPitch();
 }
 
 function confirmChipPlay() {
-  const chipName = chipConfirmModal;
-  if (!chipName) return;
-
-  activeChip = chipName;
-  if (chipName === 'fh') {
-    preFreeHitSquad = JSON.parse(JSON.stringify(mySquad));
-  }
+  activeChip = chipConfirmModal;
+  if (chipConfirmModal === 'fh') preFreeHitSquad = JSON.parse(JSON.stringify(mySquad));
   chipConfirmModal = null;
   saveData();
   renderPitch();
 }
 
-function cancelChipPlay() {
-  chipConfirmModal = null;
-  renderPitch();
-}
+function cancelChipPlay() { chipConfirmModal = null; renderPitch(); }
 
 // ==========================================
-// 4. PITCH & FORMATION
+// 4. PITCH & FORMATION (FPL THEME)
 // ==========================================
 function isValidFormation(starters) {
   if (starters.length !== 11) return false;
@@ -153,59 +139,70 @@ function isValidFormation(starters) {
   const def = starters.filter(p => p.pos === 'DEF').length;
   const mid = starters.filter(p => p.pos === 'MID').length;
   const fwd = starters.filter(p => p.pos === 'FWD').length;
-
   return gk === 1 && def >= 3 && def <= 5 && mid >= 2 && mid <= 5 && fwd >= 1 && fwd <= 3;
 }
 
 function renderPitch() {
-  const container = document.getElementById('pitch-container') || document.getElementById('tab-pitch');
+  const container = document.getElementById('pitch-container');
   if (!container) return;
 
   const starters = mySquad.filter(p => p.isStarter);
   const bench = mySquad.filter(p => !p.isStarter);
-  const chipLabels = { wc: 'Wildcard', tc: '3x Captain', bb: 'Bench Boost', fh: 'Free Hit' };
+  const chipLabels = { wc: 'Wildcard', tc: 'Triple Captain', bb: 'Bench Boost', fh: 'Free Hit' };
 
   container.innerHTML = `
-    <div class="bg-gray-800 border border-gray-700 rounded-xl p-2 mb-2">
-      <div class="flex gap-1">
+    <!-- Chips Row -->
+    <div class="bg-white rounded-lg shadow-sm p-2 mb-3">
+      <div class="flex gap-2">
         ${['wc', 'tc', 'bb', 'fh'].map(c => `
           <button onclick="promptChip('${c}')" ${chipsUsed[c] || activeChip ? 'disabled' : ''} 
-            class="flex-1 py-1 text-[9px] font-bold rounded ${chipsUsed[c] ? 'bg-gray-900 text-gray-600 cursor-not-allowed' : activeChip === c ? 'bg-amber-500 text-black' : 'bg-gray-700 text-white hover:bg-gray-600'}">
-            ${chipLabels[c]}${chipsUsed[c] ? '(Used)' : ''}
+            class="flex-1 py-1.5 text-[9px] font-bold rounded ${chipsUsed[c] ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : activeChip === c ? 'bg-fpl-purple text-fpl-green' : 'bg-white border border-gray-300 text-fpl-purple hover:bg-gray-50'}">
+            ${chipLabels[c]}
           </button>
         `).join('')}
       </div>
-      ${activeChip ? `<div class="mt-2 text-center text-[10px] font-bold text-amber-300 bg-amber-950/60 border border-amber-500 py-1 rounded">⚡ Active Chip Locked: ${chipLabels[activeChip]}</div>` : ''}
+      ${activeChip ? `<div class="mt-2 text-center text-xs font-bold text-fpl-purple bg-fpl-green py-1 rounded">✅ Active: ${chipLabels[activeChip]}</div>` : ''}
     </div>
 
-    ${pendingSubId ? `<div class="bg-amber-600 text-white text-xs p-1 text-center font-bold mb-2 rounded">🔄 Select player to swap with ${mySquad.find(p => p.id === pendingSubId)?.name}</div>` : ''}
+    ${pendingSubId ? `<div class="bg-fpl-purple text-fpl-green text-xs p-2 text-center font-bold mb-3 rounded-lg shadow">🔄 Select a player to substitute</div>` : ''}
     
-    <div class="bg-gradient-to-b from-emerald-800 to-emerald-900 border-2 border-emerald-400 rounded-xl p-2 flex flex-col justify-around min-h-[260px] shadow-xl">
-      <div class="flex justify-center gap-2">${starters.filter(p => p.pos === 'GKP').map(cardHtml).join('')}</div>
-      <div class="flex justify-center gap-2">${starters.filter(p => p.pos === 'DEF').map(cardHtml).join('')}</div>
-      <div class="flex justify-center gap-2">${starters.filter(p => p.pos === 'MID').map(cardHtml).join('')}</div>
-      <div class="flex justify-center gap-2">${starters.filter(p => p.pos === 'FWD').map(cardHtml).join('')}</div>
+    <!-- FPL Pitch -->
+    <div class="fpl-pitch rounded-t-xl p-2 flex flex-col justify-around min-h-[320px] shadow-sm">
+      <div class="flex justify-center gap-1">${starters.filter(p => p.pos === 'GKP').map(cardHtml).join('')}</div>
+      <div class="flex justify-center gap-1">${starters.filter(p => p.pos === 'DEF').map(cardHtml).join('')}</div>
+      <div class="flex justify-center gap-1">${starters.filter(p => p.pos === 'MID').map(cardHtml).join('')}</div>
+      <div class="flex justify-center gap-1">${starters.filter(p => p.pos === 'FWD').map(cardHtml).join('')}</div>
     </div>
 
-    <div class="bg-gray-900 border border-gray-700 rounded-xl p-2 mt-2">
-      <div class="text-[10px] text-gray-400 font-bold uppercase mb-1 text-center">Bench ${activeChip === 'bb' ? '(Boost Active 🚀)' : ''}</div>
-      <div class="flex justify-center gap-2">${bench.map(cardHtml).join('')}</div>
+    <!-- Bench -->
+    <div class="bg-white border-x-4 border-b-4 border-[#ffffff] rounded-b-xl p-2 shadow-md">
+      <div class="text-[10px] text-fpl-purple font-black uppercase mb-2 flex justify-between px-2">
+        <span>Bench</span>
+        ${activeChip === 'bb' ? '<span class="text-green-600">Boost Active</span>' : ''}
+      </div>
+      <div class="flex justify-center gap-1">${bench.map(cardHtml).join('')}</div>
     </div>
+    
     ${renderModal()}
     ${renderChipConfirmModal()}
   `;
 }
 
 function cardHtml(p) {
-  let badge = p.pos;
-  if (p.isCaptain) badge += ' (C)';
-  if (p.isViceCaptain) badge += ' (VC)';
+  let isCap = p.isCaptain ? '<div class="absolute -top-2 -right-1 bg-black text-white text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center">C</div>' : '';
+  let isVice = p.isViceCaptain ? '<div class="absolute -top-2 -right-1 bg-white border border-black text-black text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center">V</div>' : '';
 
   return `
-    <div onclick="handleCardClick(${p.id})" class="bg-white text-black rounded p-1 text-center w-16 cursor-pointer shadow hover:scale-105 transition">
-      <div class="text-[7px] font-black bg-gray-200 uppercase rounded">${badge}</div>
-      <div class="text-[10px] font-bold truncate mt-1">${p.name}</div>
-      <div class="text-[9px] text-amber-600 font-bold">${p.price}M</div>
+    <div onclick="handleCardClick(${p.id})" class="relative text-center w-[72px] cursor-pointer group">
+      ${isCap} ${isVice}
+      <!-- Shirt Icon Placeholder -->
+      <div class="mx-auto w-10 h-10 bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23ffffff%22><path d=%22M15.53 2.47a1.25 1.25 0 00-1.77 0L12 4.24l-1.76-1.77a1.25 1.25 0 00-1.77 0l-3.5 3.5v14.5a1 1 0 001 1h12a1 1 0 001-1V5.97l-3.44-3.5z%22/></svg>')] bg-no-repeat bg-center bg-contain mb-1 drop-shadow-md group-hover:scale-110 transition-transform"></div>
+      
+      <!-- Player Name Box -->
+      <div class="bg-fpl-dark text-white text-[9px] font-bold rounded-t-[3px] truncate px-1 py-0.5">${p.name.split(' ').pop()}</div>
+      
+      <!-- Player Price Box -->
+      <div class="bg-white text-fpl-dark text-[9px] font-bold rounded-b-[3px] shadow-sm">${p.price}</div>
     </div>
   `;
 }
@@ -241,15 +238,16 @@ function executeSwap(id1, id2) {
 function renderModal() {
   if (!activeModalId) return '';
   const p = mySquad.find(x => x.id === activeModalId);
-  if (!p) return '';
   return `
-    <div class="absolute inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-      <div class="bg-gray-800 border border-gray-600 rounded-xl p-4 w-64 text-center text-white">
-        <div class="font-bold text-sm mb-2">${p.name}</div>
-        <button onclick="pendingSubId=${p.id}; activeModalId=null; renderPitch();" class="w-full bg-emerald-600 py-1.5 rounded text-xs font-bold mb-2">🔄 Substitute</button>
-        <button onclick="setCap(${p.id}, true)" class="w-full bg-amber-600 py-1.5 rounded text-xs font-bold mb-2">👑 Make Captain (C)</button>
-        <button onclick="setCap(${p.id}, false)" class="w-full bg-gray-700 py-1.5 rounded text-xs font-bold mb-2">⭐ Make Vice-Captain (VC)</button>
-        <button onclick="activeModalId=null; renderPitch();" class="w-full text-gray-400 text-xs mt-1">Cancel</button>
+    <div class="fixed inset-0 bg-fpl-dark/80 flex items-end justify-center z-50">
+      <div class="bg-white w-full rounded-t-2xl p-5 shadow-2xl animate-[slideUp_0.2s_ease-out]">
+        <div class="flex justify-between items-center mb-4 border-b pb-2">
+          <div class="font-black text-lg text-fpl-purple">${p.name}</div>
+          <button onclick="activeModalId=null; renderPitch();" class="text-gray-400 font-bold text-xl">&times;</button>
+        </div>
+        <button onclick="pendingSubId=${p.id}; activeModalId=null; renderPitch();" class="w-full bg-gray-100 text-fpl-purple py-3 rounded-lg text-sm font-bold mb-3 shadow-sm border border-gray-200">🔄 Substitute</button>
+        <button onclick="setCap(${p.id}, true)" class="w-full bg-fpl-purple text-white py-3 rounded-lg text-sm font-bold mb-3 shadow-sm">👑 Make Captain</button>
+        <button onclick="setCap(${p.id}, false)" class="w-full bg-white border-2 border-fpl-purple text-fpl-purple py-3 rounded-lg text-sm font-bold shadow-sm">⭐ Make Vice-Captain</button>
       </div>
     </div>
   `;
@@ -257,15 +255,14 @@ function renderModal() {
 
 function renderChipConfirmModal() {
   if (!chipConfirmModal) return '';
-  const names = { wc: 'Wildcard', tc: '3x Captain', bb: 'Bench Boost', fh: 'Free Hit' };
   return `
-    <div class="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-      <div class="bg-gray-800 border border-amber-500 rounded-2xl p-4 w-64 text-center text-white shadow-2xl">
-        <div class="text-xs text-amber-400 font-bold uppercase">Confirm Chip Activation</div>
-        <div class="font-extrabold text-base my-2">Play ${names[chipConfirmModal]}?</div>
-        <p class="text-[10px] text-gray-300 mb-4">Once confirmed, this chip will be locked in for the upcoming Gameweek.</p>
-        <button onclick="confirmChipPlay()" class="w-full bg-amber-500 text-black py-2 rounded-xl text-xs font-extrabold mb-2">Confirm & Use Chip</button>
-        <button onclick="cancelChipPlay()" class="w-full bg-gray-700 text-gray-300 py-1.5 rounded-xl text-xs font-bold">Cancel</button>
+    <div class="fixed inset-0 bg-fpl-dark/80 flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-xl p-5 w-72 text-center shadow-2xl">
+        <div class="text-xs text-gray-500 font-bold uppercase mb-1">Confirm Chip</div>
+        <div class="font-black text-fpl-purple text-xl mb-2">Play ${chipConfirmModal.toUpperCase()}?</div>
+        <p class="text-xs text-gray-600 mb-5">This action will lock the chip in for the upcoming Gameweek.</p>
+        <button onclick="confirmChipPlay()" class="w-full bg-fpl-green text-fpl-purple py-3 rounded-lg text-sm font-black mb-2">Confirm</button>
+        <button onclick="cancelChipPlay()" class="w-full bg-gray-100 text-gray-600 py-3 rounded-lg text-sm font-bold">Cancel</button>
       </div>
     </div>
   `;
@@ -282,30 +279,43 @@ function setCap(id, isC) {
 }
 
 // ==========================================
-// 5. MARKET / TRANSFERS TAB
+// 5. MARKET / TRANSFERS (FPL THEME)
 // ==========================================
 function renderMarket() {
   const container = document.getElementById('tab-transfers');
   if (!container) return;
 
   container.innerHTML = `
-    <div class="bg-gray-900 border border-gray-700 rounded-xl p-3 text-white">
-      <div class="flex justify-between items-center mb-3">
-        <div class="text-xs font-bold uppercase text-gray-400">Player Market</div>
-        <div class="text-xs text-emerald-400 font-bold">Bank: ${bankBalance}M | Squad: ${mySquad.length}/15</div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="bg-fpl-purple text-white p-3 flex justify-between items-center">
+        <span class="font-black">Player Selection</span>
+        <span class="bg-fpl-green text-fpl-purple px-2 py-0.5 rounded text-xs font-bold">${bankBalance}M</span>
       </div>
-      <div class="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+      
+      <div class="p-2 bg-gray-50 text-xs text-gray-500 font-bold border-b flex justify-between px-4">
+        <span class="w-2/3">Player</span>
+        <span class="w-1/3 text-right">Price / Action</span>
+      </div>
+
+      <div class="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
         ${playerMarket.map(p => {
           const owned = mySquad.some(s => s.id === p.id);
           return `
-            <div class="bg-gray-800 p-2 rounded-lg flex justify-between items-center text-xs">
-              <div>
-                <div class="font-bold">${p.name} <span class="text-[9px] text-gray-400">(${p.pos} -${p.club})</span></div>
-                <div class="text-emerald-400 font-bold">${p.price}M <span class="text-[9px] text-gray-400">Form: ${p.form}</span></div>
+            <div class="p-3 flex justify-between items-center bg-white hover:bg-gray-50">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-[10px] font-bold text-gray-500">${p.pos}</div>
+                <div>
+                  <div class="font-bold text-sm text-fpl-dark">${p.name}</div>
+                  <div class="text-[10px] text-gray-500">${p.club}</div>
+                </div>
               </div>
-              <button onclick="${owned ? `sellPlayer(${p.id})` : `buyPlayer(${p.id})`}" class="px-3 py-1 rounded font-bold ${owned ? 'bg-red-600/30 text-red-400 hover:bg-red-600/50' : 'bg-emerald-600/30 text-emerald-400 hover:bg-emerald-600/50'}">
-                ${owned ? 'Sell' : 'Buy'}
-              </button>
+              <div class="flex flex-col items-end">
+                <span class="font-black text-fpl-purple mb-1">£${p.price}m</span>
+                <button onclick="${owned ? `sellPlayer(${p.id})` : `buyPlayer(${p.id})`}" 
+                  class="px-4 py-1 rounded text-xs font-bold shadow-sm ${owned ? 'bg-white border border-red-500 text-red-500' : 'bg-fpl-green text-fpl-purple'}">
+                  ${owned ? 'Remove' : 'Add'}
+                </button>
+              </div>
             </div>
           `;
         }).join('')}
@@ -317,14 +327,10 @@ function renderMarket() {
 function buyPlayer(id) {
   const p = playerMarket.find(x => x.id === id);
   if (mySquad.length >= 15) return alert("Squad full (15/15)!");
-  if (bankBalance < p.price && activeChip !== 'wc' && activeChip !== 'fh') {
-    return alert("Not enough budget!");
-  }
+  if (bankBalance < p.price && activeChip !== 'wc' && activeChip !== 'fh') return alert("Not enough budget!");
 
   mySquad.push({ ...p, isStarter: mySquad.filter(s => s.isStarter).length < 11, isCaptain: false, isViceCaptain: false, gwPoints: 0 });
-  if (bankBalance >= p.price && activeChip !== 'wc' && activeChip !== 'fh') {
-    bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
-  }
+  if (bankBalance >= p.price && activeChip !== 'wc' && activeChip !== 'fh') bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
   
   saveData();
   renderAll();
@@ -340,46 +346,75 @@ function sellPlayer(id) {
 }
 
 // ==========================================
-// 6. LEAGUES TAB
+// 6. LEAGUES & POINTS (FPL THEME)
 // ==========================================
 function renderLeagues() {
   const container = document.getElementById('tab-leagues');
   if (!container) return;
 
   container.innerHTML = `
-    <div class="bg-gray-900 border border-gray-700 rounded-xl p-4 text-white text-xs">
-      <div class="font-bold text-sm text-amber-400 mb-2">Global & Mini Leagues</div>
-      <p class="text-gray-400 mb-4">Compete against other managers in overall rankings.</p>
-      <div class="bg-gray-800 rounded-lg p-3 space-y-2">
-        <div class="flex justify-between font-bold text-gray-300 border-b border-gray-700 pb-1">
-          <span>Rank & Team</span>
-          <span>Total Points</span>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+      <h2 class="font-black text-fpl-purple text-lg mb-4 border-b pb-2">Global Leagues</h2>
+      <div class="space-y-3">
+        <div class="flex items-center gap-3 p-3 bg-fpl-purple text-white rounded-lg shadow-sm">
+          <div class="font-black text-xl w-8">1</div>
+          <div class="flex-1">
+            <div class="font-bold text-sm text-fpl-green">Gulit FC (You)</div>
+            <div class="text-[10px] text-gray-300">Manager: Nate</div>
+          </div>
+          <div class="font-black">${totalPoints}</div>
         </div>
-        <div class="flex justify-between items-center text-emerald-400 font-bold bg-emerald-950/40 p-2 rounded">
-          <span>1. Gulit FC (You)</span>
-          <span>${totalPoints} pts</span>
-        </div>
-        <div class="flex justify-between items-center text-gray-300 p-2">
-          <span>2. Addis Star XI</span>
-          <span>${Math.max(0, totalPoints - 12)} pts</span>
+        
+        <div class="flex items-center gap-3 p-3 bg-gray-50 border rounded-lg">
+          <div class="font-bold text-gray-400 text-lg w-8">2</div>
+          <div class="flex-1">
+            <div class="font-bold text-sm text-fpl-dark">Addis Star XI</div>
+            <div class="text-[10px] text-gray-500">Manager: Dawit</div>
+          </div>
+          <div class="font-bold text-fpl-dark">${Math.max(0, totalPoints - 12)}</div>
         </div>
       </div>
     </div>
   `;
 }
 
+function renderPoints() {
+  const container = document.getElementById('tab-points');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="bg-fpl-purple text-white p-4 text-center">
+        <div class="text-xs font-bold text-gray-300 uppercase tracking-widest mb-1">Overall Points</div>
+        <div class="text-4xl font-black text-fpl-green">${totalPoints}</div>
+      </div>
+      
+      <div class="p-4">
+        <h3 class="font-bold text-sm text-gray-500 uppercase mb-3">Gameweek History</h3>
+        ${gwHistory.length === 0 ? '<div class="text-center text-sm text-gray-400 py-4">No data yet. Play a Gameweek!</div>' : `
+          <div class="space-y-2">
+            ${gwHistory.map(h => `
+              <div class="flex justify-between items-center p-3 border rounded-lg bg-gray-50">
+                <span class="font-bold text-fpl-dark">Gameweek ${h.gameweek}</span>
+                <span class="font-black text-fpl-purple bg-gray-200 px-3 py-1 rounded-full">${h.points} pts</span>
+              </div>
+            `).join('')}
+          </div>
+        `}
+      </div>
+    </div>
+  `;
+}
+
 // ==========================================
-// 7. POINTS TAB & GAMEWEEK SIMULATION
+// 7. SIMULATION LOGIC
 // ==========================================
 function simulateGameweek() {
-  mySquad.forEach(p => {
-    p.gwPoints = Math.random() > 0.3 ? 2 + Math.floor(Math.random() * 6) : 0;
-  });
+  mySquad.forEach(p => { p.gwPoints = Math.random() > 0.3 ? 2 + Math.floor(Math.random() * 6) : 0; });
 
   if (activeChip !== 'bb') {
     let starters = mySquad.filter(p => p.isStarter);
     let bench = mySquad.filter(p => !p.isStarter);
-
     bench.forEach(sub => {
       if (sub.gwPoints === 0) return;
       let starterOut = starters.find(s => s.gwPoints === 0 && (s.pos === sub.pos || s.pos !== 'GKP'));
@@ -394,12 +429,8 @@ function simulateGameweek() {
   let gwTotal = 0;
   mySquad.forEach(p => {
     let mult = 1;
-    if (p.isCaptain) {
-      mult = (activeChip === 'tc' ? 3 : 2);
-    }
-    if (p.isStarter || activeChip === 'bb') {
-      gwTotal += p.gwPoints * mult;
-    }
+    if (p.isCaptain) mult = (activeChip === 'tc' ? 3 : 2);
+    if (p.isStarter || activeChip === 'bb') gwTotal += p.gwPoints * mult;
   });
 
   totalPoints += gwTotal;
@@ -410,56 +441,23 @@ function simulateGameweek() {
     mySquad = preFreeHitSquad;
     preFreeHitSquad = null;
     chipsUsed.fh = true;
-  } else if (activeChip === 'wc') {
-    chipsUsed.wc = true;
-  } else if (activeChip === 'tc') {
-    chipsUsed.tc = true;
-  } else if (activeChip === 'bb') {
-    chipsUsed.bb = true;
+  } else if (activeChip) {
+    chipsUsed[activeChip] = true;
   }
 
   activeChip = null;
   saveData();
   renderAll();
-  alert(`Gameweek simulated! You scored ${gwTotal} points.`);
-}
-
-function renderPoints() {
-  const container = document.getElementById('tab-points');
-  if (!container) return;
-
-  container.innerHTML = `
-    <div class="bg-gray-900 border border-gray-700 rounded-xl p-4 text-white text-xs">
-      <div class="flex justify-between items-center mb-3">
-        <div class="font-bold text-sm text-emerald-400">Gameweek History</div>
-        <div class="text-gray-400">Total Season: <b class="text-white">${totalPoints} pts</b></div>
-      </div>
-      ${gwHistory.length === 0 ? '<div class="text-gray-500 text-center py-6">No gameweeks simulated yet. Click "Simulate Gameweek" above!</div>' : `
-        <div class="space-y-2 max-h-[380px] overflow-y-auto">
-          ${gwHistory.map(h => `
-            <div class="bg-gray-800 p-2.5 rounded-lg flex justify-between items-center">
-              <span>Gameweek ${h.gameweek}</span>
-              <span class="text-emerald-400 font-bold">${h.points} Points</span>
-            </div>
-          `).join('')}
-        </div>
-      `}
-    </div>
-  `;
+  alert(`Gameweek ${gameweek - 1} finished! You scored ${gwTotal} points.`);
 }
 
 function updateHeader() {
-  const bankEl = document.getElementById('bank-balance');
-  const countEl = document.getElementById('squad-count');
-  const totalEl = document.getElementById('total-points');
-  const gwEl = document.getElementById('gw-number');
-
-  if (bankEl) bankEl.innerText = `${bankBalance}M`;
-  if (countEl) countEl.innerText = `${mySquad.length}/15`;
-  if (totalEl) totalEl.innerText = totalPoints;
-  if (gwEl) gwEl.innerText = gameweek;
+  document.getElementById('bank-balance').innerText = `${bankBalance}M`;
+  document.getElementById('squad-count').innerText = `${mySquad.length}/15`;
+  document.getElementById('total-points').innerText = totalPoints;
+  document.getElementById('gw-number').innerText = gameweek;
 }
 
-// Initialize on load
+// Initialize
 document.addEventListener('DOMContentLoaded', loadData);
 
