@@ -97,21 +97,6 @@ function saveUserData() {
   }
 }
 
-function resetSquadData() {
-  localStorage.removeItem(STORAGE_KEY);
-  totalPoints = 0;
-  gameweek = 1;
-  stagedChip = null;
-  activeChip = null;
-  chipsUsed = { wc: false, tc: false, bb: false, fh: false };
-  pendingSubPlayerId = null;
-  setDefaultSquad();
-  renderPitch();
-  renderMarket();
-  renderLeague();
-  renderPointsTab();
-}
-
 // ==========================================
 // 4. NAVIGATION & FOUR TABS
 // ==========================================
@@ -126,7 +111,7 @@ function switchTab(tab) {
   const targetTab = document.getElementById(`tab-${tab}`);
   const targetBtn = document.getElementById(`btn-${tab}`);
   if (targetTab) targetTab.classList.remove('hidden');
-  if (targetBtn) targetBtn.className = "flex-1 py-1 text-blue-400 font-bold text-[10px] text-center border-b-2 border-blue-400";
+  if (targetBtn) targetBtn.className = "flex-1 py-1 text-emerald-400 font-bold text-[10px] text-center border-b-2 border-emerald-400";
 
   if (tab === 'transfers') renderMarket();
   if (tab === 'league') renderLeague();
@@ -134,7 +119,7 @@ function switchTab(tab) {
 }
 
 // ==========================================
-// 5. PITCH RENDERING & SUB WORKFLOW
+// 5. AUTHENTIC FPL PITCH & SUB WORKFLOW
 // ==========================================
 function renderPitch() {
   const container = document.getElementById('pitch-container');
@@ -156,40 +141,46 @@ function renderPitch() {
   for (let i = 0; i < missingStarters; i++) {
     plusCardsHtml += `
       <div onclick="handlePlusClick()" 
-        class="bg-[#242f3d]/50 border-2 border-dashed border-gray-500 hover:border-blue-400 rounded p-1 text-center min-w-[58px] max-w-[65px] min-h-[64px] shadow-sm cursor-pointer transition flex flex-col items-center justify-center animate-pulse">
-        <div class="text-base font-black text-blue-400 leading-none">+</div>
-        <div class="text-[8px] text-gray-400 uppercase mt-1">Empty</div>
+        class="bg-[#1e293b]/80 border-2 border-dashed border-emerald-400/60 hover:border-emerald-300 rounded-lg p-1 text-center min-w-[62px] max-w-[70px] min-h-[72px] shadow cursor-pointer transition flex flex-col items-center justify-center animate-pulse">
+        <div class="text-lg font-black text-emerald-400 leading-none">+</div>
+        <div class="text-[8px] text-emerald-200 uppercase mt-1 font-bold">Add</div>
       </div>
     `;
   }
 
   container.innerHTML = `
-    <div class="flex flex-col justify-between w-full h-full p-1 space-y-1 text-xs">
+    <div class="flex flex-col justify-between w-full h-full p-1 space-y-1.5 text-xs">
       ${pendingSubPlayerId ? `
-        <div class="bg-blue-600/90 text-white text-[11px] font-bold py-1 px-2 rounded text-center flex justify-between items-center shadow">
+        <div class="bg-emerald-600 text-white text-[11px] font-bold py-1 px-2 rounded text-center flex justify-between items-center shadow">
           <span>🔄 Swap with ${mySquad.find(p => p.id === pendingSubPlayerId)?.name}</span>
           <button onclick="cancelSub()" class="text-xs bg-black/30 px-2 py-0.5 rounded">Cancel</button>
         </div>
       ` : missingStarters > 0 ? `
-        <div class="bg-amber-600/90 text-white text-[11px] font-bold py-1 px-2 rounded text-center shadow">
-          ⚠️ You have empty starting spots! Tap a bench player to promote them, or tap (+) to buy.
+        <div class="bg-amber-600 text-white text-[11px] font-bold py-1 px-2 rounded text-center shadow">
+          ⚠️ Empty starting spots! Tap a bench player or (+) to fill.
         </div>
       ` : ''}
 
-      <!-- Pitch Area -->
-      <div class="bg-gradient-to-b from-emerald-800 to-emerald-950 border border-emerald-600/50 rounded-lg p-1.5 flex flex-col justify-around min-h-[260px] shadow-inner relative">
-        <div class="flex justify-center gap-1">${gkps.map(createPlayerCard).join('')}</div>
-        <div class="flex justify-center gap-1 flex-wrap">${defs.map(createPlayerCard).join('')}</div>
-        <div class="flex justify-center gap-1 flex-wrap">${mids.map(createPlayerCard).join('')}</div>
-        <div class="flex justify-center gap-1 flex-wrap">${fwds.map(createPlayerCard).join('')}${plusCardsHtml}</div>
+      <!-- Authentic FPL Grass Pitch Area -->
+      <div class="relative bg-gradient-to-b from-[#1b5e20] via-[#2e7d32] to-[#1b5e20] border-2 border-emerald-400/70 rounded-xl p-2 flex flex-col justify-around min-h-[280px] shadow-2xl overflow-hidden">
+        <!-- Pitch Markings (Center circle & lines overlay) -->
+        <div class="absolute inset-0 pointer-events-none flex items-center justify-center opacity-25">
+          <div class="w-24 h-24 border-2 border-white rounded-full"></div>
+          <div class="absolute w-full h-[1px] bg-white"></div>
+        </div>
+
+        <div class="flex justify-center gap-1.5 z-10">${gkps.map(createPlayerCard).join('')}</div>
+        <div class="flex justify-center gap-1.5 flex-wrap z-10">${defs.map(createPlayerCard).join('')}</div>
+        <div class="flex justify-center gap-1.5 flex-wrap z-10">${mids.map(createPlayerCard).join('')}</div>
+        <div class="flex justify-center gap-1.5 flex-wrap z-10">${fwds.map(createPlayerCard).join('')}${plusCardsHtml}</div>
       </div>
 
       <!-- Bench Area -->
-      <div class="bg-[#17212b]/95 border ${stagedChip === 'bb' || activeChip === 'bb' ? 'border-green-400 bg-green-950/30' : 'border-gray-700'} rounded-lg p-1 text-center w-full">
-        <div class="text-[9px] font-bold ${stagedChip === 'bb' || activeChip === 'bb' ? 'text-green-400' : 'text-gray-300'} uppercase mb-1">
-          Bench ${stagedChip === 'bb' ? '(Bench Boost Staged 🚀)' : (activeChip === 'bb' ? '(Bench Boost Active! 🚀)' : '')}
+      <div class="bg-[#111827] border ${stagedChip === 'bb' || activeChip === 'bb' ? 'border-emerald-400 bg-emerald-950/40' : 'border-gray-700'} rounded-xl p-1.5 text-center w-full shadow-lg">
+        <div class="text-[9px] font-bold ${stagedChip === 'bb' || activeChip === 'bb' ? 'text-emerald-400' : 'text-gray-400'} uppercase mb-1 tracking-wider">
+          BENCH ${stagedChip === 'bb' ? '(Bench Boost Staged 🚀)' : (activeChip === 'bb' ? '(Bench Boost Active! 🚀)' : '')}
         </div>
-        <div class="flex justify-center gap-1 flex-wrap">${bench.map(createPlayerCard).join('')}</div>
+        <div class="flex justify-center gap-1.5 flex-wrap">${bench.map(createPlayerCard).join('')}</div>
       </div>
     </div>
     ${renderPlayerModal()}
@@ -205,14 +196,20 @@ function createPlayerCard(p) {
 
   const isPendingSub = pendingSubPlayerId === p.id;
 
+  // FPL-style position header color coding
+  let headerColor = 'bg-slate-700 text-slate-200';
+  if (p.pos === 'GKP') headerColor = 'bg-amber-600 text-white';
+  else if (p.pos === 'DEF') headerColor = 'bg-blue-600 text-white';
+  else if (p.pos === 'MID') headerColor = 'bg-purple-600 text-white';
+  else if (p.pos === 'FWD') headerColor = 'bg-rose-600 text-white';
+
   return `
     <div onclick="handlePlayerClick(${p.id})" 
-      class="bg-[#242f3d] border ${isPendingSub ? 'border-amber-400 animate-pulse bg-amber-950/40' : 'border-gray-600'} hover:border-blue-400 rounded p-1 text-center min-w-[58px] max-w-[65px] shadow-sm cursor-pointer transition flex flex-col justify-between">
-      <div class="text-[8px] text-blue-300 font-bold uppercase truncate">${badgeText}</div>
-      <div class="text-[10px] font-bold text-white my-0.5 truncate">${p.name}</div>
-      <div class="bg-[#17212b] border border-gray-700 rounded px-0.5 py-0.5 mt-0.5">
-        <div class="text-[8px] text-gray-400 uppercase leading-none">Price</div>
-        <div class="text-[10px] font-black text-amber-400 leading-tight">${p.price}M</div>
+      class="bg-white text-gray-900 border ${isPendingSub ? 'border-amber-400 ring-2 ring-amber-400 bg-amber-50' : 'border-gray-300'} rounded-lg shadow-md cursor-pointer transition flex flex-col justify-between overflow-hidden min-w-[62px] max-w-[70px] select-none hover:scale-105">
+      <div class="${headerColor} text-[8px] font-extrabold uppercase px-1 py-0.5 text-center truncate">${badgeText}</div>
+      <div class="p-1 text-center bg-slate-900 text-white">
+        <div class="text-[10px] font-bold truncate leading-tight">${p.name}</div>
+        <div class="text-[9px] font-extrabold text-amber-400 mt-0.5">${p.price}M</div>
       </div>
     </div>
   `;
@@ -224,7 +221,6 @@ function handlePlayerClick(id) {
 
   const startersCount = mySquad.filter(item => item.isStarter).length;
 
-  // If clicked player is on the bench AND there is an open starting spot (< 11 starters), promote them immediately!
   if (!p.isStarter && startersCount < 11) {
     p.isStarter = true;
     saveUserData();
@@ -232,7 +228,6 @@ function handlePlayerClick(id) {
     return;
   }
 
-  // Otherwise, standard behavior (open options modal or handle sub)
   if (pendingSubPlayerId === null) {
     activePlayerModalId = id;
     renderPitch();
@@ -263,6 +258,17 @@ function cancelSub() {
   renderPitch();
 }
 
+// Validates official FPL formations: 1 GKP, min 3 DEF, min 2 MID, min 1 FWD (total 11)
+function isValidFormation(starters) {
+  if (starters.length !== 11) return false;
+  const gkps = starters.filter(p => p.pos === 'GKP').length;
+  const defs = starters.filter(p => p.pos === 'DEF').length;
+  const mids = starters.filter(p => p.pos === 'MID').length;
+  const fwds = starters.filter(p => p.pos === 'FWD').length;
+
+  return gkps === 1 && defs >= 3 && mids >= 2 && fwds >= 1;
+}
+
 function executeSubstitution(id1, id2) {
   if (id1 === id2) {
     pendingSubPlayerId = null;
@@ -272,12 +278,22 @@ function executeSubstitution(id1, id2) {
 
   const p1 = mySquad.find(item => item.id === id1);
   const p2 = mySquad.find(item => item.id === id2);
-
   if (!p1 || !p2) return;
 
-  const tempStatus = p1.isStarter;
-  p1.isStarter = p2.isStarter;
-  p2.isStarter = tempStatus;
+  // Temporarily swap statuses to test formation validity
+  const originalStatus1 = p1.isStarter;
+  const originalStatus2 = p2.isStarter;
+
+  p1.isStarter = originalStatus2;
+  p2.isStarter = originalStatus1;
+
+  const newStarters = mySquad.filter(item => item.isStarter);
+  if (!isValidFormation(newStarters)) {
+    // Revert swap
+    p1.isStarter = originalStatus1;
+    p2.isStarter = originalStatus2;
+    alert("Invalid Formation! FPL rules require: 1 Goalkeeper, at least 3 Defenders, 2 Midfielders, and 1 Forward.");
+  }
 
   pendingSubPlayerId = null;
   saveUserData();
@@ -300,23 +316,23 @@ function renderPlayerModal() {
   if (!p) return '';
 
   return `
-    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div class="bg-[#17212b] border border-gray-600 rounded-xl p-3 w-full max-w-xs shadow-2xl text-center">
-        <div class="text-xs text-blue-400 font-bold uppercase">${p.pos} • ${p.club}</div>
-        <div class="text-base font-extrabold text-white my-1">${p.name}</div>
-        <div class="text-[11px] text-gray-400 mb-3">Price: ${p.price}M | Form: ${p.form}</div>
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-[#111827] border border-gray-700 rounded-2xl p-4 w-full max-w-xs shadow-2xl text-center text-white">
+        <div class="text-xs text-emerald-400 font-bold uppercase">${p.pos} • ${p.club}</div>
+        <div class="text-base font-extrabold my-1">${p.name}</div>
+        <div class="text-[11px] text-gray-400 mb-4">Price: ${p.price}M | Form: ${p.form}</div>
         
-        <div class="space-y-1.5">
-          <button onclick="startSubMode(${p.id})" class="w-full py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-bold text-white shadow">
-            🔄 Sub (Select player to swap)
+        <div class="space-y-2">
+          <button onclick="startSubMode(${p.id})" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-bold shadow">
+            🔄 Substitute / Swap
           </button>
-          <button onclick="setCaptain(${p.id})" class="w-full py-2 bg-yellow-600/30 border border-yellow-500/50 rounded-lg text-xs font-bold text-yellow-400 shadow">
+          <button onclick="setCaptain(${p.id})" class="w-full py-2.5 bg-amber-600/30 border border-amber-500/50 rounded-xl text-xs font-bold text-amber-400 shadow">
             👑 Make Captain (C)
           </button>
-          <button onclick="setViceCaptain(${p.id})" class="w-full py-2 bg-gray-700 rounded-lg text-xs font-bold text-gray-300 shadow">
+          <button onclick="setViceCaptain(${p.id})" class="w-full py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-xs font-bold text-gray-300 shadow">
             ⭐ Make Vice-Captain (VC)
           </button>
-          <button onclick="closePlayerModal()" class="w-full py-2 bg-gray-800 rounded-lg text-xs font-bold text-gray-400 mt-1">
+          <button onclick="closePlayerModal()" class="w-full py-2 bg-transparent rounded-xl text-xs font-bold text-gray-400 mt-2">
             Cancel
           </button>
         </div>
@@ -352,7 +368,7 @@ function stageChip(chipName) {
     alert(`Unselected ${chipName.toUpperCase()} chip.`);
   } else {
     stagedChip = chipName;
-    alert(`Chip Staged: ${chipName.toUpperCase()}. Click 'Simulate Gameweek' to confirm and lock it in! 🚀`);
+    alert(`Chip Staged: ${chipName.toUpperCase()}. Click 'Simulate Gameweek' to lock it in! 🚀`);
   }
 
   saveUserData();
@@ -368,7 +384,7 @@ function updateChipUI() {
       } else if (chipsUsed[chip]) {
         btn.className = "flex-1 py-1 px-1 bg-gray-900/40 border border-gray-800 text-gray-600 rounded text-[10px] font-bold cursor-not-allowed";
       } else {
-        btn.className = "flex-1 py-1 px-1 bg-[#242f3d] border border-gray-700 text-gray-300 rounded text-[10px] font-bold hover:border-gray-500";
+        btn.className = "flex-1 py-1 px-1 bg-[#1f2937] border border-gray-700 text-gray-300 rounded text-[10px] font-bold hover:border-gray-500";
       }
     }
   });
@@ -384,13 +400,13 @@ function renderMarket() {
   list.innerHTML = playerMarket.map(p => {
     const inSquad = mySquad.some(s => s.id === p.id);
     return `
-      <div class="bg-[#242f3d] p-2 rounded border border-gray-700 flex justify-between items-center mb-1.5 text-xs">
+      <div class="bg-[#1f2937] p-2.5 rounded-xl border border-gray-700 flex justify-between items-center mb-2 text-xs">
         <div>
           <div class="font-bold text-white">${p.name} <span class="text-[10px] text-gray-400">(${p.club})</span></div>
-          <div class="text-[10px] text-blue-400 font-semibold">${p.pos} • ${p.price}M ETB</div>
+          <div class="text-[10px] text-emerald-400 font-semibold">${p.pos} • ${p.price}M ETB</div>
         </div>
         <button onclick="${inSquad ? `sellPlayer(${p.id})` : `buyPlayer(${p.id})`}" 
-          class="px-2.5 py-1 rounded text-[10px] font-bold ${inSquad ? 'bg-red-500/20 text-red-400 border border-red-500/50' : 'bg-green-500/20 text-green-400 border border-green-500/50'}">
+          class="px-3 py-1.5 rounded-lg text-[10px] font-bold ${inSquad ? 'bg-red-500/20 text-red-400 border border-red-500/50' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'}">
           ${inSquad ? 'Sell' : 'Buy'}
         </button>
       </div>
@@ -449,14 +465,14 @@ function renderLeague() {
   ];
 
   list.innerHTML = `
-    <div class="mb-2 text-[11px] text-blue-400 font-bold">Active Leagues: ${myLeagues.join(', ')}</div>
+    <div class="mb-2 text-[11px] text-emerald-400 font-bold">Active Leagues: ${myLeagues.join(', ')}</div>
     ${leaderboard.map(user => `
-      <div class="flex justify-between items-center py-1.5 border-b border-gray-700/50 text-xs">
+      <div class="flex justify-between items-center py-2 border-b border-gray-700/50 text-xs">
         <div class="flex items-center gap-2">
           <span class="text-gray-400 font-bold w-4">#${user.rank}</span>
           <span class="font-semibold text-white">${user.name}</span>
         </div>
-        <span class="font-bold text-green-400">${user.pts} pts</span>
+        <span class="font-bold text-emerald-400">${user.pts} pts</span>
       </div>
     `).join('')}
   `;
@@ -499,10 +515,10 @@ function renderPointsTab() {
   });
 
   list.innerHTML = `
-    <div class="bg-[#242f3d] p-3 rounded-lg border border-gray-700 mb-3 flex justify-between items-center">
+    <div class="bg-[#1f2937] p-3.5 rounded-xl border border-gray-700 mb-3 flex justify-between items-center shadow">
       <div>
-        <div class="text-[10px] text-gray-400 uppercase font-bold">Gameweek ${Math.max(1, gameweek - 1)} Score</div>
-        <div class="text-lg font-black text-green-400">${gwTotal} Points</div>
+        <div class="text-[10px] text-gray-400 uppercase font-bold">Gameweek Score</div>
+        <div class="text-lg font-black text-emerald-400">${gwTotal} Points</div>
       </div>
       <div class="text-right">
         <div class="text-[10px] text-gray-400 uppercase font-bold">Overall Total</div>
@@ -515,12 +531,12 @@ function renderPointsTab() {
         let mult = p.isCaptain ? (activeChip === 'tc' ? 3 : 2) : 1;
         let ptsEarned = (p.gwPoints || 0) * mult;
         return `
-          <div class="bg-[#242f3d] px-3 py-1.5 rounded flex justify-between items-center text-xs border border-gray-800">
+          <div class="bg-[#1f2937] px-3 py-2 rounded-lg flex justify-between items-center text-xs border border-gray-800">
             <div>
               <span class="font-bold text-white">${p.name}</span>
-              <span class="text-[10px] text-blue-300 ml-1">(${p.pos}${p.isCaptain ? ' - C' : ''})</span>
+              <span class="text-[10px] text-emerald-300 ml-1">(${p.pos}${p.isCaptain ? ' - C' : ''})</span>
             </div>
-            <span class="font-black text-green-400">${ptsEarned} pts</span>
+            <span class="font-black text-emerald-400">${ptsEarned} pts</span>
           </div>
         `;
       }).join('')}
@@ -528,7 +544,7 @@ function renderPointsTab() {
     <div class="text-xs font-bold text-gray-300 mb-1">Substitutes / Bench</div>
     <div class="space-y-1">
       ${bench.map(p => `
-        <div class="bg-[#242f3d]/60 px-3 py-1.5 rounded flex justify-between items-center text-xs border border-gray-800/60">
+        <div class="bg-[#1f2937]/50 px-3 py-2 rounded-lg flex justify-between items-center text-xs border border-gray-800/60">
           <div>
             <span class="font-bold text-gray-300">${p.name}</span>
             <span class="text-[10px] text-gray-500 ml-1">(${p.pos})</span>
@@ -541,7 +557,53 @@ function renderPointsTab() {
 }
 
 // ==========================================
-// 10. SIMULATION & CHIP CONFIRMATION ENGINE
+// 10. OFFICIAL FPL AUTOMATED SUBSTITUTION ENGINE
+// ==========================================
+function applyAutomaticSubstitutions() {
+  if (activeChip === 'bb') return; // Bench Boost disables automatic bench subs because everyone scores
+
+  let starters = mySquad.filter(p => p.isStarter);
+  let bench = mySquad.filter(p => !p.isStarter);
+
+  // Check if starting GKP played (scored 0 mins / 0 points due to DNP)
+  let starterGkp = starters.find(p => p.pos === 'GKP');
+  let benchGkp = bench.find(p => p.pos === 'GKP');
+
+  if (starterGkp && starterGkp.gwPoints === 0 && benchGkp && benchGkp.gwPoints > 0) {
+    starterGkp.isStarter = false;
+    benchGkp.isStarter = true;
+    starters = mySquad.filter(p => p.isStarter);
+    bench = mySquad.filter(p => !p.isStarter);
+  }
+
+  // Check outfield substitutes in bench priority order
+  for (let i = 0; i < bench.length; i++) {
+    let subCandidate = bench[i];
+    if (subCandidate.pos === 'GKP') continue; // GKP bench sub already handled above
+    if (subCandidate.gwPoints === 0) continue; // Didn't play, skip
+
+    // Find eligible outfield starters who scored 0 points
+    let eligibleStarter = starters.find(s => s.gwPoints === 0 && s.pos !== 'GKP');
+    if (eligibleStarter) {
+      // Test if swapping maintains a legal FPL formation (min 3 DEF, min 2 MID, min 1 FWD)
+      eligibleStarter.isStarter = false;
+      subCandidate.isStarter = true;
+
+      const testStarters = mySquad.filter(p => p.isStarter);
+      if (isValidFormation(testStarters)) {
+        // Successful automatic sub
+        break;
+      } else {
+        // Revert if formation becomes illegal
+        eligibleStarter.isStarter = true;
+        subCandidate.isStarter = false;
+      }
+    }
+  }
+}
+
+// ==========================================
+// 11. SIMULATION & CHIP CONFIRMATION ENGINE
 // ==========================================
 function simulateGameweek() {
   if (stagedChip) {
@@ -550,18 +612,25 @@ function simulateGameweek() {
     stagedChip = null;
   }
 
+  // Generate random points for all squad members
+  mySquad.forEach(p => {
+    // 30% chance a player didn't play (0 points), otherwise 2 to 8 points
+    let played = Math.random() > 0.3;
+    p.gwPoints = played ? (2 + Math.floor(Math.random() * 7)) : 0;
+  });
+
+  // Run official FPL automatic substitution logic prior to tallying scores
+  applyAutomaticSubstitutions();
+
   let gwPts = 0;
   mySquad.forEach(p => {
-    let pts = 2 + Math.floor(Math.random() * 5);
-    p.gwPoints = pts;
-    
     let multiplier = 1;
     if (p.isCaptain) {
       multiplier = (activeChip === 'tc' ? 3 : 2);
     }
 
     if (p.isStarter || activeChip === 'bb') {
-      gwPts += pts * multiplier;
+      gwPts += (p.gwPoints || 0) * multiplier;
     }
   });
 
@@ -571,7 +640,7 @@ function simulateGameweek() {
   saveUserData();
   renderPitch();
   renderPointsTab();
-  alert(`Gameweek Simulated! Earned ${gwPts} points.`);
+  alert(`Gameweek Simulated! Automatic subs processed. Total GW Points: ${gwPts}.`);
 }
 
 function updateHeader() {
@@ -587,13 +656,12 @@ function updateHeader() {
 }
 
 // ==========================================
-// 11. BOOTSTRAPPER & EVENT LISTENERS
+// 12. BOOTSTRAPPER & EVENT LISTENERS
 // ==========================================
 function initApp() {
   loadUserData();
   renderPitch();
 
-  // Wire up 4 navigation tabs
   const tabs = ['pitch', 'transfers', 'league', 'points'];
   tabs.forEach(tab => {
     const btn = document.getElementById(`btn-${tab}`);
@@ -602,7 +670,6 @@ function initApp() {
     }
   });
 
-  // Wire up chips
   ['wc', 'tc', 'bb', 'fh'].forEach(chip => {
     const chipBtn = document.getElementById(`btn-chip-${chip}`);
     if (chipBtn) {
@@ -616,4 +683,3 @@ document.addEventListener('DOMContentLoaded', initApp);
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
   initApp();
 }
-
