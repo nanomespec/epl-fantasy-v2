@@ -14,10 +14,10 @@
     <div class="flex justify-between items-center mb-2">
       <div>
         <h1 class="text-sm font-bold text-gray-100 tracking-wide">Gulit FC</h1>
-        <p class="text-[11px] text-blue-400 font-medium">Gameweek 1 • Deadline: Oct 9, 15:00</p>
+        <p class="text-[11px] text-blue-400 font-medium">Gameweek <span id="gw-number">1</span> • Live Engine</p>
       </div>
       <div class="text-right">
-        <span class="text-[10px] uppercase text-gray-400 tracking-wider">Total Points</span>
+        <span class="text-[10px] uppercase text-gray-400 tracking-wider">Gameweek Points</span>
         <p class="text-lg font-extrabold text-green-400 leading-none mt-0.5" id="total-points">0</p>
       </div>
     </div>
@@ -32,12 +32,18 @@
   <main class="flex-1 overflow-y-auto p-3 flex flex-col justify-between">
     <!-- PITCH TAB -->
     <div id="tab-pitch" class="h-full flex flex-col justify-between space-y-3">
-      <!-- CHIPS SECTION -->
-      <div class="bg-[#242f3d]/80 border border-gray-700 p-2 rounded-xl flex justify-between gap-1 text-[10px]">
-        <button id="chip-wc" onclick="playChip('wc')" class="flex-1 py-1.5 bg-gray-700/50 rounded font-bold hover:bg-blue-600 transition">Wildcard</button>
-        <button id="chip-tc" onclick="playChip('tc')" class="flex-1 py-1.5 bg-gray-700/50 rounded font-bold hover:bg-yellow-600 transition">3x Captain</button>
-        <button id="chip-bb" onclick="playChip('bb')" class="flex-1 py-1.5 bg-gray-700/50 rounded font-bold hover:bg-green-600 transition">Bench Boost</button>
-        <button id="chip-fh" onclick="playChip('fh')" class="flex-1 py-1.5 bg-gray-700/50 rounded font-bold hover:bg-purple-600 transition">Free Hit</button>
+      <!-- CHIPS & SIMULATION BAR -->
+      <div class="space-y-2">
+        <div class="bg-[#242f3d]/80 border border-gray-700 p-2 rounded-xl flex justify-between gap-1 text-[10px]">
+          <button id="chip-wc" onclick="playChip('wc')" class="flex-1 py-1.5 bg-gray-700/50 rounded font-bold hover:bg-blue-600 transition">Wildcard</button>
+          <button id="chip-tc" onclick="playChip('tc')" class="flex-1 py-1.5 bg-gray-700/50 rounded font-bold hover:bg-yellow-600 transition">3x Captain</button>
+          <button id="chip-bb" onclick="playChip('bb')" class="flex-1 py-1.5 bg-gray-700/50 rounded font-bold hover:bg-green-600 transition">Bench Boost</button>
+          <button id="chip-fh" onclick="playChip('fh')" class="flex-1 py-1.5 bg-gray-700/50 rounded font-bold hover:bg-purple-600 transition">Free Hit</button>
+        </div>
+        
+        <button onclick="simulateGameweek()" class="w-full py-2 bg-gradient-to-r from-green-600 to-emerald-500 font-black rounded-lg text-xs uppercase tracking-wider shadow-md hover:brightness-110 active:scale-[0.98] transition">
+          ⚡ Simulate Gameweek Matches
+        </button>
       </div>
 
       <!-- PITCH CONTAINER -->
