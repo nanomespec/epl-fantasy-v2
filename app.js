@@ -1,7 +1,7 @@
 // ==========================================
 // 1. STATE & INITIALIZATION
 // ==========================================
-const STORAGE_KEY = 'epl_fantasy_clean_v1';
+const STORAGE_KEY = 'epl_fantasy_clean_v2';
 
 const playerMarket = [
   { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, form: 5.2 },
@@ -22,10 +22,11 @@ const playerMarket = [
 ];
 
 let mySquad = [];
+let preFreeHitSquad = null; // Stash squad for Free Hit reversion
 let bankBalance = 100.0;
 let totalPoints = 0;
 let gameweek = 1;
-let activeChip = null;
+let activeChip = null; // 'wc' | 'tc' | 'bb' | 'fh'
 let chipsUsed = { wc: false, tc: false, bb: false, fh: false };
 let activeModalId = null;
 let pendingSubId = null;
@@ -37,17 +38,21 @@ function loadData() {
   if (saved) {
     const data = JSON.parse(saved);
     mySquad = data.mySquad;
+    preFreeHitSquad = data.preFreeHitSquad || null;
     bankBalance = data.bankBalance;
     totalPoints = data.totalPoints;
     gameweek = data.gameweek;
     chipsUsed = data.chipsUsed || chipsUsed;
+    activeChip = data.activeChip || null;
   } else {
     resetSquad();
   }
 }
 
 function saveData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ mySquad, bankBalance, totalPoints, gameweek, chipsUsed }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ 
+    mySquad, preFreeHitSquad, bankBalance, totalPoints, gameweek, chipsUsed, activeChip 
+  }));
 }
 
 function resetSquad() {
@@ -61,6 +66,9 @@ function resetSquad() {
   bankBalance = parseFloat((100.0 - mySquad.reduce((sum, p) => sum + p.price, 0)).toFixed(1));
   totalPoints = 0;
   gameweek = 1;
+  chipsUsed = { wc: false, tc: false, bb: false, fh: false };
+  activeChip = null;
+  preFreeHitSquad = null;
   saveData();
   renderPitch();
 }
@@ -79,7 +87,37 @@ function switchTab(tab) {
 }
 
 // ==========================================
-// 3. PITCH & FORMATION RULES (FPL)
+// 3. CHIP ACTIVATION LOGIC
+// ==========================================
+function activateChip(chipName) {
+  if (chipsUsed[chipName]) {
+    return alert(`You have already used the ${chipName.toUpperCase()} chip this season!`);
+  }
+  if (activeChip) {
+    return alert(`You already have the ${activeChip.toUpperCase()} chip active for this gameweek!`);
+  }
+
+  activeChip = chipName;
+
+  if (chipName === 'fh') {
+    // Snapshot current squad so we can restore it after GW simulation
+    preFreeHitSquad = JSON.parse(JSON.stringify(mySquad));
+    alert("Free Hit activated! Unlimited free transfers for this gameweek only. Team reverts next week.");
+  } else if (chipName === 'wc') {
+    chipsUsed.wc = true;
+    alert("Wildcard activated! Unlimited permanent transfers unlocked.");
+  } else if (chipName === 'tc') {
+    alert("Triple Captain activated! Your captain will score 3x points this gameweek.");
+  } else if (chipName === 'bb') {
+    alert("Bench Boost activated! All 4 bench players will score points this gameweek.");
+  }
+
+  saveData();
+  renderPitch();
+}
+
+// ==========================================
+// 4. PITCH & FORMATION RULES (FPL)
 // ==========================================
 function isValidFormation(starters) {
   if (starters.length !== 11) return false;
@@ -99,9 +137,18 @@ function renderPitch() {
   const bench = mySquad.filter(p => !p.isStarter);
 
   container.innerHTML = `
-    ${pendingSubId ? `<div class="bg-amber-600 text-white text-xs p-1 text-center font-bold mb-2">🔄 Select player to swap with ${mySquad.find(p => p.id === pendingSubId)?.name}</div>` : ''}
+    <!-- Chips Status Bar -->
+    <div class="flex gap-1 mb-2">
+      <button onclick="activateChip('wc')" class="flex-1 py-1 text-[9px] font-bold rounded ${chipsUsed.wc ? 'bg-gray-800 text-gray-500' : (activeChip === 'wc' ? 'bg-amber-500 text-black' : 'bg-gray-700 text-white')}">Wildcard</button>
+      <button onclick="activateChip('tc')" class="flex-1 py-1 text-[9px] font-bold rounded ${chipsUsed.tc ? 'bg-gray-800 text-gray-500' : (activeChip === 'tc' ? 'bg-amber-500 text-black' : 'bg-gray-700 text-white')}">3x Captain</button>
+      <button onclick="activateChip('bb')" class="flex-1 py-1 text-[9px] font-bold rounded ${chipsUsed.bb ? 'bg-gray-800 text-gray-500' : (activeChip === 'bb' ? 'bg-amber-500 text-black' : 'bg-gray-700 text-white')}">Bench Boost</button>
+      <button onclick="activateChip('fh')" class="flex-1 py-1 text-[9px] font-bold rounded ${chipsUsed.fh ? 'bg-gray-800 text-gray-500' : (activeChip === 'fh' ? 'bg-amber-500 text-black' : 'bg-gray-700 text-white')}">Free Hit</button>
+    </div>
+
+    ${activeChip ? `<div class="bg-amber-600/30 border border-amber-500 text-amber-300 text-[10px] p-1 text-center font-bold mb-2 rounded">⚡ Active Chip: ${activeChip.toUpperCase()}</div>` : ''}
+    ${pendingSubId ? `<div class="bg-amber-600 text-white text-xs p-1 text-center font-bold mb-2 rounded">🔄 Select player to swap with ${mySquad.find(p => p.id === pendingSubId)?.name}</div>` : ''}
     
-    <div class="bg-gradient-to-b from-emerald-800 to-emerald-900 border-2 border-emerald-400 rounded-xl p-2 flex flex-col justify-around min-h-[280px] shadow-xl">
+    <div class="bg-gradient-to-b from-emerald-800 to-emerald-900 border-2 border-emerald-400 rounded-xl p-2 flex flex-col justify-around min-h-[260px] shadow-xl">
       <div class="flex justify-center gap-2">${starters.filter(p => p.pos === 'GKP').map(cardHtml).join('')}</div>
       <div class="flex justify-center gap-2">${starters.filter(p => p.pos === 'DEF').map(cardHtml).join('')}</div>
       <div class="flex justify-center gap-2">${starters.filter(p => p.pos === 'MID').map(cardHtml).join('')}</div>
@@ -109,7 +156,7 @@ function renderPitch() {
     </div>
 
     <div class="bg-gray-900 border border-gray-700 rounded-xl p-2 mt-2">
-      <div class="text-[10px] text-gray-400 font-bold uppercase mb-1 text-center">Bench</div>
+      <div class="text-[10px] text-gray-400 font-bold uppercase mb-1 text-center">Bench ${activeChip === 'bb' ? '(Boost Active 🚀)' : ''}</div>
       <div class="flex justify-center gap-2">${bench.map(cardHtml).join('')}</div>
     </div>
     ${renderModal()}
@@ -150,7 +197,6 @@ function executeSwap(id1, id2) {
   p2.isStarter = status1;
 
   if (!isValidFormation(mySquad.filter(p => p.isStarter))) {
-    // Revert swap if illegal formation
     p2.isStarter = p1.isStarter;
     p1.isStarter = status1;
     alert("Invalid formation! Must have 1 GKP, 3-5 DEF, 2-5 MID, 1-3 FWD.");
@@ -161,7 +207,7 @@ function executeSwap(id1, id2) {
 }
 
 // ==========================================
-// 4. PLAYER MODAL ACTIONS
+// 5. PLAYER MODAL ACTIONS
 // ==========================================
 function renderModal() {
   if (!activeModalId) return '';
@@ -190,7 +236,7 @@ function setCap(id, isC) {
 }
 
 // ==========================================
-// 5. TRANSFERS MARKET
+// 6. TRANSFERS MARKET
 // ==========================================
 function renderMarket() {
   const list = document.getElementById('market-list');
@@ -212,10 +258,17 @@ function renderMarket() {
 function buyPlayer(id) {
   const p = playerMarket.find(x => x.id === id);
   if (mySquad.length >= 15) return alert("Squad full (15/15)!");
-  if (bankBalance < p.price) return alert("Not enough budget!");
+  
+  // Wildcard and Free Hit bypass budget checks
+  if (bankBalance < p.price && activeChip !== 'wc' && activeChip !== 'fh') {
+    return alert("Not enough budget!");
+  }
 
   mySquad.push({ ...p, isStarter: mySquad.filter(s => s.isStarter).length < 11, isCaptain: false, isViceCaptain: false, gwPoints: 0 });
-  bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
+  if (bankBalance >= p.price) {
+    bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
+  }
+  
   saveData();
   renderPitch();
   renderMarket();
@@ -232,30 +285,35 @@ function sellPlayer(id) {
 }
 
 // ==========================================
-// 6. SIMULATION & AUTO SUBS
+// 7. SIMULATION & CHIP EXECUTION
 // ==========================================
 function simulateGameweek() {
   mySquad.forEach(p => {
     p.gwPoints = Math.random() > 0.3 ? 2 + Math.floor(Math.random() * 6) : 0;
   });
 
-  // Real FPL Auto Subs logic
-  let starters = mySquad.filter(p => p.isStarter);
-  let bench = mySquad.filter(p => !p.isStarter);
+  // Bench Boost disables auto-subs because all benched players score points directly
+  if (activeChip !== 'bb') {
+    let starters = mySquad.filter(p => p.isStarter);
+    let bench = mySquad.filter(p => !p.isStarter);
 
-  bench.forEach(sub => {
-    if (sub.gwPoints === 0) return;
-    const starterOut = starters.find(s => s.gwPoints === 0 && (s.pos === sub.pos || s.pos !== 'GKP'));
-    if (starterOut) {
-      starterOut.isStarter = false;
-      sub.isStarter = true;
-      starters = mySquad.filter(p => p.isStarter);
-    }
-  });
+    bench.forEach(sub => {
+      if (sub.gwPoints === 0) return;
+      let starterOut = starters.find(s => s.gwPoints === 0 && (s.pos === sub.pos || s.pos !== 'GKP'));
+      if (starterOut) {
+        starterOut.isStarter = false;
+        sub.isStarter = true;
+        starters = mySquad.filter(p => p.isStarter);
+      }
+    });
+  }
 
   let gwTotal = 0;
   mySquad.forEach(p => {
-    let mult = p.isCaptain ? (activeChip === 'tc' ? 3 : 2) : 1;
+    let mult = 1;
+    if (p.isCaptain) {
+      mult = (activeChip === 'tc' ? 3 : 2);
+    }
     if (p.isStarter || activeChip === 'bb') {
       gwTotal += p.gwPoints * mult;
     }
@@ -263,6 +321,20 @@ function simulateGameweek() {
 
   totalPoints += gwTotal;
   gameweek++;
+
+  // Handle post-chip logic
+  if (activeChip === 'fh' && preFreeHitSquad) {
+    mySquad = preFreeHitSquad; // Revert team back to pre-Free Hit state
+    preFreeHitSquad = null;
+    chipsUsed.fh = true;
+  } else if (activeChip === 'wc') {
+    chipsUsed.wc = true;
+  } else if (activeChip === 'tc') {
+    chipsUsed.tc = true;
+  } else if (activeChip === 'bb') {
+    chipsUsed.bb = true;
+  }
+
   activeChip = null;
   saveData();
   renderPitch();
