@@ -46,7 +46,6 @@ let myLeagues = ["Overall League"];
 let activePlayerModalId = null;
 let pendingSubPlayerId = null;
 
-// Official FPL 1-4-4-2 default starting setup
 const defaultStarterIds = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
 
 function setDefaultSquad() {
@@ -99,7 +98,7 @@ function saveUserData() {
 }
 
 // ==========================================
-// 4. NAVIGATION & TABS
+// 4. NAVIGATION & TABS (Updated to "Pick Team")
 // ==========================================
 function switchTab(tab) {
   ['pitch', 'transfers', 'league', 'points'].forEach(t => {
@@ -122,13 +121,6 @@ function switchTab(tab) {
 // ==========================================
 // 5. OFFICIAL FPL FORMATION & PITCH VIEW
 // ==========================================
-
-// Official FPL formation validation rules:
-// - Exactly 1 GKP
-// - 3 to 5 Defenders
-// - 2 to 5 Midfielders
-// - 1 to 3 Forwards
-// - Total starters = 11
 function isValidFormation(starters) {
   if (starters.length !== 11) return false;
   const gkps = starters.filter(p => p.pos === 'GKP').length;
@@ -159,7 +151,7 @@ function renderPitch() {
   for (let i = 0; i < missingStarters; i++) {
     plusCardsHtml += `
       <div onclick="handlePlusClick()" 
-        class="bg-[#1e293b]/80 border-2 border-dashed border-emerald-400/60 hover:border-emerald-300 rounded-lg p-1 text-center min-w-[62px] max-w-[70px] min-h-[72px] shadow cursor-pointer transition flex flex-col items-center justify-center animate-pulse">
+        class="bg-[#1e293b]/80 border-2 border-dashed border-emerald-400/65 hover:border-emerald-300 rounded-lg p-1 text-center min-w-[62px] max-w-[70px] min-h-[72px] shadow cursor-pointer transition flex flex-col items-center justify-center animate-pulse">
         <div class="text-lg font-black text-emerald-400 leading-none">+</div>
         <div class="text-[8px] text-emerald-200 uppercase mt-1 font-bold">Add</div>
       </div>
@@ -680,5 +672,5 @@ function initApp() {
 document.addEventListener('DOMContentLoaded', initApp);
 
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  initApp();
+    initApp();
 }
