@@ -42,6 +42,7 @@ let gameweek = 1;
 let freeTransfers = 1;
 let transfersMadeInGW = 0;
 let myLeagues = ["Overall League"];
+let selectedPlayerForSub = null;
 
 const defaultStarterIds = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
 
@@ -112,13 +113,13 @@ function resetSquadData() {
 function switchTab(tab) {
   ['pitch', 'transfers', 'league'].forEach(t => {
     const el = document.getElementById(`tab-${t}`);
-    const btn = document.getElementById(`btn-${t}`);
+    const btn = document.getElementById(`btn-${t}`) || document.getElementById(`btn-${t === 'league' ? 'leagues' : t}`);
     if (el) el.classList.add('hidden');
     if (btn) btn.className = "flex-1 py-1 text-gray-400 font-bold";
   });
   
   const targetTab = document.getElementById(`tab-${tab}`);
-  const targetBtn = document.getElementById(`btn-${tab}`);
+  const targetBtn = document.getElementById(`btn-${tab}`) || document.getElementById(`btn-${tab === 'league' ? 'leagues' : tab}`);
   if (targetTab) targetTab.classList.remove('hidden');
   if (targetBtn) targetBtn.className = "flex-1 py-1 text-blue-400 font-bold";
 
@@ -127,7 +128,7 @@ function switchTab(tab) {
 }
 
 // ==========================================
-// 5. PITCH RENDERING
+// 5. PITCH RENDERING & SUBSTITUTIONS
 // ==========================================
 function renderPitch() {
   const container = document.getElementById('pitch-container') || 
@@ -156,18 +157,23 @@ function renderPitch() {
       <div class="flex justify-center gap-2 flex-wrap">${mids.map(createPlayerCard).join('')}</div>
       <div class="flex justify-center gap-2 flex-wrap">${fwds.map(createPlayerCard).join('')}</div>
     </div>
-    <div class="mt-2 p-2 bg-[#17212b]/90 border border-gray-700 rounded-xl text-center w-full">
-      <p class="text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-1">Bench</p>
+    <div class="mt-2 p-2 bg-[#17212b]/90 border ${activeChip === 'bb' ? 'border-green-400 bg-green-950/40' : 'border-gray-700'} rounded-xl text-center w-full">
+      <p class="text-[10px] font-bold ${activeChip === 'bb' ? 'text-green-400' : 'text-gray-300'} uppercase tracking-wider mb-1">
+        Bench ${activeChip === 'bb' ? '(Bench Boost Active! 🚀)' : ''}
+      </p>
       <div class="flex justify-center gap-2 flex-wrap">${bench.map(createPlayerCard).join('')}</div>
     </div>
   `;
   updateHeader();
+  updateChipUI();
 }
 
 function createPlayerCard(p) {
   let captainBadge = p.isCaptain ? ' <span class="text-yellow-400 font-black">(C)</span>' : (p.isViceCaptain ? ' <span class="text-gray-300 font-black">(VC)</span>' : '');
+  const isSelectedForSub = selectedPlayerForSub && selectedPlayerForSub.id === p.id;
+  
   return `
-    <div class="bg-[#242f3d] border border-gray-600 rounded-lg p-1.5 text-center min-w-[68px] shadow-md">
+    <div onclick="handlePlayerClick(${p.id})" class="bg-[#242f3d] border ${isSelectedForSub ? 'border-yellow-400 ring-2 ring-yellow-400/50' : 'border-gray-600'} rounded-lg p-1.5 text-center min-w-[68px] shadow-md cursor-pointer hover:border-blue-400 transition">
       <div class="text-[9px] text-blue-300 font-bold uppercase">${p.pos}${captainBadge}</div>
       <div class="text-[11px] font-bold text-white my-0.5 truncate max-w-[64px]">${p.name}</div>
       <div class="text-[10px] font-black text-green-400">${p.gwPoints || 0} pts</div>
@@ -175,8 +181,61 @@ function createPlayerCard(p) {
   `;
 }
 
+function handlePlayerClick(id) {
+  const clickedPlayer = mySquad.find(p => p.id === id);
+  if (!clickedPlayer) return;
+
+  if (!selectedPlayerForSub) {
+    selectedPlayerForSub = clickedPlayer;
+    renderPitch();
+  } else {
+    // Perform substitution swap between starter and bench status
+    const tempStatus = selectedPlayerForSub.isStarter;
+    selectedPlayerForSub.isStarter = clickedPlayer.isStarter;
+    clickedPlayer.isStarter = tempStatus;
+
+    selectedPlayerForSub = null;
+    saveUserData();
+    renderPitch();
+  }
+}
+
 // ==========================================
-// 6. MARKET & TRANSFERS
+// 6. CHIPS ENGINE
+// ==========================================
+function activateChip(chipName) {
+  if (chipsUsed[chipName]) {
+    return alert(`You have already used the ${chipName.toUpperCase()} chip this season!`);
+  }
+  
+  if (activeChip === chipName) {
+    activeChip = null;
+    alert(`Deactivated ${chipName.toUpperCase()} chip.`);
+  } else {
+    activeChip = chipName;
+    chipsUsed[chipName] = true;
+    alert(`Chip Activated: ${chipName.toUpperCase()}! 🚀`);
+  }
+  
+  saveUserData();
+  renderPitch();
+}
+
+function updateChipUI() {
+  ['wc', 'tc', 'bb', 'fh'].forEach(chip => {
+    const btn = document.getElementById(`btn-chip-${chip}`) || document.getElementById(`chip-${chip}`);
+    if (btn) {
+      if (activeChip === chip) {
+        btn.classList.add('border-green-400', 'bg-green-950/60');
+      } else {
+        btn.classList.remove('border-green-400', 'bg-green-950/60');
+      }
+    }
+  });
+}
+
+// ==========================================
+// 7. MARKET & TRANSFERS
 // ==========================================
 function renderMarket() {
   const list = document.getElementById('market-list');
@@ -227,7 +286,7 @@ function sellPlayer(id) {
 }
 
 // ==========================================
-// 7. LEAGUES
+// 8. LEAGUES
 // ==========================================
 function renderLeague() {
   const list = document.getElementById('league-list');
@@ -274,15 +333,19 @@ function joinLeague() {
 }
 
 // ==========================================
-// 8. SIMULATION ENGINE
+// 9. SIMULATION ENGINE
 // ==========================================
 function simulateGameweek() {
   let gwPts = 0;
   mySquad.forEach(p => {
     let pts = 2 + Math.floor(Math.random() * 5);
     p.gwPoints = pts;
-    if (p.isStarter) {
-      gwPts += p.isCaptain ? pts * 2 : pts;
+    
+    let multiplier = 1;
+    if (p.isCaptain) multiplier = (activeChip === 'tc' ? 3 : 2);
+
+    if (p.isStarter || (activeChip === 'bb')) {
+      gwPts += pts * multiplier;
     }
   });
 
@@ -306,43 +369,30 @@ function updateHeader() {
 }
 
 // ==========================================
-// 9. BOOTSTRAPPER
+// 10. BOOTSTRAPPER & EVENT LISTENERS
 // ==========================================
-document.addEventListener('DOMContentLoaded', () => {
+function initApp() {
   loadUserData();
   renderPitch();
-});
 
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  loadUserData();
-  renderPitch();
+  // Wire up tabs
+  const btnPick = document.getElementById('btn-pitch') || document.getElementById('btn-pick');
+  const btnTransfers = document.getElementById('btn-transfers');
+  const btnLeagues = document.getElementById('btn-league') || document.getElementById('btn-leagues');
+
+  if (btnPick) btnPick.addEventListener('click', () => switchTab('pitch'));
+  if (btnTransfers) btnTransfers.addEventListener('click', () => switchTab('transfers'));
+  if (btnLeagues) btnLeagues.addEventListener('click', () => switchTab('league'));
+
+  // Wire up chips
+  ['wc', 'tc', 'bb', 'fh'].forEach(chip => {
+    const chipBtn = document.getElementById(`btn-chip-${chip}`) || document.getElementById(`chip-${chip}`);
+    if (chipBtn) chipBtn.addEventListener('click', () => activateChip(chip));
+  });
 }
-// ==========================================
-// 9. BOOTSTRAPPER & TAB BINDINGS
-// ==========================================
-document.addEventListener('DOMContentLoaded', () => {
-  loadUserData();
-  renderPitch();
 
-  // Wire up bottom navigation tabs
-  const btnPick = document.getElementById('btn-pitch') || document.getElementById('btn-pick');
-  const btnTransfers = document.getElementById('btn-transfers');
-  const btnLeagues = document.getElementById('btn-league') || document.getElementById('btn-leagues');
-
-  if (btnPick) btnPick.addEventListener('click', () => switchTab('pitch'));
-  if (btnTransfers) btnTransfers.addEventListener('click', () => switchTab('transfers'));
-  if (btnLeagues) btnLeagues.addEventListener('click', () => switchTab('league'));
-});
+document.addEventListener('DOMContentLoaded', initApp);
 
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  loadUserData();
-  renderPitch();
-  
-  const btnPick = document.getElementById('btn-pitch') || document.getElementById('btn-pick');
-  const btnTransfers = document.getElementById('btn-transfers');
-  const btnLeagues = document.getElementById('btn-league') || document.getElementById('btn-leagues');
-
-  if (btnPick) btnPick.addEventListener('click', () => switchTab('pitch'));
-  if (btnTransfers) btnTransfers.addEventListener('click', () => switchTab('transfers'));
-  if (btnLeagues) btnLeagues.addEventListener('click', () => switchTab('league'));
+  initApp();
 }
