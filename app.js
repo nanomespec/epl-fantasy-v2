@@ -46,6 +46,7 @@ let myLeagues = ["Overall League"];
 let activePlayerModalId = null;
 let pendingSubPlayerId = null;
 
+// Official FPL 1-4-4-2 default starting setup
 const defaultStarterIds = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
 
 function setDefaultSquad() {
@@ -98,7 +99,7 @@ function saveUserData() {
 }
 
 // ==========================================
-// 4. NAVIGATION & FOUR TABS
+// 4. NAVIGATION & TABS
 // ==========================================
 function switchTab(tab) {
   ['pitch', 'transfers', 'league', 'points'].forEach(t => {
@@ -119,8 +120,25 @@ function switchTab(tab) {
 }
 
 // ==========================================
-// 5. AUTHENTIC FPL PITCH & SUB WORKFLOW
+// 5. OFFICIAL FPL FORMATION & PITCH VIEW
 // ==========================================
+
+// Official FPL formation validation rules:
+// - Exactly 1 GKP
+// - 3 to 5 Defenders
+// - 2 to 5 Midfielders
+// - 1 to 3 Forwards
+// - Total starters = 11
+function isValidFormation(starters) {
+  if (starters.length !== 11) return false;
+  const gkps = starters.filter(p => p.pos === 'GKP').length;
+  const defs = starters.filter(p => p.pos === 'DEF').length;
+  const mids = starters.filter(p => p.pos === 'MID').length;
+  const fwds = starters.filter(p => p.pos === 'FWD').length;
+
+  return gkps === 1 && defs >= 3 && defs <= 5 && mids >= 2 && mids <= 5 && fwds >= 1 && fwds <= 3;
+}
+
 function renderPitch() {
   const container = document.getElementById('pitch-container');
   if (!container) return;
@@ -161,9 +179,9 @@ function renderPitch() {
         </div>
       ` : ''}
 
-      <!-- Authentic FPL Grass Pitch Area -->
+      <!-- Authentic FPL Pitch Area -->
       <div class="relative bg-gradient-to-b from-[#1b5e20] via-[#2e7d32] to-[#1b5e20] border-2 border-emerald-400/70 rounded-xl p-2 flex flex-col justify-around min-h-[280px] shadow-2xl overflow-hidden">
-        <!-- Pitch Markings (Center circle & lines overlay) -->
+        <!-- Pitch Markings -->
         <div class="absolute inset-0 pointer-events-none flex items-center justify-center opacity-25">
           <div class="w-24 h-24 border-2 border-white rounded-full"></div>
           <div class="absolute w-full h-[1px] bg-white"></div>
@@ -196,7 +214,6 @@ function createPlayerCard(p) {
 
   const isPendingSub = pendingSubPlayerId === p.id;
 
-  // FPL-style position header color coding
   let headerColor = 'bg-slate-700 text-slate-200';
   if (p.pos === 'GKP') headerColor = 'bg-amber-600 text-white';
   else if (p.pos === 'DEF') headerColor = 'bg-blue-600 text-white';
@@ -258,17 +275,6 @@ function cancelSub() {
   renderPitch();
 }
 
-// Validates official FPL formations: 1 GKP, min 3 DEF, min 2 MID, min 1 FWD (total 11)
-function isValidFormation(starters) {
-  if (starters.length !== 11) return false;
-  const gkps = starters.filter(p => p.pos === 'GKP').length;
-  const defs = starters.filter(p => p.pos === 'DEF').length;
-  const mids = starters.filter(p => p.pos === 'MID').length;
-  const fwds = starters.filter(p => p.pos === 'FWD').length;
-
-  return gkps === 1 && defs >= 3 && mids >= 2 && fwds >= 1;
-}
-
 function executeSubstitution(id1, id2) {
   if (id1 === id2) {
     pendingSubPlayerId = null;
@@ -280,7 +286,6 @@ function executeSubstitution(id1, id2) {
   const p2 = mySquad.find(item => item.id === id2);
   if (!p1 || !p2) return;
 
-  // Temporarily swap statuses to test formation validity
   const originalStatus1 = p1.isStarter;
   const originalStatus2 = p2.isStarter;
 
@@ -289,10 +294,9 @@ function executeSubstitution(id1, id2) {
 
   const newStarters = mySquad.filter(item => item.isStarter);
   if (!isValidFormation(newStarters)) {
-    // Revert swap
     p1.isStarter = originalStatus1;
     p2.isStarter = originalStatus2;
-    alert("Invalid Formation! FPL rules require: 1 Goalkeeper, at least 3 Defenders, 2 Midfielders, and 1 Forward.");
+    alert("Invalid FPL Formation! Allowed formations require 1 GKP, 3-5 DEF, 2-5 MID, and 1-3 FWD.");
   }
 
   pendingSubPlayerId = null;
@@ -356,7 +360,7 @@ function setViceCaptain(id) {
 }
 
 // ==========================================
-// 6. REAL FPL CHIPS LOGIC
+// 6. CHIPS LOGIC
 // ==========================================
 function stageChip(chipName) {
   if (chipsUsed[chipName]) {
@@ -557,15 +561,15 @@ function renderPointsTab() {
 }
 
 // ==========================================
-// 10. OFFICIAL FPL AUTOMATED SUBSTITUTION ENGINE
+// 10. REAL FPL AUTOMATED SUBSTITUTION ENGINE
 // ==========================================
 function applyAutomaticSubstitutions() {
-  if (activeChip === 'bb') return; // Bench Boost disables automatic bench subs because everyone scores
+  if (activeChip === 'bb') return; // Bench Boost disables automatic bench subs
 
   let starters = mySquad.filter(p => p.isStarter);
   let bench = mySquad.filter(p => !p.isStarter);
 
-  // Check if starting GKP played (scored 0 mins / 0 points due to DNP)
+  // 1. Goalkeeper automatic substitution check
   let starterGkp = starters.find(p => p.pos === 'GKP');
   let benchGkp = bench.find(p => p.pos === 'GKP');
 
@@ -576,25 +580,23 @@ function applyAutomaticSubstitutions() {
     bench = mySquad.filter(p => !p.isStarter);
   }
 
-  // Check outfield substitutes in bench priority order
+  // 2. Outfield substitutions checking bench in exact left-to-right order
   for (let i = 0; i < bench.length; i++) {
     let subCandidate = bench[i];
-    if (subCandidate.pos === 'GKP') continue; // GKP bench sub already handled above
+    if (subCandidate.pos === 'GKP') continue;
     if (subCandidate.gwPoints === 0) continue; // Didn't play, skip
 
-    // Find eligible outfield starters who scored 0 points
+    // Find a starting outfield player who scored 0 points
     let eligibleStarter = starters.find(s => s.gwPoints === 0 && s.pos !== 'GKP');
     if (eligibleStarter) {
-      // Test if swapping maintains a legal FPL formation (min 3 DEF, min 2 MID, min 1 FWD)
       eligibleStarter.isStarter = false;
       subCandidate.isStarter = true;
 
       const testStarters = mySquad.filter(p => p.isStarter);
       if (isValidFormation(testStarters)) {
-        // Successful automatic sub
-        break;
+        break; // Successful sub made, move to next bench priority
       } else {
-        // Revert if formation becomes illegal
+        // Revert if resulting formation violates FPL rule
         eligibleStarter.isStarter = true;
         subCandidate.isStarter = false;
       }
@@ -612,14 +614,11 @@ function simulateGameweek() {
     stagedChip = null;
   }
 
-  // Generate random points for all squad members
   mySquad.forEach(p => {
-    // 30% chance a player didn't play (0 points), otherwise 2 to 8 points
     let played = Math.random() > 0.3;
     p.gwPoints = played ? (2 + Math.floor(Math.random() * 7)) : 0;
   });
 
-  // Run official FPL automatic substitution logic prior to tallying scores
   applyAutomaticSubstitutions();
 
   let gwPts = 0;
