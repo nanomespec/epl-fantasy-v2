@@ -1,7 +1,7 @@
 // ==========================================
 // 1. STATE & INITIALIZATION
 // ==========================================
-const STORAGE_KEY = 'epl_fantasy_clean_v3';
+const STORAGE_KEY = 'epl_fantasy_clean_v4';
 
 const playerMarket = [
   { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, form: 5.2 },
@@ -30,7 +30,7 @@ let activeChip = null;
 let chipsUsed = { wc: false, tc: false, bb: false, fh: false };
 let activeModalId = null;
 let pendingSubId = null;
-let chipConfirmModal = null; // Holds chip name waiting for confirmation
+let chipConfirmModal = null;
 
 const defaultStarters = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
 
@@ -38,16 +38,17 @@ function loadData() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
     const data = JSON.parse(saved);
-    mySquad = data.mySquad;
+    mySquad = data.mySquad || [];
     preFreeHitSquad = data.preFreeHitSquad || null;
-    bankBalance = data.bankBalance;
-    totalPoints = data.totalPoints;
-    gameweek = data.gameweek;
+    bankBalance = data.bankBalance ?? 100.0;
+    totalPoints = data.totalPoints ?? 0;
+    gameweek = data.gameweek ?? 1;
     chipsUsed = data.chipsUsed || chipsUsed;
     activeChip = data.activeChip || null;
   } else {
     resetSquad();
   }
+  renderPitch();
 }
 
 function saveData() {
@@ -71,7 +72,6 @@ function resetSquad() {
   activeChip = null;
   preFreeHitSquad = null;
   saveData();
-  renderPitch();
 }
 
 // ==========================================
@@ -79,9 +79,11 @@ function resetSquad() {
 // ==========================================
 function switchTab(tab) {
   ['pitch', 'transfers', 'points'].forEach(t => {
-    document.getElementById(`tab-${t}`)?.classList.add('hidden');
+    const el = document.getElementById(`tab-${t}`);
+    if (el) el.classList.add('hidden');
   });
-  document.getElementById(`tab-${tab}`)?.classList.remove('hidden');
+  const target = document.getElementById(`tab-${tab}`);
+  if (target) target.classList.remove('hidden');
 
   if (tab === 'transfers') renderMarket();
   if (tab === 'points') renderPoints();
@@ -138,22 +140,20 @@ function renderPitch() {
 
   const starters = mySquad.filter(p => p.isStarter);
   const bench = mySquad.filter(p => !p.isStarter);
-
-  const chipLabels = { wc: 'Wildcard', tc: 'Triple Captain', bb: 'Bench Boost', fh: 'Free Hit' };
+  const chipLabels = { wc: 'Wildcard', tc: '3x Captain', bb: 'Bench Boost', fh: 'Free Hit' };
 
   container.innerHTML = `
-    <!-- Single Clean Chip Management Bar -->
-    <div class="bg-gray-800/80 border border-gray-700 rounded-xl p-2 mb-2">
-      <div class="text-[10px] text-gray-400 uppercase font-bold mb-1 text-center">Available Chips</div>
-      <div class="flex gap-1.5">
+    <!-- Integrated Official FPL Chip Bar -->
+    <div class="bg-gray-800 border border-gray-700 rounded-xl p-2 mb-2">
+      <div class="flex gap-1">
         ${['wc', 'tc', 'bb', 'fh'].map(c => `
           <button onclick="promptChip('${c}')" ${chipsUsed[c] || activeChip ? 'disabled' : ''} 
-            class="flex-1 py-1 text-[9px] font-bold rounded border ${chipsUsed[c] ? 'bg-gray-900 border-gray-800 text-gray-600 cursor-not-allowed' : activeChip === c ? 'bg-amber-500/20 border-amber-400 text-amber-300' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}">
+            class="flex-1 py-1 text-[9px] font-bold rounded ${chipsUsed[c] ? 'bg-gray-900 text-gray-600 cursor-not-allowed' : activeChip === c ? 'bg-amber-500 text-black' : 'bg-gray-700 text-white hover:bg-gray-600'}">
             ${chipLabels[c]}${chipsUsed[c] ? '(Used)' : ''}
           </button>
         `).join('')}
       </div>
-      ${activeChip ? `<div class="mt-2 text-center text-[10px] font-bold text-amber-400 bg-amber-950/40 border border-amber-500/50 py-1 rounded">⚡ Active Chip Locked: ${chipLabels[activeChip]}</div>` : ''}
+      ${activeChip ? `<div class="mt-2 text-center text-[10px] font-bold text-amber-300 bg-amber-950/60 border border-amber-500 py-1 rounded">⚡ Active Chip Locked: ${chipLabels[activeChip]}</div>` : ''}
     </div>
 
     ${pendingSubId ? `<div class="bg-amber-600 text-white text-xs p-1 text-center font-bold mb-2 rounded">🔄 Select player to swap with ${mySquad.find(p => p.id === pendingSubId)?.name}</div>` : ''}
@@ -223,6 +223,7 @@ function executeSwap(id1, id2) {
 function renderModal() {
   if (!activeModalId) return '';
   const p = mySquad.find(x => x.id === activeModalId);
+  if (!p) return '';
   return `
     <div class="absolute inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
       <div class="bg-gray-800 border border-gray-600 rounded-xl p-4 w-64 text-center text-white">
@@ -238,14 +239,14 @@ function renderModal() {
 
 function renderChipConfirmModal() {
   if (!chipConfirmModal) return '';
-  const names = { wc: 'Wildcard', tc: 'Triple Captain', bb: 'Bench Boost', fh: 'Free Hit' };
+  const names = { wc: 'Wildcard', tc: '3x Captain', bb: 'Bench Boost', fh: 'Free Hit' };
   return `
     <div class="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-      <div class="bg-gray-800 border border-amber-500/60 rounded-2xl p-4 w-64 text-center text-white shadow-2xl">
+      <div class="bg-gray-800 border border-amber-500 rounded-2xl p-4 w-64 text-center text-white shadow-2xl">
         <div class="text-xs text-amber-400 font-bold uppercase">Confirm Chip Activation</div>
         <div class="font-extrabold text-base my-2">Play ${names[chipConfirmModal]}?</div>
-        <p class="text-[10px] text-gray-300 mb-4">Once confirmed, this chip will be locked in for the upcoming Gameweek simulation.</p>
-        <button onclick="confirmChipPlay()" class="w-full bg-amber-500 text-black py-2 rounded-xl text-xs font-extrabold mb-2 shadow">Confirm & Use Chip</button>
+        <p class="text-[10px] text-gray-300 mb-4">Once confirmed, this chip will be locked in for the upcoming Gameweek.</p>
+        <button onclick="confirmChipPlay()" class="w-full bg-amber-500 text-black py-2 rounded-xl text-xs font-extrabold mb-2">Confirm & Use Chip</button>
         <button onclick="cancelChipPlay()" class="w-full bg-gray-700 text-gray-300 py-1.5 rounded-xl text-xs font-bold">Cancel</button>
       </div>
     </div>
@@ -366,15 +367,23 @@ function simulateGameweek() {
 }
 
 function updateHeader() {
-  document.getElementById('bank-balance').innerText = `${bankBalance}M`;
-  document.getElementById('squad-count').innerText = `${mySquad.length}/15`;
-  document.getElementById('total-points').innerText = totalPoints;
-  document.getElementById('gw-number').innerText = gameweek;
+  const bankEl = document.getElementById('bank-balance');
+  const countEl = document.getElementById('squad-count');
+  const totalEl = document.getElementById('total-points');
+  const gwEl = document.getElementById('gw-number');
+
+  if (bankEl) bankEl.innerText = `${bankBalance}M`;
+  if (countEl) countEl.innerText = `${mySquad.length}/15`;
+  if (totalEl) totalEl.innerText = totalPoints;
+  if (gwEl) gwEl.innerText = gameweek;
 }
 
 function renderPoints() {
-  document.getElementById('points-list').innerHTML = `<div class="text-xs text-gray-300">Total Season Points: <b class="text-emerald-400">${totalPoints}</b></div>`;
+  const listEl = document.getElementById('points-list');
+  if (listEl) {
+    listEl.innerHTML = `<div class="text-xs text-gray-300">Total Season Points: <b class="text-emerald-400">${totalPoints}</b></div>`;
+  }
 }
 
-// Initialize
+// Initialize on load
 document.addEventListener('DOMContentLoaded', loadData);
