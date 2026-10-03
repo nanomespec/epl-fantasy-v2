@@ -1,3 +1,8 @@
+// Initialize Supabase Client
+const SUPABASE_URL = "https://tksmrwziohtawmfdbjzj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRrc21yd3ppb2h0YXdtZmRianpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwMzM5OTgsImV4cCI6MjEwNjYwOTk5OH0.ARTRC5VqnQv6AD8dvqRQzcnF2CAv43ARBeompCk-Yac";
+const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
 // Initialize Telegram SDK
 const tg = window.Telegram ? window.Telegram.WebApp : null;
 if (tg) { tg.expand(); tg.ready(); }
@@ -41,7 +46,7 @@ let pendingSubId = null;
 
 const defaultStarterIds = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
 
-// 3. Save & Load Data
+// 3. Save & Load Data (with Cloud Sync)
 function loadUserData() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
@@ -56,12 +61,29 @@ function loadUserData() {
       freeTransfers = data.freeTransfers !== undefined ? data.freeTransfers : 1;
       transfersMadeInGW = data.transfersMadeInGW || 0;
       myLeagues = data.myLeagues || ["Overall League"];
+      syncToCloud();
       return;
     } catch (e) {
       console.error("Failed to parse local storage", e);
     }
   }
   setDefaultSquad();
+}
+
+async function syncToCloud() {
+  if (!supabase) return;
+  const userName = tg?.initDataUnsafe?.user?.first_name || 'Gulit Manager';
+  try {
+    await supabase.from('user_squads').upsert({
+      telegram_id: String(userId),
+      user_name: userName,
+      total_points: totalPoints,
+      squad_data: mySquad,
+      updated_at: new Date()
+    });
+  } catch (err) {
+    console.error("Cloud sync error:", err);
+  }
 }
 
 function setDefaultSquad() {
@@ -94,6 +116,7 @@ function resetSquadData() {
 function saveUserData() {
   const payload = { mySquad, bankBalance, activeChip, chipsUsed, totalPoints, gameweek, freeTransfers, transfersMadeInGW, myLeagues };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  syncToCloud();
 }
 
 // 4. Substitution & Formation Rules
@@ -205,7 +228,6 @@ function simulateGameweek() {
   let currentGwPoints = 0;
   let autoSubLogs = [];
 
-  // 1. Simulate match performance & dynamic price changes
   mySquad.forEach(player => {
     const played = Math.random() > 0.15;
     if (!played) {
@@ -224,7 +246,6 @@ function simulateGameweek() {
 
     player.gwPoints = pts;
 
-    // High scorers experience dynamic price increases
     if (pts >= 8) {
       player.price = parseFloat((player.price + 0.1).toFixed(1));
       const marketRef = playerMarket.find(m => m.id === player.id);
@@ -232,7 +253,6 @@ function simulateGameweek() {
     }
   });
 
-  // 2. Captain / Vice-Captain Failover
   const captain = mySquad.find(p => p.isCaptain);
   const vice = mySquad.find(p => p.isViceCaptain);
   if (captain && captain.dnp && vice && !vice.dnp) {
@@ -240,7 +260,6 @@ function simulateGameweek() {
     autoSubLogs.push(`Captain ${captain.name} DNP ➔ Vice-Captain ${vice.name} inherited Captaincy!`);
   }
 
-  // 3. Auto-Substitutions
   if (activeChip !== 'bb') {
     const startersDNP = mySquad.filter(p => p.isStarter && p.dnp);
     const benchAvailable = mySquad.filter(p => !p.isStarter && !p.dnp);
@@ -269,7 +288,6 @@ function simulateGameweek() {
     });
   }
 
-  // 4. Calculate Final Points
   mySquad.forEach(player => {
     if (player.isStarter || activeChip === 'bb') {
       let multiplier = 1;
@@ -313,13 +331,12 @@ function simulateGameweek() {
 function renderMarket() {
   const list = document.getElementById('market-list');
   list.innerHTML = playerMarket.map(p => {
-    const inSquad = mySquad.find(s => s.id === p.id);
+    const inSquad = mySquad.some(s => s.id === p.id);
     let sellValue = p.price;
 
     if (inSquad) {
       const priceDiff = p.price - (inSquad.purchasePrice || p.price);
       if (priceDiff > 0) {
-        // FPL 50% Profit Rule (rounded down to nearest 0.1M)
         sellValue = parseFloat(((inSquad.purchasePrice || p.price) + Math.floor(priceDiff * 5) / 10).toFixed(1));
       }
     }
@@ -361,7 +378,6 @@ function sellPlayer(id) {
   const p = mySquad.find(item => item.id === id);
   if (!p) return;
 
-  // Calculate sell price using 50% profit rule
   let sellPrice = p.price;
   const priceDiff = p.price - (p.purchasePrice || p.price);
   if (priceDiff > 0) {
