@@ -1,6 +1,6 @@
 // Initialize Supabase Client
 const SUPABASE_URL = "https://tksmrwziohtawmfdbjzj.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRrc21yd3ppb2h0YXdtZmRianpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwMzM5OTgsImV4cCI6MjEwNjYwOTk5OH0.ARTRC5VqnQv6AD8dvqRQzcnF2CAv43ARBeompCk-Yac";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRrc21yd3ppb2h0awdtZmRianpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwMzM5OTgsImV4cCI6MjEwNjYwOTk5OH0.ARTRC5VqnQv6AD8dvqRQzcnF2CAv43ARBeompCk-Yac";
 const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 // Initialize Telegram SDK
@@ -61,7 +61,12 @@ function loadUserData() {
       freeTransfers = data.freeTransfers !== undefined ? data.freeTransfers : 1;
       transfersMadeInGW = data.transfersMadeInGW || 0;
       myLeagues = data.myLeagues || ["Overall League"];
-      syncToCloud();
+      
+      if (mySquad.length === 0) {
+        setDefaultSquad();
+      } else {
+        syncToCloud();
+      }
       return;
     } catch (e) {
       console.error("Failed to parse local storage", e);
@@ -95,7 +100,7 @@ function setDefaultSquad() {
     isViceCaptain: p.id === 13,
     gwPoints: 0
   }));
-  bankBalance = 100.0 - mySquad.reduce((sum, p) => sum + p.price, 0);
+  bankBalance = parseFloat((100.0 - mySquad.reduce((sum, p) => sum + p.price, 0)).toFixed(1));
   freeTransfers = 1;
   transfersMadeInGW = 0;
   myLeagues = ["Overall League"];
@@ -176,6 +181,7 @@ function handlePlayerClick(id) {
 
   selectedPlayerId = id;
   const player = mySquad.find(p => p.id === id);
+  if (!player) return;
 
   document.getElementById('modal-player-name').innerText = player.name;
   document.getElementById('modal-player-details').innerText = `${player.pos} • ${player.club} • Current: ${player.price}M ETB`;
@@ -330,14 +336,17 @@ function simulateGameweek() {
 // 7. Transfer Market Actions & FPL Selling Profit Mechanics
 function renderMarket() {
   const list = document.getElementById('market-list');
+  if (!list) return;
+
   list.innerHTML = playerMarket.map(p => {
     const inSquad = mySquad.some(s => s.id === p.id);
     let sellValue = p.price;
 
     if (inSquad) {
-      const priceDiff = p.price - (inSquad.purchasePrice || p.price);
+      const squadPlayer = mySquad.find(s => s.id === p.id);
+      const priceDiff = p.price - (squadPlayer.purchasePrice || p.price);
       if (priceDiff > 0) {
-        sellValue = parseFloat(((inSquad.purchasePrice || p.price) + Math.floor(priceDiff * 5) / 10).toFixed(1));
+        sellValue = parseFloat(((squadPlayer.purchasePrice || p.price) + Math.floor(priceDiff * 5) / 10).toFixed(1));
       }
     }
 
@@ -396,6 +405,10 @@ function sellPlayer(id) {
 function renderPitch() {
   const container = document.getElementById('pitch-container');
   if (!container) return;
+
+  if (!mySquad || mySquad.length === 0) {
+    setDefaultSquad();
+  }
 
   const starters = mySquad.filter(p => p.isStarter);
   const bench = mySquad.filter(p => !p.isStarter);
@@ -471,6 +484,8 @@ function joinLeague() {
 
 function renderLeague() {
   const list = document.getElementById('league-list');
+  if (!list) return;
+
   const userName = tg?.initDataUnsafe?.user?.first_name ? `${tg.initDataUnsafe.user.first_name}'s Team` : "Gulit FC (You)";
   
   const leaderboard = [
@@ -496,11 +511,16 @@ function renderLeague() {
 
 function switchTab(tab) {
   ['pitch', 'transfers', 'league'].forEach(t => {
-    document.getElementById(`tab-${t}`).classList.add('hidden');
-    document.getElementById(`btn-${t}`).className = "flex-1 py-1 text-gray-400 font-bold";
+    const el = document.getElementById(`tab-${t}`);
+    const btn = document.getElementById(`btn-${t}`);
+    if (el) el.classList.add('hidden');
+    if (btn) btn.className = "flex-1 py-1 text-gray-400 font-bold";
   });
-  document.getElementById(`tab-${tab}`).classList.remove('hidden');
-  document.getElementById(`btn-${tab}`).className = "flex-1 py-1 text-blue-400 font-bold";
+  
+  const targetTab = document.getElementById(`tab-${tab}`);
+  const targetBtn = document.getElementById(`btn-${tab}`);
+  if (targetTab) targetTab.classList.remove('hidden');
+  if (targetBtn) targetBtn.className = "flex-1 py-1 text-blue-400 font-bold";
 
   if (tab === 'transfers') renderMarket();
   if (tab === 'league') renderLeague();
@@ -530,16 +550,22 @@ function updateChipUI() {
 }
 
 function updateHeader() {
-  document.getElementById('bank-balance').innerText = `${bankBalance.toFixed(1)}M ETB`;
-  document.getElementById('squad-count').innerText = `${mySquad.length}/15`;
-  document.getElementById('total-points').innerText = totalPoints;
+  const bankElem = document.getElementById('bank-balance');
+  const countElem = document.getElementById('squad-count');
+  const totalPtsElem = document.getElementById('total-points');
+  const ftElem = document.getElementById('free-transfers');
+  const hitsElem = document.getElementById('transfer-hits');
+
+  if (bankElem) bankElem.innerText = `${bankBalance.toFixed(1)}M ETB`;
+  if (countElem) countElem.innerText = `${mySquad.length}/15`;
+  if (totalPtsElem) totalPtsElem.innerText = totalPoints;
   
   const hits = (activeChip === 'wc' || activeChip === 'fh') 
     ? 0 
     : Math.max(0, transfersMadeInGW - freeTransfers) * 4;
 
-  document.getElementById('free-transfers').innerText = freeTransfers;
-  document.getElementById('transfer-hits').innerText = `-${hits} pts`;
+  if (ftElem) ftElem.innerText = freeTransfers;
+  if (hitsElem) hitsElem.innerText = `-${hits} pts`;
 
   const label = document.getElementById('transfer-cost-label');
   if (label) {
