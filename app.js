@@ -1,7 +1,7 @@
 // ==========================================
 // 1. STATE & INITIALIZATION
 // ==========================================
-const STORAGE_KEY = 'epl_fantasy_clean_v9';
+const STORAGE_KEY = 'epl_fantasy_clean_v10';
 
 const playerMarket = [
   { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, form: 5.2 },
@@ -31,6 +31,7 @@ let chipsUsed = { wc: false, tc: false, bb: false, fh: false };
 let activeModalId = null;
 let pendingSubId = null;
 let chipConfirmModal = null;
+let gwHistory = [];
 
 const defaultStarters = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
 
@@ -45,16 +46,16 @@ function loadData() {
     gameweek = data.gameweek ?? 1;
     chipsUsed = data.chipsUsed || chipsUsed;
     activeChip = data.activeChip || null;
+    gwHistory = data.gwHistory || [];
   } else {
     resetSquad();
   }
-  renderPitch();
-  updateHeader();
+  renderAll();
 }
 
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ 
-    mySquad, preFreeHitSquad, bankBalance, totalPoints, gameweek, chipsUsed, activeChip 
+    mySquad, preFreeHitSquad, bankBalance, totalPoints, gameweek, chipsUsed, activeChip, gwHistory 
   }));
 }
 
@@ -72,13 +73,47 @@ function resetSquad() {
   chipsUsed = { wc: false, tc: false, bb: false, fh: false };
   activeChip = null;
   preFreeHitSquad = null;
+  gwHistory = [];
   saveData();
+  renderAll();
+}
+
+// ==========================================
+// 2. TAB SWITCHING SYSTEM
+// ==========================================
+function switchTab(tabName) {
+  ['pitch', 'transfers', 'leagues', 'points'].forEach(t => {
+    const el = document.getElementById(`tab-${t}`);
+    if (el) {
+      el.classList.add('hidden');
+      el.style.display = 'none';
+    }
+  });
+
+  const target = document.getElementById(`tab-${tabName}`);
+  if (target) {
+    target.classList.remove('hidden');
+    target.style.display = 'block';
+  } else {
+    // Fallback if container uses 'pitch-container' directly
+    const pitchCont = document.getElementById('pitch-container');
+    if (pitchCont && tabName === 'pitch') {
+      pitchCont.style.display = 'block';
+    }
+  }
+  renderAll();
+}
+
+function renderAll() {
   renderPitch();
+  renderMarket();
+  renderLeagues();
+  renderPoints();
   updateHeader();
 }
 
 // ==========================================
-// 2. CHIPS SYSTEM
+// 3. CHIPS SYSTEM
 // ==========================================
 function promptChip(chipName) {
   if (chipsUsed[chipName]) {
@@ -110,7 +145,7 @@ function cancelChipPlay() {
 }
 
 // ==========================================
-// 3. PITCH & FORMATION
+// 4. PITCH & FORMATION
 // ==========================================
 function isValidFormation(starters) {
   if (starters.length !== 11) return false;
@@ -123,7 +158,7 @@ function isValidFormation(starters) {
 }
 
 function renderPitch() {
-  const container = document.getElementById('pitch-container');
+  const container = document.getElementById('pitch-container') || document.getElementById('tab-pitch');
   if (!container) return;
 
   const starters = mySquad.filter(p => p.isStarter);
@@ -247,7 +282,94 @@ function setCap(id, isC) {
 }
 
 // ==========================================
-// 4. GAMEWEEK SIMULATION
+// 5. MARKET / TRANSFERS TAB
+// ==========================================
+function renderMarket() {
+  const container = document.getElementById('tab-transfers');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="bg-gray-900 border border-gray-700 rounded-xl p-3 text-white">
+      <div class="flex justify-between items-center mb-3">
+        <div class="text-xs font-bold uppercase text-gray-400">Player Market</div>
+        <div class="text-xs text-emerald-400 font-bold">Bank: ${bankBalance}M | Squad: ${mySquad.length}/15</div>
+      </div>
+      <div class="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+        ${playerMarket.map(p => {
+          const owned = mySquad.some(s => s.id === p.id);
+          return `
+            <div class="bg-gray-800 p-2 rounded-lg flex justify-between items-center text-xs">
+              <div>
+                <div class="font-bold">${p.name} <span class="text-[9px] text-gray-400">(${p.pos} -${p.club})</span></div>
+                <div class="text-emerald-400 font-bold">${p.price}M <span class="text-[9px] text-gray-400">Form: ${p.form}</span></div>
+              </div>
+              <button onclick="${owned ? `sellPlayer(${p.id})` : `buyPlayer(${p.id})`}" class="px-3 py-1 rounded font-bold ${owned ? 'bg-red-600/30 text-red-400 hover:bg-red-600/50' : 'bg-emerald-600/30 text-emerald-400 hover:bg-emerald-600/50'}">
+                ${owned ? 'Sell' : 'Buy'}
+              </button>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function buyPlayer(id) {
+  const p = playerMarket.find(x => x.id === id);
+  if (mySquad.length >= 15) return alert("Squad full (15/15)!");
+  if (bankBalance < p.price && activeChip !== 'wc' && activeChip !== 'fh') {
+    return alert("Not enough budget!");
+  }
+
+  mySquad.push({ ...p, isStarter: mySquad.filter(s => s.isStarter).length < 11, isCaptain: false, isViceCaptain: false, gwPoints: 0 });
+  if (bankBalance >= p.price && activeChip !== 'wc' && activeChip !== 'fh') {
+    bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
+  }
+  
+  saveData();
+  renderAll();
+}
+
+function sellPlayer(id) {
+  if (mySquad.length <= 11) return alert("Must keep at least 11 players!");
+  const p = mySquad.find(x => x.id === id);
+  mySquad = mySquad.filter(x => x.id !== id);
+  bankBalance = parseFloat((bankBalance + p.price).toFixed(1));
+  saveData();
+  renderAll();
+}
+
+// ==========================================
+// 6. LEAGUES TAB
+// ==========================================
+function renderLeagues() {
+  const container = document.getElementById('tab-leagues');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="bg-gray-900 border border-gray-700 rounded-xl p-4 text-white text-xs">
+      <div class="font-bold text-sm text-amber-400 mb-2">Global & Mini Leagues</div>
+      <p class="text-gray-400 mb-4">Compete against other managers in overall rankings.</p>
+      <div class="bg-gray-800 rounded-lg p-3 space-y-2">
+        <div class="flex justify-between font-bold text-gray-300 border-b border-gray-700 pb-1">
+          <span>Rank & Team</span>
+          <span>Total Points</span>
+        </div>
+        <div class="flex justify-between items-center text-emerald-400 font-bold bg-emerald-950/40 p-2 rounded">
+          <span>1. Gulit FC (You)</span>
+          <span>${totalPoints} pts</span>
+        </div>
+        <div class="flex justify-between items-center text-gray-300 p-2">
+          <span>2. Addis Star XI</span>
+          <span>${Math.max(0, totalPoints - 12)} pts</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ==========================================
+// 7. POINTS TAB & GAMEWEEK SIMULATION
 // ==========================================
 function simulateGameweek() {
   mySquad.forEach(p => {
@@ -281,6 +403,7 @@ function simulateGameweek() {
   });
 
   totalPoints += gwTotal;
+  gwHistory.push({ gameweek, points: gwTotal });
   gameweek++;
 
   if (activeChip === 'fh' && preFreeHitSquad) {
@@ -297,9 +420,32 @@ function simulateGameweek() {
 
   activeChip = null;
   saveData();
-  renderPitch();
-  updateHeader();
+  renderAll();
   alert(`Gameweek simulated! You scored ${gwTotal} points.`);
+}
+
+function renderPoints() {
+  const container = document.getElementById('tab-points');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="bg-gray-900 border border-gray-700 rounded-xl p-4 text-white text-xs">
+      <div class="flex justify-between items-center mb-3">
+        <div class="font-bold text-sm text-emerald-400">Gameweek History</div>
+        <div class="text-gray-400">Total Season: <b class="text-white">${totalPoints} pts</b></div>
+      </div>
+      ${gwHistory.length === 0 ? '<div class="text-gray-500 text-center py-6">No gameweeks simulated yet. Click "Simulate Gameweek" above!</div>' : `
+        <div class="space-y-2 max-h-[380px] overflow-y-auto">
+          ${gwHistory.map(h => `
+            <div class="bg-gray-800 p-2.5 rounded-lg flex justify-between items-center">
+              <span>Gameweek ${h.gameweek}</span>
+              <span class="text-emerald-400 font-bold">${h.points} Points</span>
+            </div>
+          `).join('')}
+        </div>
+      `}
+    </div>
+  `;
 }
 
 function updateHeader() {
