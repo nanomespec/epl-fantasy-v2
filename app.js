@@ -317,3 +317,32 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
   loadUserData();
   renderPitch();
 }
+// ==========================================
+// 9. BOOTSTRAPPER & TAB BINDINGS
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+  loadUserData();
+  renderPitch();
+
+  // Wire up bottom navigation tabs
+  const btnPick = document.getElementById('btn-pitch') || document.getElementById('btn-pick');
+  const btnTransfers = document.getElementById('btn-transfers');
+  const btnLeagues = document.getElementById('btn-league') || document.getElementById('btn-leagues');
+
+  if (btnPick) btnPick.addEventListener('click', () => switchTab('pitch'));
+  if (btnTransfers) btnTransfers.addEventListener('click', () => switchTab('transfers'));
+  if (btnLeagues) btnLeagues.addEventListener('click', () => switchTab('league'));
+});
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  loadUserData();
+  renderPitch();
+  
+  const btnPick = document.getElementById('btn-pitch') || document.getElementById('btn-pick');
+  const btnTransfers = document.getElementById('btn-transfers');
+  const btnLeagues = document.getElementById('btn-league') || document.getElementById('btn-leagues');
+
+  if (btnPick) btnPick.addEventListener('click', () => switchTab('pitch'));
+  if (btnTransfers) btnTransfers.addEventListener('click', () => switchTab('transfers'));
+  if (btnLeagues) btnLeagues.addEventListener('click', () => switchTab('league'));
+}
