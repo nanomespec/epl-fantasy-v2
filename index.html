@@ -1,185 +1,140 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>EPL Fantasy Mini App</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    /* REALISTIC FOOTBALL PITCH STYLING */
-    .football-pitch {
-      background: linear-gradient(to bottom, #1e4620, #2e7d32, #1e4620);
-      background-size: 100% 40px;
-      position: relative;
-      border: 2px solid rgba(255, 255, 255, 0.4);
-      border-radius: 16px;
-      box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
-      overflow: hidden;
-    }
-
-    /* PITCH MARKINGS */
-    .pitch-center-line {
-      position: absolute;
-      top: 50%;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: rgba(255, 255, 255, 0.25);
-      transform: translateY(-50%);
-    }
-
-    .pitch-center-circle {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 80px;
-      height: 80px;
-      border: 2px solid rgba(255, 255, 255, 0.25);
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-    }
-
-    .pitch-penalty-top {
-      position: absolute;
-      top: 0;
-      left: 50%;
-      width: 140px;
-      height: 50px;
-      border: 2px solid rgba(255, 255, 255, 0.25);
-      border-top: none;
-      transform: translateX(-50%);
-    }
-
-    .pitch-penalty-bottom {
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      width: 140px;
-      height: 50px;
-      border: 2px solid rgba(255, 255, 255, 0.25);
-      border-bottom: none;
-      transform: translateX(-50%);
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPL Fantasy Mini App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
-<body class="flex flex-col h-screen overflow-hidden select-none bg-[#17212b] text-white font-sans">
+<body class="bg-[#0f172a] text-white flex flex-col h-screen overflow-hidden font-sans">
 
-  <!-- APP HEADER -->
-  <header class="bg-[#242f3d] px-4 py-3 border-b border-gray-700 shadow-md">
-    <div class="flex justify-between items-center mb-2">
-      <div>
-        <h1 class="text-sm font-bold text-gray-100 tracking-wide">Gulit FC</h1>
-        <p class="text-[11px] text-blue-400 font-medium">Gameweek <span id="gw-number">1</span> • Live Engine</p>
-      </div>
-      <div class="text-right flex items-center gap-2">
-        <div>
-          <span class="text-[10px] uppercase text-gray-400 tracking-wider">Total Points</span>
-          <p class="text-lg font-extrabold text-green-400 leading-none mt-0.5" id="total-points">0</p>
+    <!-- Header Section -->
+    <header class="bg-[#1e293b] p-3 border-b border-gray-800 shadow-md">
+        <div class="flex justify-between items-center mb-2">
+            <div>
+                <h1 class="font-bold text-base text-white">Gulit FC</h1>
+                <p class="text-[11px] text-gray-400">Gameweek <span id="gw-number">1</span> • Live Engine</p>
+            </div>
+            <div class="text-right">
+                <span class="text-[10px] text-gray-400 uppercase tracking-wider block">Total Points</span>
+                <span id="total-points" class="font-black text-lg text-green-400">0</span>
+            </div>
+            <button onclick="resetSquadData()" class="px-2 py-1 bg-red-600/80 text-white rounded text-xs font-bold hover:bg-red-600 transition">Reset</button>
         </div>
-        <button onclick="resetSquadData()" class="ml-2 px-2 py-1 bg-red-600/30 hover:bg-red-600 text-red-300 text-[10px] font-bold rounded border border-red-500/40">Reset</button>
-      </div>
-    </div>
-    <!-- BUDGET, SQUAD & TRANSFERS STATS -->
-    <div class="grid grid-cols-3 gap-2 bg-[#17212b] p-2 rounded-lg text-xs border border-gray-700/50 text-center">
-      <div>Bank: <span id="bank-balance" class="font-bold text-green-400">100.0M ETB</span></div>
-      <div>Free Trans: <span id="free-transfers" class="font-bold text-yellow-400">1</span></div>
-      <div>Hits: <span id="transfer-hits" class="font-bold text-red-400">0 pts</span></div>
-    </div>
-  </header>
 
-  <!-- CONTENT TABS -->
-  <main class="flex-1 overflow-y-auto p-3 flex flex-col justify-between">
-    <!-- PITCH TAB -->
-    <div id="tab-pitch" class="h-full flex flex-col justify-between space-y-3">
-      <!-- CHIPS & SIMULATION BAR -->
-      <div class="space-y-2">
-        <div class="bg-[#242f3d]/80 border border-gray-700 p-2 rounded-xl flex justify-between gap-1 text-[10px]">
-          <button id="chip-wc" onclick="playChip('wc')" class="flex-1 py-1.5 bg-gray-700/50 rounded font-bold hover:bg-blue-600 transition">Wildcard</button>
-          <button id="chip-tc" onclick="playChip('tc')" class="flex-1 py-1.5 bg-gray-700/50 rounded font-bold hover:bg-yellow-600 transition">3x Captain</button>
-          <button id="chip-bb" onclick="playChip('bb')" class="flex-1 py-1.5 bg-gray-700/50 rounded font-bold hover:bg-green-600 transition">Bench Boost</button>
-          <button id="chip-fh" onclick="playChip('fh')" class="flex-1 py-1.5 bg-gray-700/50 rounded font-bold hover:bg-purple-600 transition">Free Hit</button>
+        <div class="flex justify-between items-center bg-[#0f172a] px-3 py-2 rounded-lg border border-gray-800 text-xs">
+            <div>Bank: <span id="bank-balance" class="font-bold text-green-400">100.0M ETB</span></div>
+            <div>Squad: <span id="squad-count" class="font-bold text-blue-400">0/15</span></div>
+            <div>Free Trans: <span id="free-transfers" class="font-bold text-yellow-400">1</span></div>
+            <div>Hits: <span id="transfer-hits" class="font-bold text-red-400">0 pts</span></div>
         </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto p-3 relative">
         
-        <button onclick="simulateGameweek()" class="w-full py-2 bg-gradient-to-r from-green-600 to-emerald-500 font-black rounded-lg text-xs uppercase tracking-wider shadow-md hover:brightness-110 active:scale-[0.98] transition">
-          ⚡ Simulate Gameweek Matches
-        </button>
-      </div>
+        <!-- Tab 1: Pick Team (Pitch) -->
+        <div id="tab-pitch" class="flex flex-col h-full space-y-3">
+            <!-- Chips Bar -->
+            <div class="flex gap-1">
+                <button id="chip-wc" onclick="playChip('wc')" class="flex-1 py-1.5 bg-gray-800 text-xs font-bold rounded text-gray-300">Wildcard</button>
+                <button id="chip-tc" onclick="playChip('tc')" class="flex-1 py-1.5 bg-gray-800 text-xs font-bold rounded text-gray-300">3x Captain</button>
+                <button id="chip-bb" onclick="playChip('bb')" class="flex-1 py-1.5 bg-gray-800 text-xs font-bold rounded text-gray-300">Bench Boost</button>
+                <button id="chip-fh" onclick="playChip('fh')" class="flex-1 py-1.5 bg-gray-800 text-xs font-bold rounded text-gray-300">Free Hit</button>
+            </div>
 
-      <!-- PITCH CONTAINER WITH FOOTBALL GRAPHICS -->
-      <div class="football-pitch flex-1 flex flex-col justify-between py-3 my-2 shadow-2xl">
-        <div class="pitch-penalty-top"></div>
-        <div class="pitch-center-circle"></div>
-        <div class="pitch-center-line"></div>
-        <div class="pitch-penalty-bottom"></div>
+            <button onclick="simulateGameweek()" class="w-full py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 font-black text-sm rounded-xl shadow-lg uppercase tracking-wider text-white transition">
+                ⚡ Simulate Gameweek Matches
+            </button>
 
-        <div id="pitch-container" class="relative z-10 h-full flex flex-col justify-around"></div>
-      </div>
+            <!-- Pitch Visual Container -->
+            <div id="pitch-container" class="flex-1 bg-gradient-to-b from-green-800 to-green-900 border-2 border-green-700/60 rounded-2xl p-2 flex flex-col justify-between shadow-inner min-h-[360px]">
+                <!-- Populated dynamically by app.js -->
+            </div>
+        </div>
+
+        <!-- Tab 2: Transfer Market -->
+        <div id="tab-transfers" class="hidden flex flex-col h-full space-y-3">
+            <div class="bg-[#1e293b] p-3 rounded-lg border border-gray-800">
+                <h2 class="font-bold text-sm text-white mb-1">Transfer Market</h2>
+                <p id="transfer-cost-label" class="text-xs text-gray-400">Free: 1 • Hits: -0 pts</p>
+            </div>
+            <div id="market-list" class="flex-1 overflow-y-auto space-y-2">
+                <!-- Populated dynamically by app.js -->
+            </div>
+        </div>
+
+        <!-- Tab 3: Leagues -->
+        <div id="tab-league" class="hidden flex flex-col h-full space-y-3">
+            <div class="bg-[#1e293b] p-3 rounded-lg border border-gray-800 space-y-2">
+                <h2 class="font-bold text-sm text-white">Leagues & Standings</h2>
+                <div class="flex gap-2">
+                    <input id="league-code-input" type="text" placeholder="Enter League Code" class="flex-1 bg-[#0f172a] border border-gray-700 rounded px-2 py-1 text-xs text-white">
+                    <button onclick="joinLeague()" class="px-3 py-1 bg-blue-600 font-bold rounded text-xs hover:bg-blue-500">Join</button>
+                    <button onclick="createLeague()" class="px-3 py-1 bg-green-600 font-bold rounded text-xs hover:bg-green-500">Create</button>
+                </div>
+            </div>
+            <div id="league-list" class="bg-[#1e293b] p-3 rounded-lg border border-gray-800 flex-1 overflow-y-auto">
+                <!-- Populated dynamically by app.js -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Player Details Modal -->
+    <div id="player-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-[#1e293b] border border-gray-700 w-full max-w-xs rounded-2xl p-4 shadow-2xl space-y-3">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 id="modal-player-name" class="font-bold text-base text-white">Player Name</h3>
+                    <p id="modal-player-details" class="text-xs text-gray-400">Position • Club</p>
+                </div>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-white font-bold text-lg">&times;</button>
+            </div>
+            
+            <div class="grid grid-cols-4 gap-1 text-center bg-[#0f172a] p-2 rounded-lg">
+                <div>
+                    <span class="text-[9px] text-gray-400 block">GOALS</span>
+                    <span id="stat-goals" class="font-bold text-sm text-white">0</span>
+                </div>
+                <div>
+                    <span class="text-[9px] text-gray-400 block">ASSISTS</span>
+                    <span id="stat-assists" class="font-bold text-sm text-white">0</span>
+                </div>
+                <div>
+                    <span class="text-[9px] text-gray-400 block">CLEAN S</span>
+                    <span id="stat-cleans" class="font-bold text-sm text-white">0</span>
+                </div>
+                <div>
+                    <span class="text-[9px] text-gray-400 block">FORM</span>
+                    <span id="stat-form" class="font-bold text-sm text-green-400">0.0</span>
+                </div>
+            </div>
+
+            <div>
+                <span class="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">Fixture Difficulty Rating (FDR)</span>
+                <div id="fdr-container" class="flex gap-1 text-xs"></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 pt-1">
+                <button onclick="setCaptain()" class="py-2 bg-yellow-500/20 text-yellow-400 border border-yellow-500/40 rounded-lg text-xs font-bold hover:bg-yellow-500/30">Make Captain (C)</button>
+                <button onclick="setViceCaptain()" class="py-2 bg-gray-700/50 text-gray-300 border border-gray-600 rounded-lg text-xs font-bold hover:bg-gray-600">Make Vice (VC)</button>
+            </div>
+            <button onclick="prepareSub()" class="w-full py-2 bg-blue-600/20 text-blue-400 border border-blue-500/40 rounded-lg text-xs font-bold hover:bg-blue-600/30">Substitute Player</button>
+            <button onclick="closeModal()" class="w-full py-2 bg-gray-800 text-gray-400 rounded-lg text-xs font-bold">Close</button>
+        </div>
     </div>
 
-    <!-- TRANSFERS TAB -->
-    <div id="tab-transfers" class="hidden space-y-3">
-      <div class="flex justify-between items-center">
-        <h2 class="text-xs font-bold uppercase tracking-wider text-gray-400">Transfer Market</h2>
-        <span id="transfer-cost-label" class="text-xs text-yellow-400 font-semibold">1 Free Transfer Remaining</span>
-      </div>
-      <div id="market-list" class="space-y-2"></div>
-    </div>
+    <!-- Navigation Footer Bar -->
+    <nav class="bg-[#1e293b] border-t border-gray-800 flex justify-around py-2 text-xs">
+        <button id="btn-pitch" onclick="switchTab('pitch')" class="flex-1 py-1 text-blue-400 font-bold">Pick Team</button>
+        <button id="btn-transfers" onclick="switchTab('transfers')" class="flex-1 py-1 text-gray-400 font-bold">Transfers</button>
+        <button id="btn-league" onclick="switchTab('league')" class="flex-1 py-1 text-gray-400 font-bold">Leagues</button>
+    </nav>
 
-    <!-- LEAGUE TAB -->
-    <div id="tab-league" class="hidden space-y-3">
-      <div class="flex justify-between items-center">
-        <h2 class="text-xs font-bold uppercase tracking-wider text-gray-400">Private Leagues</h2>
-        <button onclick="createLeague()" class="px-2 py-1 bg-blue-600 text-white rounded font-bold text-xs">+ Create League</button>
-      </div>
-      <div class="flex gap-2">
-        <input id="league-code-input" type="text" placeholder="Enter Code (e.g. ETH-892)" class="flex-1 bg-[#17212b] border border-gray-700 rounded p-2 text-xs text-white uppercase tracking-wider">
-        <button onclick="joinLeague()" class="px-3 py-2 bg-green-600 text-white rounded font-bold text-xs">Join</button>
-      </div>
-      <div id="league-list" class="bg-[#242f3d] border border-gray-700 rounded-lg p-3 space-y-2"></div>
-    </div>
-  </main>
-
-  <!-- DETAILED PLAYER MODAL WITH STATS & FDR -->
-  <div id="player-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-    <div class="bg-[#242f3d] border border-gray-700 rounded-xl p-4 w-full max-w-xs text-center space-y-3 shadow-xl">
-      <div>
-        <h3 id="modal-player-name" class="font-bold text-base text-white"></h3>
-        <p id="modal-player-details" class="text-xs text-blue-400"></p>
-      </div>
-
-      <!-- PLAYER STATS GRID -->
-      <div class="grid grid-cols-4 gap-1 bg-[#17212b] p-2 rounded-lg text-[10px] border border-gray-700/50">
-        <div><span class="text-gray-400 block">Goals</span><b id="stat-goals" class="text-green-400 font-bold">0</b></div>
-        <div><span class="text-gray-400 block">Assists</span><b id="stat-assists" class="text-yellow-400 font-bold">0</b></div>
-        <div><span class="text-gray-400 block">Clean Sh</span><b id="stat-cleans" class="text-blue-400 font-bold">0</b></div>
-        <div><span class="text-gray-400 block">Form</span><b id="stat-form" class="text-purple-400 font-bold">0.0</b></div>
-      </div>
-
-      <!-- FIXTURE DIFFICULTY RATING (FDR) -->
-      <div>
-        <span class="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">Upcoming Fixtures</span>
-        <div id="fdr-container" class="flex justify-center gap-1 text-[10px]"></div>
-      </div>
-      
-      <!-- ACTION BUTTONS -->
-      <div class="space-y-2 pt-1">
-        <button id="btn-sub" onclick="prepareSub()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 font-bold rounded-lg text-xs">Switch / Substitute</button>
-        <button id="btn-cap" onclick="setCaptain()" class="w-full py-2 bg-yellow-600 hover:bg-yellow-500 font-bold rounded-lg text-xs">Make Captain (C)</button>
-        <button id="btn-vc" onclick="setViceCaptain()" class="w-full py-2 bg-gray-600 hover:bg-gray-500 font-bold rounded-lg text-xs">Make Vice Captain (VC)</button>
-        <button onclick="closeModal()" class="w-full py-2 bg-gray-700/50 text-gray-300 font-semibold rounded-lg text-xs">Cancel</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- BOTTOM NAVIGATION -->
-  <nav class="bg-[#242f3d] border-t border-gray-700 flex justify-around p-2 text-center text-xs">
-    <button onclick="switchTab('pitch')" id="btn-pitch" class="flex-1 py-1 text-blue-400 font-bold">Pick Team</button>
-    <button onclick="switchTab('transfers')" id="btn-transfers" class="flex-1 py-1 text-gray-400 font-bold">Transfers</button>
-    <button onclick="switchTab('league')" id="btn-league" class="flex-1 py-1 text-gray-400 font-bold">Leagues</button>
-  </nav>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js"></script>
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
 </body>
 </html>
-  
