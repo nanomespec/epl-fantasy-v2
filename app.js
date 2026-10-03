@@ -2,7 +2,6 @@
 const tg = window.Telegram ? window.Telegram.WebApp : null;
 if (tg) { tg.expand(); tg.ready(); }
 
-// Extract Telegram User ID or fallback to guest key
 const userId = tg?.initDataUnsafe?.user?.id || 'guest_user';
 const STORAGE_KEY = `epl_fantasy_squad_${userId}`;
 
@@ -28,13 +27,15 @@ const playerMarket = [
 // 2. User State Variables
 let mySquad = [];
 let bankBalance = 100.0;
-let activeChip = null; // 'wc', 'tc', 'bb', 'fh'
+let activeChip = null;
 let chipsUsed = { wc: false, tc: false, bb: false, fh: false };
+let totalPoints = 0;
+let gameweek = 1;
 
 let selectedPlayerId = null;
 let pendingSubId = null;
 
-// 3. Save & Load Data Mechanics
+// 3. Save & Load Data
 function loadUserData() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
@@ -44,76 +45,70 @@ function loadUserData() {
       bankBalance = data.bankBalance !== undefined ? data.bankBalance : 0.0;
       activeChip = data.activeChip || null;
       chipsUsed = data.chipsUsed || { wc: false, tc: false, bb: false, fh: false };
+      totalPoints = data.totalPoints || 0;
+      gameweek = data.gameweek || 1;
       return;
     } catch (e) {
       console.error("Failed to parse local storage", e);
     }
   }
   
-  // Default Initial Squad if no saved state exists
   mySquad = playerMarket.slice(0, 15).map((p, idx) => ({
     ...p,
     isStarter: idx < 11,
     isCaptain: idx === 11,
-    isViceCaptain: idx === 12
+    isViceCaptain: idx === 12,
+    gwPoints: 0
   }));
   bankBalance = 100.0 - mySquad.reduce((sum, p) => sum + p.price, 0);
   saveUserData();
 }
 
 function saveUserData() {
-  const payload = {
-    mySquad,
-    bankBalance,
-    activeChip,
-    chipsUsed
-  };
+  const payload = { mySquad, bankBalance, activeChip, chipsUsed, totalPoints, gameweek };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
 
-// 4. Tab Switcher
-function switchTab(tab) {
-  ['pitch', 'transfers', 'league'].forEach(t => {
-    document.getElementById(`tab-${t}`).classList.add('hidden');
-    document.getElementById(`btn-${t}`).className = "flex-1 py-1 text-gray-400 font-bold";
-  });
-  document.getElementById(`tab-${tab}`).classList.remove('hidden');
-  document.getElementById(`btn-${tab}`).className = "flex-1 py-1 text-blue-400 font-bold";
+// 4. Match Simulation Engine
+function simulateGameweek() {
+  let currentGwPoints = 0;
 
-  if (tab === 'transfers') renderMarket();
-  if (tab === 'league') renderLeague();
-}
+  mySquad.forEach(player => {
+    let pts = 2; // Appearance points
+    
+    // Random chance for goals/assists/clean sheets based on position
+    const rand = Math.random();
+    if (player.pos === 'FWD' && rand > 0.4) pts += 4; // Goal
+    if (player.pos === 'MID' && rand > 0.5) pts += 5; // Goal
+    if (player.pos === 'MID' && rand > 0.3) pts += 3; // Assist
+    if ((player.pos === 'DEF' || player.pos === 'GKP') && rand > 0.5) pts += 4; // Clean Sheet
 
-// 5. Chip Logic
-function playChip(chipKey) {
-  if (chipsUsed[chipKey]) return alert("You have already used this chip this season!");
+    player.gwPoints = pts;
 
-  if (activeChip === chipKey) {
-    activeChip = null;
-  } else {
-    activeChip = chipKey;
-  }
-  saveUserData();
-  updateChipUI();
-  renderPitch();
-}
-
-function updateChipUI() {
-  const chipButtons = { wc: 'chip-wc', tc: 'chip-tc', bb: 'chip-bb', fh: 'chip-fh' };
-  Object.keys(chipButtons).forEach(key => {
-    const btn = document.getElementById(chipButtons[key]);
-    if (!btn) return;
-    if (activeChip === key) {
-      btn.className = "flex-1 py-1.5 bg-green-600 text-white font-black rounded border border-green-400 shadow-lg";
-    } else if (chipsUsed[key]) {
-      btn.className = "flex-1 py-1.5 bg-gray-800 text-gray-500 font-bold rounded cursor-not-allowed opacity-50";
-    } else {
-      btn.className = "flex-1 py-1.5 bg-gray-700/50 rounded font-bold hover:bg-gray-600 transition";
+    // Apply multipliers for starters or Bench Boost
+    if (player.isStarter || activeChip === 'bb') {
+      let multiplier = 1;
+      if (player.isCaptain) {
+        multiplier = activeChip === 'tc' ? 3 : 2;
+      }
+      currentGwPoints += (pts * multiplier);
     }
   });
+
+  totalPoints += currentGwPoints;
+  gameweek++;
+
+  if (activeChip) {
+    chipsUsed[activeChip] = true;
+    activeChip = null;
+  }
+
+  saveUserData();
+  renderPitch();
+  alert(`Gameweek Simulated!\nYour Squad earned ${currentGwPoints} points! 🚀`);
 }
 
-// 6. Render Pitch
+// 5. Render Pitch
 function renderPitch() {
   const container = document.getElementById('pitch-container');
   if (!container) return;
@@ -161,27 +156,56 @@ function createPlayerCard(p) {
       class="bg-[#242f3d] border ${isPending ? 'border-yellow-400 animate-pulse' : 'border-gray-700'} rounded-lg p-2 text-center min-w-[72px] shadow-md cursor-pointer active:scale-95 transition-all">
       <div class="text-[9px] text-blue-400 font-bold uppercase">${p.pos}${captainBadge}</div>
       <div class="text-xs font-bold text-white my-0.5 truncate max-w-[68px]">${p.name}</div>
-      <div class="text-[9px] text-gray-400">${p.price}M ETB</div>
+      <div class="text-[10px] font-black text-green-400">${p.gwPoints || 0} pts</div>
     </div>
   `;
 }
 
-// 7. Interactive Actions
+// 6. UI & Action Handlers
+function switchTab(tab) {
+  ['pitch', 'transfers', 'league'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.add('hidden');
+    document.getElementById(`btn-${t}`).className = "flex-1 py-1 text-gray-400 font-bold";
+  });
+  document.getElementById(`tab-${tab}`).classList.remove('hidden');
+  document.getElementById(`btn-${tab}`).className = "flex-1 py-1 text-blue-400 font-bold";
+
+  if (tab === 'transfers') renderMarket();
+  if (tab === 'league') renderLeague();
+}
+
+function playChip(chipKey) {
+  if (chipsUsed[chipKey]) return alert("You have already used this chip this season!");
+  activeChip = activeChip === chipKey ? null : chipKey;
+  saveUserData();
+  updateChipUI();
+  renderPitch();
+}
+
+function updateChipUI() {
+  const chipButtons = { wc: 'chip-wc', tc: 'chip-tc', bb: 'chip-bb', fh: 'chip-fh' };
+  Object.keys(chipButtons).forEach(key => {
+    const btn = document.getElementById(chipButtons[key]);
+    if (!btn) return;
+    if (activeChip === key) {
+      btn.className = "flex-1 py-1.5 bg-green-600 text-white font-black rounded border border-green-400 shadow-lg";
+    } else if (chipsUsed[key]) {
+      btn.className = "flex-1 py-1.5 bg-gray-800 text-gray-500 font-bold rounded cursor-not-allowed opacity-50";
+    } else {
+      btn.className = "flex-1 py-1.5 bg-gray-700/50 rounded font-bold hover:bg-gray-600 transition";
+    }
+  });
+}
+
 function handlePlayerClick(id) {
   if (pendingSubId) {
-    if (pendingSubId === id) {
-      pendingSubId = null;
-      renderPitch();
-      return;
-    }
+    if (pendingSubId === id) { pendingSubId = null; renderPitch(); return; }
     executeSwap(pendingSubId, id);
     pendingSubId = null;
     return;
   }
-
   selectedPlayerId = id;
   const player = mySquad.find(p => p.id === id);
-
   document.getElementById('modal-player-name').innerText = player.name;
   document.getElementById('modal-player-details').innerText = `${player.pos} • ${player.club} • ${player.price}M ETB`;
   document.getElementById('player-modal').classList.remove('hidden');
@@ -192,22 +216,15 @@ function closeModal() {
   selectedPlayerId = null;
 }
 
-function prepareSub() {
-  pendingSubId = selectedPlayerId;
-  closeModal();
-  renderPitch();
-}
+function prepareSub() { pendingSubId = selectedPlayerId; closeModal(); renderPitch(); }
 
 function executeSwap(id1, id2) {
   const p1 = mySquad.find(p => p.id === id1);
   const p2 = mySquad.find(p => p.id === id2);
-
   if (!p1 || !p2) return;
-
   const tempStarter = p1.isStarter;
   p1.isStarter = p2.isStarter;
   p2.isStarter = tempStarter;
-
   saveUserData();
   renderPitch();
 }
@@ -216,7 +233,6 @@ function setCaptain() {
   mySquad.forEach(p => { p.isCaptain = (p.id === selectedPlayerId); });
   const currentVC = mySquad.find(p => p.isViceCaptain);
   if (currentVC && currentVC.id === selectedPlayerId) currentVC.isViceCaptain = false;
-  
   saveUserData();
   closeModal();
   renderPitch();
@@ -226,13 +242,11 @@ function setViceCaptain() {
   mySquad.forEach(p => { p.isViceCaptain = (p.id === selectedPlayerId); });
   const currentC = mySquad.find(p => p.isCaptain);
   if (currentC && currentC.id === selectedPlayerId) currentC.isCaptain = false;
-
   saveUserData();
   closeModal();
   renderPitch();
 }
 
-// 8. Transfer Market
 function renderMarket() {
   const list = document.getElementById('market-list');
   list.innerHTML = playerMarket.map(p => {
@@ -257,7 +271,7 @@ function buyPlayer(id) {
   if (mySquad.length >= 15) return alert("Squad full! Sell a player first.");
   if (bankBalance < p.price && activeChip !== 'wc' && activeChip !== 'fh') return alert("Not enough budget!");
 
-  mySquad.push({ ...p, isStarter: mySquad.length < 11, isCaptain: false, isViceCaptain: false });
+  mySquad.push({ ...p, isStarter: mySquad.length < 11, isCaptain: false, isViceCaptain: false, gwPoints: 0 });
   bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
   saveUserData();
   renderPitch();
@@ -274,18 +288,14 @@ function sellPlayer(id) {
   renderMarket();
 }
 
-// 9. Render Leagues
 function renderLeague() {
   const list = document.getElementById('league-list');
-  const userName = tg?.initDataUnsafe?.user?.first_name 
-    ? `${tg.initDataUnsafe.user.first_name}'s Team` 
-    : "Gulit FC (You)";
-
+  const userName = tg?.initDataUnsafe?.user?.first_name ? `${tg.initDataUnsafe.user.first_name}'s Team` : "Gulit FC (You)";
   const leaderboard = [
-    { rank: 1, name: userName, pts: 0 },
-    { rank: 2, name: "Sheger Warriors", pts: 0 },
-    { rank: 3, name: "Addis Strikers", pts: 0 },
-    { rank: 4, name: "Fasil Dynasty", pts: 0 }
+    { rank: 1, name: userName, pts: totalPoints },
+    { rank: 2, name: "Sheger Warriors", pts: Math.max(0, totalPoints - 12) },
+    { rank: 3, name: "Addis Strikers", pts: Math.max(0, totalPoints - 24) },
+    { rank: 4, name: "Fasil Dynasty", pts: Math.max(0, totalPoints - 31) }
   ];
 
   list.innerHTML = leaderboard.map(user => `
@@ -302,13 +312,13 @@ function renderLeague() {
 function updateHeader() {
   document.getElementById('bank-balance').innerText = `${bankBalance.toFixed(1)}M ETB`;
   document.getElementById('squad-count').innerText = `${mySquad.length}/15`;
+  document.getElementById('total-points').innerText = totalPoints;
+  const gwElem = document.getElementById('gw-number');
+  if (gwElem) gwElem.innerText = gameweek;
 }
 
 // Boot
-document.addEventListener('DOMContentLoaded', () => {
-  loadUserData();
-  renderPitch();
-});
+document.addEventListener('DOMContentLoaded', () => { loadUserData(); renderPitch(); });
 loadUserData();
 renderPitch();
 
