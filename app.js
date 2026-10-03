@@ -1,7 +1,7 @@
 // ==========================================
 // 1. STATE & INITIALIZATION
 // ==========================================
-const STORAGE_KEY = 'epl_fantasy_clean_v5';
+const STORAGE_KEY = 'epl_fantasy_clean_v6';
 
 const playerMarket = [
   { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, form: 5.2 },
@@ -31,7 +31,7 @@ let chipsUsed = { wc: false, tc: false, bb: false, fh: false };
 let activeModalId = null;
 let pendingSubId = null;
 let chipConfirmModal = null;
-let gwHistory = []; // Stores past gameweek scores for the Points tab
+let gwHistory = [];
 
 const defaultStarters = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
 
@@ -50,7 +50,7 @@ function loadData() {
   } else {
     resetSquad();
   }
-  renderPitch();
+  renderAll();
 }
 
 function saveData() {
@@ -78,29 +78,32 @@ function resetSquad() {
 }
 
 // ==========================================
-// 2. NAVIGATION TABS (Pick Team, Transfers, Leagues, Points)
+// 2. NAVIGATION TABS
 // ==========================================
 function switchTab(tab) {
-  // Hide all tabs
   ['pitch', 'transfers', 'leagues', 'points'].forEach(t => {
     const el = document.getElementById(`tab-${t}`);
     if (el) el.classList.add('hidden');
   });
 
-  // Show target tab
   const target = document.getElementById(`tab-${tab}`);
   if (target) {
     target.classList.remove('hidden');
   }
 
-  // Render specific tab contents
-  if (tab === 'transfers') renderMarket();
-  if (tab === 'leagues') renderLeagues();
-  if (tab === 'points') renderPoints();
+  renderAll();
+}
+
+function renderAll() {
+  renderPitch();
+  renderMarket();
+  renderLeagues();
+  renderPoints();
+  updateHeader();
 }
 
 // ==========================================
-// 3. FPL CHIP CONFIRMATION SYSTEM
+// 3. CHIPS SYSTEM
 // ==========================================
 function promptChip(chipName) {
   if (chipsUsed[chipName]) {
@@ -132,7 +135,7 @@ function cancelChipPlay() {
 }
 
 // ==========================================
-// 4. PITCH & FORMATION RULES (FPL)
+// 4. PITCH & FORMATION
 // ==========================================
 function isValidFormation(starters) {
   if (starters.length !== 11) return false;
@@ -153,7 +156,6 @@ function renderPitch() {
   const chipLabels = { wc: 'Wildcard', tc: '3x Captain', bb: 'Bench Boost', fh: 'Free Hit' };
 
   container.innerHTML = `
-    <!-- Integrated Official FPL Chip Bar -->
     <div class="bg-gray-800 border border-gray-700 rounded-xl p-2 mb-2">
       <div class="flex gap-1">
         ${['wc', 'tc', 'bb', 'fh'].map(c => `
@@ -182,7 +184,6 @@ function renderPitch() {
     ${renderModal()}
     ${renderChipConfirmModal()}
   `;
-  updateHeader();
 }
 
 function cardHtml(p) {
@@ -227,9 +228,6 @@ function executeSwap(id1, id2) {
   renderPitch();
 }
 
-// ==========================================
-// 5. MODALS (Player & Chip Confirmation)
-// ==========================================
 function renderModal() {
   if (!activeModalId) return '';
   const p = mySquad.find(x => x.id === activeModalId);
@@ -274,7 +272,7 @@ function setCap(id, isC) {
 }
 
 // ==========================================
-// 6. TRANSFERS MARKET TAB
+// 5. TRANSFERS MARKET TAB
 // ==========================================
 function renderMarket() {
   const container = document.getElementById('tab-transfers');
@@ -320,8 +318,7 @@ function buyPlayer(id) {
   }
   
   saveData();
-  renderPitch();
-  renderMarket();
+  renderAll();
 }
 
 function sellPlayer(id) {
@@ -330,12 +327,11 @@ function sellPlayer(id) {
   mySquad = mySquad.filter(x => x.id !== id);
   bankBalance = parseFloat((bankBalance + p.price).toFixed(1));
   saveData();
-  renderPitch();
-  renderMarket();
+  renderAll();
 }
 
 // ==========================================
-// 7. LEAGUES TAB
+// 6. LEAGUES TAB
 // ==========================================
 function renderLeagues() {
   const container = document.getElementById('tab-leagues');
@@ -368,7 +364,7 @@ function renderLeagues() {
 }
 
 // ==========================================
-// 8. POINTS TAB & SIMULATION
+// 7. POINTS TAB & SIMULATION
 // ==========================================
 function simulateGameweek() {
   mySquad.forEach(p => {
@@ -419,7 +415,7 @@ function simulateGameweek() {
 
   activeChip = null;
   saveData();
-  renderPitch();
+  renderAll();
   alert(`Gameweek simulated! You scored ${gwTotal} points.`);
 }
 
