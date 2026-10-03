@@ -21,7 +21,7 @@ const playerMarket = [
   { id: 15, name: "B. Gugsa", club: "Fasil Kenema", pos: "FWD", price: 8.0, fixture: "WOL (A)" }
 ];
 
-// 2. User State & Selection Tracking
+// 2. User State & Active Chips Tracking
 let mySquad = playerMarket.slice(0, 15).map((p, idx) => ({
   ...p,
   isStarter: idx < 11,
@@ -29,6 +29,9 @@ let mySquad = playerMarket.slice(0, 15).map((p, idx) => ({
   isViceCaptain: idx === 12
 }));
 let bankBalance = 100.0 - mySquad.reduce((sum, p) => sum + p.price, 0);
+
+let activeChip = null; // 'wc', 'tc', 'bb', 'fh'
+let chipsUsed = { wc: false, tc: false, bb: false, fh: false };
 
 let selectedPlayerId = null;
 let pendingSubId = null;
@@ -46,7 +49,35 @@ function switchTab(tab) {
   if (tab === 'league') renderLeague();
 }
 
-// 4. Render Pitch
+// 4. Chip Logic
+function playChip(chipKey) {
+  if (chipsUsed[chipKey]) return alert("You have already used this chip this season!");
+
+  if (activeChip === chipKey) {
+    activeChip = null; // Toggle off
+  } else {
+    activeChip = chipKey;
+  }
+  updateChipUI();
+  renderPitch();
+}
+
+function updateChipUI() {
+  const chipButtons = { wc: 'chip-wc', tc: 'chip-tc', bb: 'chip-bb', fh: 'chip-fh' };
+  Object.keys(chipButtons).forEach(key => {
+    const btn = document.getElementById(chipButtons[key]);
+    if (!btn) return;
+    if (activeChip === key) {
+      btn.className = "flex-1 py-1.5 bg-green-600 text-white font-black rounded border border-green-400 shadow-lg";
+    } else if (chipsUsed[key]) {
+      btn.className = "flex-1 py-1.5 bg-gray-800 text-gray-500 font-bold rounded cursor-not-allowed opacity-50";
+    } else {
+      btn.className = "flex-1 py-1.5 bg-gray-700/50 rounded font-bold hover:bg-gray-600 transition";
+    }
+  });
+}
+
+// 5. Render Pitch
 function renderPitch() {
   const container = document.getElementById('pitch-container');
   if (!container) return;
@@ -66,33 +97,44 @@ function renderPitch() {
       <div class="flex justify-center gap-2 flex-wrap">${mids.map(createPlayerCard).join('')}</div>
       <div class="flex justify-center gap-2 flex-wrap">${fwds.map(createPlayerCard).join('')}</div>
     </div>
-    <div class="mt-4 p-3 bg-[#242f3d]/60 border border-gray-700 rounded-xl text-center">
-      <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Substitutes</p>
+    <div class="mt-4 p-3 bg-[#242f3d]/60 border ${activeChip === 'bb' ? 'border-green-400 bg-green-950/20' : 'border-gray-700'} rounded-xl text-center">
+      <p class="text-[10px] font-bold ${activeChip === 'bb' ? 'text-green-400' : 'text-gray-400'} uppercase tracking-wider mb-2">
+        Substitutes ${activeChip === 'bb' ? '(Bench Boost Active! 🚀)' : ''}
+      </p>
       <div class="flex justify-center gap-2 flex-wrap">${bench.map(createPlayerCard).join('')}</div>
     </div>
   `;
   updateHeader();
+  updateChipUI();
 }
 
 function createPlayerCard(p) {
   const isPending = pendingSubId === p.id;
-  const badge = p.isCaptain ? ' <span class="text-yellow-400 font-black">(C)</span>' : (p.isViceCaptain ? ' <span class="text-gray-300 font-black">(VC)</span>' : '');
+  let captainBadge = '';
+
+  if (p.isCaptain) {
+    captainBadge = activeChip === 'tc' 
+      ? ' <span class="text-yellow-400 font-black">(3xC)</span>' 
+      : ' <span class="text-yellow-400 font-black">(C)</span>';
+  } else if (p.isViceCaptain) {
+    captainBadge = ' <span class="text-gray-300 font-black">(VC)</span>';
+  }
 
   return `
     <div onclick="handlePlayerClick(${p.id})" 
       class="bg-[#242f3d] border ${isPending ? 'border-yellow-400 animate-pulse' : 'border-gray-700'} rounded-lg p-2 text-center min-w-[72px] shadow-md cursor-pointer active:scale-95 transition-all">
-      <div class="text-[9px] text-blue-400 font-bold uppercase">${p.pos}${badge}</div>
+      <div class="text-[9px] text-blue-400 font-bold uppercase">${p.pos}${captainBadge}</div>
       <div class="text-xs font-bold text-white my-0.5 truncate max-w-[68px]">${p.name}</div>
       <div class="text-[9px] text-gray-400">${p.price}M ETB</div>
     </div>
   `;
 }
 
-// 5. Interactive Substitution & Captain Modal
+// 6. Interactive Actions
 function handlePlayerClick(id) {
   if (pendingSubId) {
     if (pendingSubId === id) {
-      pendingSubId = null; // Cancel selection
+      pendingSubId = null;
       renderPitch();
       return;
     }
@@ -126,7 +168,6 @@ function executeSwap(id1, id2) {
 
   if (!p1 || !p2) return;
 
-  // Swap starter statuses
   const tempStarter = p1.isStarter;
   p1.isStarter = p2.isStarter;
   p2.isStarter = tempStarter;
@@ -136,25 +177,21 @@ function executeSwap(id1, id2) {
 
 function setCaptain() {
   mySquad.forEach(p => { p.isCaptain = (p.id === selectedPlayerId); });
-  // If vice-captain was captain, clear vice-captain
   const currentVC = mySquad.find(p => p.isViceCaptain);
   if (currentVC && currentVC.id === selectedPlayerId) currentVC.isViceCaptain = false;
-  
   closeModal();
   renderPitch();
 }
 
 function setViceCaptain() {
   mySquad.forEach(p => { p.isViceCaptain = (p.id === selectedPlayerId); });
-  // If captain was vice-captain, clear captain
   const currentC = mySquad.find(p => p.isCaptain);
   if (currentC && currentC.id === selectedPlayerId) currentC.isCaptain = false;
-
   closeModal();
   renderPitch();
 }
 
-// 6. Transfer Market
+// 7. Transfer Market
 function renderMarket() {
   const list = document.getElementById('market-list');
   list.innerHTML = playerMarket.map(p => {
@@ -177,7 +214,7 @@ function renderMarket() {
 function buyPlayer(id) {
   const p = playerMarket.find(item => item.id === id);
   if (mySquad.length >= 15) return alert("Squad full! Sell a player first.");
-  if (bankBalance < p.price) return alert("Not enough budget!");
+  if (bankBalance < p.price && activeChip !== 'wc' && activeChip !== 'fh') return alert("Not enough budget!");
 
   mySquad.push({ ...p, isStarter: mySquad.length < 11, isCaptain: false, isViceCaptain: false });
   bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
@@ -194,7 +231,7 @@ function sellPlayer(id) {
   renderMarket();
 }
 
-// 7. Render Leagues
+// 8. Render Leagues
 function renderLeague() {
   const list = document.getElementById('league-list');
   const leaderboard = [
