@@ -32,10 +32,12 @@ let chipsUsed = { wc: false, tc: false, bb: false, fh: false };
 let totalPoints = 0;
 let gameweek = 1;
 
+let freeTransfers = 1;
+let transfersMadeInGW = 0;
+
 let selectedPlayerId = null;
 let pendingSubId = null;
 
-// Starting Indices for standard 1 GKP, 4 DEF, 4 MID, 2 FWD formation
 const defaultStarterIds = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
 
 // 3. Save & Load Data
@@ -50,6 +52,8 @@ function loadUserData() {
       chipsUsed = data.chipsUsed || { wc: false, tc: false, bb: false, fh: false };
       totalPoints = data.totalPoints || 0;
       gameweek = data.gameweek || 1;
+      freeTransfers = data.freeTransfers !== undefined ? data.freeTransfers : 1;
+      transfersMadeInGW = data.transfersMadeInGW || 0;
       return;
     } catch (e) {
       console.error("Failed to parse local storage", e);
@@ -67,6 +71,8 @@ function setDefaultSquad() {
     gwPoints: 0
   }));
   bankBalance = 100.0 - mySquad.reduce((sum, p) => sum + p.price, 0);
+  freeTransfers = 1;
+  transfersMadeInGW = 0;
   saveUserData();
 }
 
@@ -82,11 +88,11 @@ function resetSquadData() {
 }
 
 function saveUserData() {
-  const payload = { mySquad, bankBalance, activeChip, chipsUsed, totalPoints, gameweek };
+  const payload = { mySquad, bankBalance, activeChip, chipsUsed, totalPoints, gameweek, freeTransfers, transfersMadeInGW };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
 
-// 4. Substitution & Formation Validation Rules
+// 4. Substitution & Formation Rules
 function validateFormation(proposedSquad) {
   const starters = proposedSquad.filter(p => p.isStarter);
   const gkps = starters.filter(p => p.pos === 'GKP').length;
@@ -107,7 +113,6 @@ function executeSwap(id1, id2) {
   const p2 = mySquad.find(p => p.id === id2);
   if (!p1 || !p2) return;
 
-  // GKP Swap Restriction
   if ((p1.pos === 'GKP' || p2.pos === 'GKP') && p1.pos !== p2.pos) {
     alert("Goalkeepers can only be swapped with another Goalkeeper!");
     return;
@@ -156,7 +161,23 @@ function simulateGameweek() {
     }
   });
 
-  totalPoints += currentGwPoints;
+  // Calculate Hits Penalty (-4 pts per transfer over free transfers)
+  let hitsCost = 0;
+  if (activeChip !== 'wc' && activeChip !== 'fh') {
+    const extraTransfers = Math.max(0, transfersMadeInGW - freeTransfers);
+    hitsCost = extraTransfers * 4;
+  }
+
+  const netGwPoints = currentGwPoints - hitsCost;
+  totalPoints += netGwPoints;
+
+  // Carry over unused transfers (max 5)
+  if (activeChip !== 'wc' && activeChip !== 'fh') {
+    const unused = Math.max(0, freeTransfers - transfersMadeInGW);
+    freeTransfers = Math.min(5, unused + 1);
+  }
+  
+  transfersMadeInGW = 0;
   gameweek++;
 
   if (activeChip) {
@@ -166,10 +187,59 @@ function simulateGameweek() {
 
   saveUserData();
   renderPitch();
-  alert(`Gameweek Simulated!\nYour Squad earned ${currentGwPoints} points! 🚀`);
+  alert(`Gameweek Simulated!\nGross Points: ${currentGwPoints}\nTransfer Hits: -${hitsCost} pts\nNet Points Earned: ${netGwPoints} 🚀`);
 }
 
-// 6. Render Pitch
+// 6. Transfer Market Actions
+function renderMarket() {
+  const list = document.getElementById('market-list');
+  list.innerHTML = playerMarket.map(p => {
+    const inSquad = mySquad.some(s => s.id === p.id);
+    return `
+      <div class="bg-[#242f3d] p-3 rounded-lg border border-gray-700 flex justify-between items-center">
+        <div>
+          <div class="font-bold text-sm text-white">${p.name} <span class="text-xs font-normal text-gray-400">(${p.club})</span></div>
+          <div class="text-xs text-blue-400 font-semibold">${p.pos} • ${p.price}M ETB • ${p.fixture}</div>
+        </div>
+        <button onclick="${inSquad ? `sellPlayer(${p.id})` : `buyPlayer(${p.id})`}" 
+          class="px-3 py-1 rounded text-xs font-bold ${inSquad ? 'bg-red-500/20 text-red-400 border border-red-500/50' : 'bg-green-500/20 text-green-400 border border-green-500/50'}">
+          ${inSquad ? 'Sell' : 'Buy'}
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+function buyPlayer(id) {
+  const p = playerMarket.find(item => item.id === id);
+  if (mySquad.length >= 15) return alert("Squad full! Sell a player first.");
+  
+  const clubCount = mySquad.filter(item => item.club === p.club).length;
+  if (clubCount >= 3) return alert(`Limit reached! You can only have 3 players from ${p.club}.`);
+
+  if (bankBalance < p.price && activeChip !== 'wc' && activeChip !== 'fh') return alert("Not enough budget!");
+
+  mySquad.push({ ...p, isStarter: mySquad.length < 11, isCaptain: false, isViceCaptain: false, gwPoints: 0 });
+  bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
+  transfersMadeInGW++;
+
+  saveUserData();
+  renderPitch();
+  renderMarket();
+}
+
+function sellPlayer(id) {
+  const p = mySquad.find(item => item.id === id);
+  if (!p) return;
+  mySquad = mySquad.filter(item => item.id !== id);
+  bankBalance = parseFloat((bankBalance + p.price).toFixed(1));
+
+  saveUserData();
+  renderPitch();
+  renderMarket();
+}
+
+// 7. Render Pitch
 function renderPitch() {
   const container = document.getElementById('pitch-container');
   if (!container) return;
@@ -222,7 +292,7 @@ function createPlayerCard(p) {
   `;
 }
 
-// 7. Navigation & Event Handlers
+// 8. Navigation & Event Handlers
 function switchTab(tab) {
   ['pitch', 'transfers', 'league'].forEach(t => {
     document.getElementById(`tab-${t}`).classList.add('hidden');
@@ -297,51 +367,6 @@ function setViceCaptain() {
   renderPitch();
 }
 
-function renderMarket() {
-  const list = document.getElementById('market-list');
-  list.innerHTML = playerMarket.map(p => {
-    const inSquad = mySquad.some(s => s.id === p.id);
-    return `
-      <div class="bg-[#242f3d] p-3 rounded-lg border border-gray-700 flex justify-between items-center">
-        <div>
-          <div class="font-bold text-sm text-white">${p.name} <span class="text-xs font-normal text-gray-400">(${p.club})</span></div>
-          <div class="text-xs text-blue-400 font-semibold">${p.pos} • ${p.price}M ETB • ${p.fixture}</div>
-        </div>
-        <button onclick="${inSquad ? `sellPlayer(${p.id})` : `buyPlayer(${p.id})`}" 
-          class="px-3 py-1 rounded text-xs font-bold ${inSquad ? 'bg-red-500/20 text-red-400 border border-red-500/50' : 'bg-green-500/20 text-green-400 border border-green-500/50'}">
-          ${inSquad ? 'Sell' : 'Buy'}
-        </button>
-      </div>
-    `;
-  }).join('');
-}
-
-function buyPlayer(id) {
-  const p = playerMarket.find(item => item.id === id);
-  if (mySquad.length >= 15) return alert("Squad full! Sell a player first.");
-  
-  const clubCount = mySquad.filter(item => item.club === p.club).length;
-  if (clubCount >= 3) return alert(`Limit reached! You can only have 3 players from ${p.club}.`);
-
-  if (bankBalance < p.price && activeChip !== 'wc' && activeChip !== 'fh') return alert("Not enough budget!");
-
-  mySquad.push({ ...p, isStarter: mySquad.length < 11, isCaptain: false, isViceCaptain: false, gwPoints: 0 });
-  bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
-  saveUserData();
-  renderPitch();
-  renderMarket();
-}
-
-function sellPlayer(id) {
-  const p = mySquad.find(item => item.id === id);
-  if (!p) return;
-  mySquad = mySquad.filter(item => item.id !== id);
-  bankBalance = parseFloat((bankBalance + p.price).toFixed(1));
-  saveUserData();
-  renderPitch();
-  renderMarket();
-}
-
 function renderLeague() {
   const list = document.getElementById('league-list');
   const userName = tg?.initDataUnsafe?.user?.first_name ? `${tg.initDataUnsafe.user.first_name}'s Team` : "Gulit FC (You)";
@@ -367,6 +392,23 @@ function updateHeader() {
   document.getElementById('bank-balance').innerText = `${bankBalance.toFixed(1)}M ETB`;
   document.getElementById('squad-count').innerText = `${mySquad.length}/15`;
   document.getElementById('total-points').innerText = totalPoints;
+  
+  const hits = (activeChip === 'wc' || activeChip === 'fh') 
+    ? 0 
+    : Math.max(0, transfersMadeInGW - freeTransfers) * 4;
+
+  document.getElementById('free-transfers').innerText = freeTransfers;
+  document.getElementById('transfer-hits').innerText = `-${hits} pts`;
+
+  const label = document.getElementById('transfer-cost-label');
+  if (label) {
+    if (activeChip === 'wc' || activeChip === 'fh') {
+      label.innerText = "Unlimited Free Transfers (Chip Active)";
+    } else {
+      label.innerText = `Free: ${freeTransfers} • Hits: -${hits} pts`;
+    }
+  }
+
   const gwElem = document.getElementById('gw-number');
   if (gwElem) gwElem.innerText = gameweek;
 }
