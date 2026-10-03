@@ -48,6 +48,21 @@
     </div>
   </main>
 
+  <!-- ACTION MODAL FOR SUBSTITUTIONS & CAPTAIN -->
+  <div id="player-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+    <div class="bg-[#242f3d] border border-gray-700 rounded-xl p-4 w-full max-w-xs text-center space-y-3 shadow-xl">
+      <h3 id="modal-player-name" class="font-bold text-base text-white"></h3>
+      <p id="modal-player-details" class="text-xs text-blue-400"></p>
+      
+      <div class="space-y-2 pt-2">
+        <button id="btn-sub" onclick="prepareSub()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 font-bold rounded-lg text-xs">Switch / Substitute</button>
+        <button id="btn-cap" onclick="setCaptain()" class="w-full py-2 bg-yellow-600 hover:bg-yellow-500 font-bold rounded-lg text-xs">Make Captain (C)</button>
+        <button id="btn-vc" onclick="setViceCaptain()" class="w-full py-2 bg-gray-600 hover:bg-gray-500 font-bold rounded-lg text-xs">Make Vice Captain (VC)</button>
+        <button onclick="closeModal()" class="w-full py-2 bg-gray-700/50 text-gray-300 font-semibold rounded-lg text-xs">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- BOTTOM NAVIGATION -->
   <nav class="bg-[#242f3d] border-t border-gray-700 flex justify-around p-2 text-center text-xs">
     <button onclick="switchTab('pitch')" id="btn-pitch" class="flex-1 py-1 text-blue-400 font-bold">Pick Team</button>
@@ -58,4 +73,3 @@
   <script src="app.js"></script>
 </body>
 </html>
-   
