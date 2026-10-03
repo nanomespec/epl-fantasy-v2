@@ -1,7 +1,7 @@
 // ==========================================
 // 1. STATE & INITIALIZATION
 // ==========================================
-const STORAGE_KEY = 'epl_fantasy_clean_v7';
+const STORAGE_KEY = 'epl_fantasy_clean_v8';
 
 const playerMarket = [
   { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, form: 5.2 },
@@ -32,7 +32,6 @@ let activeModalId = null;
 let pendingSubId = null;
 let chipConfirmModal = null;
 let gwHistory = [];
-let currentTab = 'pitch'; // 'pitch', 'transfers', 'leagues', 'points'
 
 const defaultStarters = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
 
@@ -48,16 +47,15 @@ function loadData() {
     chipsUsed = data.chipsUsed || chipsUsed;
     activeChip = data.activeChip || null;
     gwHistory = data.gwHistory || [];
-    currentTab = data.currentTab || 'pitch';
   } else {
     resetSquad();
   }
-  renderApp();
+  renderAll();
 }
 
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ 
-    mySquad, preFreeHitSquad, bankBalance, totalPoints, gameweek, chipsUsed, activeChip, gwHistory, currentTab 
+    mySquad, preFreeHitSquad, bankBalance, totalPoints, gameweek, chipsUsed, activeChip, gwHistory 
   }));
 }
 
@@ -76,34 +74,39 @@ function resetSquad() {
   activeChip = null;
   preFreeHitSquad = null;
   gwHistory = [];
-  currentTab = 'pitch';
   saveData();
 }
 
 // ==========================================
-// 2. NAVIGATION & RENDERING ENGINE
+// 2. TAB SWITCHING SYSTEM
 // ==========================================
-function switchTab(tab) {
-  currentTab = tab;
-  saveData();
-  renderApp();
-}
+function switchTab(tabName) {
+  // Hide all potential tab containers
+  const tabs = ['pitch', 'transfers', 'leagues', 'points'];
+  tabs.forEach(t => {
+    const el = document.getElementById(`tab-${t}`);
+    if (el) {
+      el.classList.add('hidden');
+      el.style.display = 'none';
+    }
+  });
 
-function renderApp() {
-  const container = document.getElementById('pitch-container');
-  if (!container) return;
-
-  updateHeader();
-
-  if (currentTab === 'pitch') {
-    container.innerHTML = renderPitchView();
-  } else if (currentTab === 'transfers') {
-    container.innerHTML = renderMarketView();
-  } else if (currentTab === 'leagues') {
-    container.innerHTML = renderLeaguesView();
-  } else if (currentTab === 'points') {
-    container.innerHTML = renderPointsView();
+  // Show the requested tab container
+  const target = document.getElementById(`tab-${tabName}`);
+  if (target) {
+    target.classList.remove('hidden');
+    target.style.display = 'block';
   }
+
+  renderAll();
+}
+
+function renderAll() {
+  renderPitch();
+  renderMarket();
+  renderLeagues();
+  renderPoints();
+  updateHeader();
 }
 
 // ==========================================
@@ -117,7 +120,7 @@ function promptChip(chipName) {
     return alert(`You already have an active chip (${activeChip.toUpperCase()}) for this gameweek!`);
   }
   chipConfirmModal = chipName;
-  renderApp();
+  renderPitch();
 }
 
 function confirmChipPlay() {
@@ -130,16 +133,16 @@ function confirmChipPlay() {
   }
   chipConfirmModal = null;
   saveData();
-  renderApp();
+  renderPitch();
 }
 
 function cancelChipPlay() {
   chipConfirmModal = null;
-  renderApp();
+  renderPitch();
 }
 
 // ==========================================
-// 4. VIEWS HTML GENERATORS
+// 4. PITCH & FORMATION
 // ==========================================
 function isValidFormation(starters) {
   if (starters.length !== 11) return false;
@@ -151,12 +154,15 @@ function isValidFormation(starters) {
   return gk === 1 && def >= 3 && def <= 5 && mid >= 2 && mid <= 5 && fwd >= 1 && fwd <= 3;
 }
 
-function renderPitchView() {
+function renderPitch() {
+  const container = document.getElementById('tab-pitch') || document.getElementById('pitch-container');
+  if (!container) return;
+
   const starters = mySquad.filter(p => p.isStarter);
   const bench = mySquad.filter(p => !p.isStarter);
   const chipLabels = { wc: 'Wildcard', tc: '3x Captain', bb: 'Bench Boost', fh: 'Free Hit' };
 
-  return `
+  container.innerHTML = `
     <div class="bg-gray-800 border border-gray-700 rounded-xl p-2 mb-2">
       <div class="flex gap-1">
         ${['wc', 'tc', 'bb', 'fh'].map(c => `
@@ -204,14 +210,14 @@ function cardHtml(p) {
 function handleCardClick(id) {
   if (pendingSubId === null) {
     activeModalId = id;
-    renderApp();
+    renderPitch();
   } else {
     executeSwap(pendingSubId, id);
   }
 }
 
 function executeSwap(id1, id2) {
-  if (id1 === id2) { pendingSubId = null; renderApp(); return; }
+  if (id1 === id2) { pendingSubId = null; renderPitch(); return; }
   const p1 = mySquad.find(p => p.id === id1);
   const p2 = mySquad.find(p => p.id === id2);
 
@@ -226,7 +232,7 @@ function executeSwap(id1, id2) {
   }
   pendingSubId = null;
   saveData();
-  renderApp();
+  renderPitch();
 }
 
 function renderModal() {
@@ -237,10 +243,10 @@ function renderModal() {
     <div class="absolute inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
       <div class="bg-gray-800 border border-gray-600 rounded-xl p-4 w-64 text-center text-white">
         <div class="font-bold text-sm mb-2">${p.name}</div>
-        <button onclick="pendingSubId=${p.id}; activeModalId=null; renderApp();" class="w-full bg-emerald-600 py-1.5 rounded text-xs font-bold mb-2">🔄 Substitute</button>
+        <button onclick="pendingSubId=${p.id}; activeModalId=null; renderPitch();" class="w-full bg-emerald-600 py-1.5 rounded text-xs font-bold mb-2">🔄 Substitute</button>
         <button onclick="setCap(${p.id}, true)" class="w-full bg-amber-600 py-1.5 rounded text-xs font-bold mb-2">👑 Make Captain (C)</button>
         <button onclick="setCap(${p.id}, false)" class="w-full bg-gray-700 py-1.5 rounded text-xs font-bold mb-2">⭐ Make Vice-Captain (VC)</button>
-        <button onclick="activeModalId=null; renderApp();" class="w-full text-gray-400 text-xs mt-1">Cancel</button>
+        <button onclick="activeModalId=null; renderPitch();" class="w-full text-gray-400 text-xs mt-1">Cancel</button>
       </div>
     </div>
   `;
@@ -269,14 +275,17 @@ function setCap(id, isC) {
   });
   activeModalId = null;
   saveData();
-  renderApp();
+  renderPitch();
 }
 
 // ==========================================
-// 5. TRANSFERS MARKET TAB VIEW
+// 5. TRANSFERS MARKET TAB
 // ==========================================
-function renderMarketView() {
-  return `
+function renderMarket() {
+  const container = document.getElementById('tab-transfers');
+  if (!container) return;
+
+  container.innerHTML = `
     <div class="bg-gray-900 border border-gray-700 rounded-xl p-3 text-white">
       <div class="flex justify-between items-center mb-3">
         <div class="text-xs font-bold uppercase text-gray-400">Player Market</div>
@@ -316,7 +325,7 @@ function buyPlayer(id) {
   }
   
   saveData();
-  renderApp();
+  renderAll();
 }
 
 function sellPlayer(id) {
@@ -325,14 +334,17 @@ function sellPlayer(id) {
   mySquad = mySquad.filter(x => x.id !== id);
   bankBalance = parseFloat((bankBalance + p.price).toFixed(1));
   saveData();
-  renderApp();
+  renderAll();
 }
 
 // ==========================================
-// 6. LEAGUES TAB VIEW
+// 6. LEAGUES TAB
 // ==========================================
-function renderLeaguesView() {
-  return `
+function renderLeagues() {
+  const container = document.getElementById('tab-leagues');
+  if (!container) return;
+
+  container.innerHTML = `
     <div class="bg-gray-900 border border-gray-700 rounded-xl p-4 text-white text-xs">
       <div class="font-bold text-sm text-amber-400 mb-2">Global & Mini Leagues</div>
       <p class="text-gray-400 mb-4">Compete against other managers in overall rankings.</p>
@@ -359,7 +371,7 @@ function renderLeaguesView() {
 }
 
 // ==========================================
-// 7. POINTS TAB VIEW & SIMULATION
+// 7. POINTS TAB & SIMULATION
 // ==========================================
 function simulateGameweek() {
   mySquad.forEach(p => {
@@ -410,12 +422,15 @@ function simulateGameweek() {
 
   activeChip = null;
   saveData();
-  renderApp();
+  renderAll();
   alert(`Gameweek simulated! You scored ${gwTotal} points.`);
 }
 
-function renderPointsView() {
-  return `
+function renderPoints() {
+  const container = document.getElementById('tab-points');
+  if (!container) return;
+
+  container.innerHTML = `
     <div class="bg-gray-900 border border-gray-700 rounded-xl p-4 text-white text-xs">
       <div class="flex justify-between items-center mb-3">
         <div class="font-bold text-sm text-emerald-400">Gameweek History</div>
