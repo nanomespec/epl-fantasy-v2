@@ -156,13 +156,11 @@ function handlePlayerClick(id) {
   document.getElementById('modal-player-name').innerText = player.name;
   document.getElementById('modal-player-details').innerText = `${player.pos} • ${player.club} • ${player.price}M ETB`;
   
-  // Update Player Stats
   document.getElementById('stat-goals').innerText = player.goals || 0;
   document.getElementById('stat-assists').innerText = player.assists || 0;
   document.getElementById('stat-cleans').innerText = player.cleans || 0;
   document.getElementById('stat-form').innerText = player.form || '0.0';
 
-  // Render Fixture Difficulty Rating (FDR)
   const fdrColors = { 2: 'bg-green-600', 3: 'bg-gray-600', 4: 'bg-pink-600', 5: 'bg-red-600' };
   const fdrContainer = document.getElementById('fdr-container');
   if (fdrContainer && player.fdr) {
@@ -201,12 +199,23 @@ function setViceCaptain() {
   renderPitch();
 }
 
-// 6. Simulation Engine
+// 6. Simulation Engine & FPL Auto-Substitutions Engine
 function simulateGameweek() {
   let currentGwPoints = 0;
+  let autoSubLogs = [];
 
+  // 1. Simulate match minutes & raw points
   mySquad.forEach(player => {
-    let pts = 2;
+    // 15% chance player gets 0 minutes (DNP)
+    const played = Math.random() > 0.15;
+    if (!played) {
+      player.gwPoints = 0;
+      player.dnp = true;
+      return;
+    }
+
+    player.dnp = false;
+    let pts = 2; // Appearance points
     const rand = Math.random();
     if (player.pos === 'FWD' && rand > 0.4) { pts += 4; player.goals = (player.goals || 0) + 1; }
     if (player.pos === 'MID' && rand > 0.5) { pts += 5; player.goals = (player.goals || 0) + 1; }
@@ -214,13 +223,56 @@ function simulateGameweek() {
     if ((player.pos === 'DEF' || player.pos === 'GKP') && rand > 0.5) { pts += 4; player.cleans = (player.cleans || 0) + 1; }
 
     player.gwPoints = pts;
+  });
 
+  // 2. Process Captain / Vice-Captain Failover
+  const captain = mySquad.find(p => p.isCaptain);
+  const vice = mySquad.find(p => p.isViceCaptain);
+  if (captain && captain.dnp && vice && !vice.dnp) {
+    vice.isCaptain = true;
+    autoSubLogs.push(`Captain ${captain.name} DNP ➔ Vice-Captain ${vice.name} inherited Captaincy!`);
+  }
+
+  // 3. Process Auto-Substitutions (if Bench Boost is NOT active)
+  if (activeChip !== 'bb') {
+    const startersDNP = mySquad.filter(p => p.isStarter && p.dnp);
+    const benchAvailable = mySquad.filter(p => !p.isStarter && !p.dnp);
+
+    startersDNP.forEach(absentPlayer => {
+      // Find candidate from bench (GK for GK, Outfield for Outfield)
+      const validSub = benchAvailable.find(sub => {
+        if (absentPlayer.pos === 'GKP') return sub.pos === 'GKP';
+        if (sub.pos === 'GKP') return false;
+
+        // Verify formation remains valid after swap
+        const testSquad = mySquad.map(p => {
+          if (p.id === absentPlayer.id) return { ...p, isStarter: false };
+          if (p.id === sub.id) return { ...p, isStarter: true };
+          return p;
+        });
+        return validateFormation(testSquad) === null;
+      });
+
+      if (validSub) {
+        absentPlayer.isStarter = false;
+        validSub.isStarter = true;
+        // Remove validSub from available bench list
+        const idx = benchAvailable.findIndex(b => b.id === validSub.id);
+        if (idx > -1) benchAvailable.splice(idx, 1);
+
+        autoSubLogs.push(`Auto-Sub: ${validSub.name} (+${validSub.gwPoints} pts) replaced ${absentPlayer.name} (DNP)`);
+      }
+    });
+  }
+
+  // 4. Calculate Final Points
+  mySquad.forEach(player => {
     if (player.isStarter || activeChip === 'bb') {
       let multiplier = 1;
       if (player.isCaptain) {
         multiplier = activeChip === 'tc' ? 3 : 2;
       }
-      currentGwPoints += (pts * multiplier);
+      currentGwPoints += (player.gwPoints * multiplier);
     }
   });
 
@@ -248,7 +300,9 @@ function simulateGameweek() {
 
   saveUserData();
   renderPitch();
-  alert(`Gameweek Simulated!\nGross Points: ${currentGwPoints}\nTransfer Hits: -${hitsCost} pts\nNet Points Earned: ${netGwPoints} 🚀`);
+
+  const autoSubMsg = autoSubLogs.length > 0 ? `\n\n🔄 Auto-Subs:\n${autoSubLogs.join('\n')}` : '';
+  alert(`Gameweek Simulated!\nGross Points: ${currentGwPoints}\nTransfer Hits: -${hitsCost} pts\nNet Points Earned: ${netGwPoints} 🚀${autoSubMsg}`);
 }
 
 // 7. Transfer Market Actions
@@ -343,12 +397,14 @@ function createPlayerCard(p) {
     captainBadge = ' <span class="text-gray-300 font-black">(VC)</span>';
   }
 
+  const dnpBadge = p.dnp ? '<span class="text-red-400 font-bold ml-0.5">(DNP)</span>' : '';
+
   return `
     <div onclick="handlePlayerClick(${p.id})" 
-      class="bg-[#242f3d]/90 backdrop-blur-md border ${isPending ? 'border-yellow-400 animate-pulse' : 'border-gray-600'} rounded-lg p-1.5 text-center min-w-[68px] shadow-lg cursor-pointer active:scale-95 transition-all">
-      <div class="text-[9px] text-blue-300 font-bold uppercase">${p.pos}${captainBadge}</div>
+      class="bg-[#242f3d]/90 backdrop-blur-md border ${isPending ? 'border-yellow-400 animate-pulse' : (p.dnp ? 'border-red-500/80' : 'border-gray-600')} rounded-lg p-1.5 text-center min-w-[68px] shadow-lg cursor-pointer active:scale-95 transition-all">
+      <div class="text-[9px] text-blue-300 font-bold uppercase">${p.pos}${captainBadge}${dnpBadge}</div>
       <div class="text-[11px] font-bold text-white my-0.5 truncate max-w-[64px]">${p.name}</div>
-      <div class="text-[10px] font-black text-green-400">${p.gwPoints || 0} pts</div>
+      <div class="text-[10px] font-black ${p.dnp ? 'text-red-400' : 'text-green-400'}">${p.gwPoints || 0} pts</div>
     </div>
   `;
 }
