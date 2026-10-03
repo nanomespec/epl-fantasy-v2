@@ -1,54 +1,44 @@
-// 1. Initialize Telegram WebApp SDK
+// Initialize Telegram SDK
 const tg = window.Telegram ? window.Telegram.WebApp : null;
-if (tg) {
-  tg.expand();
-  tg.ready();
-}
+if (tg) { tg.expand(); tg.ready(); }
 
-// 2. Ethiopian Premier League Default Squad Dataset
+// 1. Extended Market Dataset with Prices & Clubs
 const playerMarket = [
-  { id: 1, name: "S. Bahiru", pos: "GKP", fixture: "NEG (H)" },
-  { id: 2, name: "A. Nuri", pos: "GKP", fixture: "SHE (H)" },
-  { id: 3, name: "A. K. Frimpong", pos: "DEF", fixture: "NEG (H)" },
-  { id: 4, name: "E. Frimpong", pos: "DEF", fixture: "NEG (H)" },
-  { id: 5, name: "A. Tefera", pos: "DEF", fixture: "SHE (H)" },
-  { id: 6, name: "S. Bereket", pos: "DEF", fixture: "SID (A)" },
-  { id: 7, name: "Y. Endale", pos: "DEF", fixture: "WOL (A)" },
-  { id: 8, name: "B. Belay", pos: "MID", fixture: "NEG (H)" },
-  { id: 9, name: "E. Tadesse", pos: "MID", fixture: "SHE (H)" },
-  { id: 10, name: "A. Gidey", pos: "MID", fixture: "SID (A)" },
-  { id: 11, name: "G. Panom", pos: "MID", fixture: "HAW (A)" },
-  { id: 12, name: "A. Okutu", pos: "FWD", fixture: "NEG (H)" },
-  { id: 13, name: "H. Konkoni", pos: "FWD", fixture: "SHE (H)" },
-  { id: 14, name: "D. Nathaniel", pos: "FWD", fixture: "SID (A)" },
-  { id: 15, name: "B. Gugsa", pos: "FWD", fixture: "WOL (A)" }
+  { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, fixture: "NEG (H)" },
+  { id: 2, name: "A. Nuri", club: "Ethiopian Coffee", pos: "GKP", price: 5.0, fixture: "SHE (H)" },
+  { id: 3, name: "A. K. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, fixture: "NEG (H)" },
+  { id: 4, name: "E. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, fixture: "NEG (H)" },
+  { id: 5, name: "A. Tefera", club: "Ethiopian Coffee", pos: "DEF", price: 5.0, fixture: "SHE (H)" },
+  { id: 6, name: "S. Bereket", club: "CBE SA", pos: "DEF", price: 5.0, fixture: "SID (A)" },
+  { id: 7, name: "Y. Endale", club: "Fasil Kenema", pos: "DEF", price: 5.0, fixture: "WOL (A)" },
+  { id: 8, name: "B. Belay", club: "Saint George", pos: "MID", price: 7.0, fixture: "NEG (H)" },
+  { id: 9, name: "E. Tadesse", club: "Ethiopian Coffee", pos: "MID", price: 7.5, fixture: "SHE (H)" },
+  { id: 10, name: "A. Gidey", club: "CBE SA", pos: "MID", price: 7.5, fixture: "SID (A)" },
+  { id: 11, name: "G. Panom", club: "Mechal", pos: "MID", price: 7.0, fixture: "HAW (A)" },
+  { id: 12, name: "A. Okutu", club: "Saint George", pos: "FWD", price: 9.0, fixture: "NEG (H)" },
+  { id: 13, name: "H. Konkoni", club: "Ethiopian Coffee", pos: "FWD", price: 8.0, fixture: "SHE (H)" },
+  { id: 14, name: "D. Nathaniel", club: "CBE SA", pos: "FWD", price: 8.5, fixture: "SID (A)" },
+  { id: 15, name: "B. Gugsa", club: "Fasil Kenema", pos: "FWD", price: 8.0, fixture: "WOL (A)" }
 ];
 
-// 3. User Squad State Management
-let mySquad = playerMarket.map((player, index) => ({
-  ...player,
-  isStarter: index < 11,
-  isCaptain: index === 11 // Default Captain: A. Okutu
-}));
+// 2. User State
+let mySquad = playerMarket.slice(0, 15).map((p, idx) => ({ ...p, isStarter: idx < 11, isCaptain: idx === 11 }));
+let bankBalance = 100.0 - mySquad.reduce((sum, p) => sum + p.price, 0);
 
-// 4. Render HTML for individual player card
-function createPlayerCard(player) {
-  return `
-    <div class="bg-[#242f3d] border border-gray-700 rounded-lg p-2 text-center min-w-[72px] shadow-md flex flex-col items-center">
-      <div class="text-[9px] text-blue-400 font-bold uppercase tracking-wider">
-        ${player.pos} ${player.isCaptain ? '⭐' : ''}
-      </div>
-      <div class="text-xs font-bold text-white my-0.5 truncate max-w-[68px]">
-        ${player.name}
-      </div>
-      <div class="text-[9px] text-gray-400">
-        ${player.fixture}
-      </div>
-    </div>
-  `;
+// 3. Tab Switcher
+function switchTab(tab) {
+  ['pitch', 'transfers', 'league'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.add('hidden');
+    document.getElementById(`btn-${t}`).className = "flex-1 py-1 text-gray-400 font-bold";
+  });
+  document.getElementById(`tab-${tab}`).classList.remove('hidden');
+  document.getElementById(`btn-${tab}`).className = "flex-1 py-1 text-blue-400 font-bold";
+
+  if (tab === 'transfers') renderMarket();
+  if (tab === 'league') renderLeague();
 }
 
-// 5. Pitch Rendering Logic
+// 4. Render Pitch
 function renderPitch() {
   const container = document.getElementById('pitch-container');
   if (!container) return;
@@ -62,24 +52,99 @@ function renderPitch() {
   const fwds = starters.filter(p => p.pos === 'FWD');
 
   container.innerHTML = `
-    <!-- MAIN PITCH FORMATION -->
     <div class="flex flex-col justify-around h-full space-y-3 my-auto">
       <div class="flex justify-center gap-2">${gkps.map(createPlayerCard).join('')}</div>
       <div class="flex justify-center gap-2 flex-wrap">${defs.map(createPlayerCard).join('')}</div>
       <div class="flex justify-center gap-2 flex-wrap">${mids.map(createPlayerCard).join('')}</div>
       <div class="flex justify-center gap-2 flex-wrap">${fwds.map(createPlayerCard).join('')}</div>
     </div>
-
-    <!-- BENCH SECTION -->
     <div class="mt-4 p-3 bg-[#242f3d]/60 border border-gray-700 rounded-xl text-center">
       <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Substitutes</p>
-      <div class="flex justify-center gap-2 flex-wrap">
-        ${bench.map(createPlayerCard).join('')}
-      </div>
+      <div class="flex justify-center gap-2 flex-wrap">${bench.map(createPlayerCard).join('')}</div>
+    </div>
+  `;
+  updateHeader();
+}
+
+function createPlayerCard(p) {
+  return `
+    <div class="bg-[#242f3d] border border-gray-700 rounded-lg p-2 text-center min-w-[72px] shadow-md">
+      <div class="text-[9px] text-blue-400 font-bold uppercase">${p.pos} ${p.isCaptain ? '⭐' : ''}</div>
+      <div class="text-xs font-bold text-white my-0.5 truncate max-w-[68px]">${p.name}</div>
+      <div class="text-[9px] text-gray-400">${p.price}M ETB</div>
     </div>
   `;
 }
 
-// 6. Boot Application
-document.addEventListener('DOMContentLoaded', renderPitch);
+// 5. Render Transfer Market
+function renderMarket() {
+  const list = document.getElementById('market-list');
+  list.innerHTML = playerMarket.map(p => {
+    const inSquad = mySquad.some(s => s.id === p.id);
+    return `
+      <div class="bg-[#242f3d] p-3 rounded-lg border border-gray-700 flex justify-between items-center">
+        <div>
+          <div class="font-bold text-sm text-white">${p.name} <span class="text-xs font-normal text-gray-400">(${p.club})</span></div>
+          <div class="text-xs text-blue-400 font-semibold">${p.pos} • ${p.price}M ETB • ${p.fixture}</div>
+        </div>
+        <button onclick="${inSquad ? `sellPlayer(${p.id})` : `buyPlayer(${p.id})`}" 
+          class="px-3 py-1 rounded text-xs font-bold ${inSquad ? 'bg-red-500/20 text-red-400 border border-red-500/50' : 'bg-green-500/20 text-green-400 border border-green-500/50'}">
+          ${inSquad ? 'Sell' : 'Buy'}
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+// 6. Buy / Sell Actions
+function buyPlayer(id) {
+  const p = playerMarket.find(item => item.id === id);
+  if (mySquad.length >= 15) return alert("Squad full! Sell a player first.");
+  if (bankBalance < p.price) return alert("Not enough budget!");
+
+  mySquad.push({ ...p, isStarter: mySquad.length < 11, isCaptain: false });
+  bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
+  renderPitch();
+  renderMarket();
+}
+
+function sellPlayer(id) {
+  const p = mySquad.find(item => item.id === id);
+  if (!p) return;
+  mySquad = mySquad.filter(item => item.id !== id);
+  bankBalance = parseFloat((bankBalance + p.price).toFixed(1));
+  renderPitch();
+  renderMarket();
+}
+
+// 7. Render Leagues
+function renderLeague() {
+  const list = document.getElementById('league-list');
+  const leaderboard = [
+    { rank: 1, name: "Gulit FC (You)", pts: 0 },
+    { rank: 2, name: "Sheger Warriors", pts: 0 },
+    { rank: 3, name: "Addis Strikers", pts: 0 },
+    { rank: 4, name: "Fasil Dynasty", pts: 0 }
+  ];
+
+  list.innerHTML = leaderboard.map(user => `
+    <div class="flex justify-between items-center py-1.5 border-b border-gray-700/50 last:border-0">
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold text-gray-400 w-4">#${user.rank}</span>
+        <span class="text-sm font-semibold text-white">${user.name}</span>
+      </div>
+      <span class="text-sm font-bold text-green-400">${user.pts} pts</span>
+    </div>
+  `).join('');
+}
+
+function updateHeader() {
+  document.getElementById('bank-balance').innerText = `${bankBalance.toFixed(1)}M ETB`;
+  document.getElementById('squad-count').innerText = `${mySquad.length}/15`;
+}
+
+// Boot
+document.addEventListener('DOMContentLoaded', ()attr => { renderPitch(); });
 renderPitch();
+
+
