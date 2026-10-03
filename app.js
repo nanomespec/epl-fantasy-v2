@@ -149,15 +149,14 @@ function renderPitch() {
   const mids = starters.filter(p => p.pos === 'MID');
   const fwds = starters.filter(p => p.pos === 'FWD');
 
-  // If starters are fewer than 11, fill with plus placeholder cards
   const totalStartersCount = starters.length;
   const missingStarters = Math.max(0, 11 - totalStartersCount);
 
   let plusCardsHtml = '';
   for (let i = 0; i < missingStarters; i++) {
     plusCardsHtml += `
-      <div onclick="switchTab('transfers')" 
-        class="bg-[#242f3d]/50 border-2 border-dashed border-gray-500 hover:border-blue-400 rounded p-1 text-center min-w-[58px] max-w-[65px] min-h-[64px] shadow-sm cursor-pointer transition flex flex-col items-center justify-center">
+      <div onclick="handlePlusClick()" 
+        class="bg-[#242f3d]/50 border-2 border-dashed border-gray-500 hover:border-blue-400 rounded p-1 text-center min-w-[58px] max-w-[65px] min-h-[64px] shadow-sm cursor-pointer transition flex flex-col items-center justify-center animate-pulse">
         <div class="text-base font-black text-blue-400 leading-none">+</div>
         <div class="text-[8px] text-gray-400 uppercase mt-1">Empty</div>
       </div>
@@ -170,6 +169,10 @@ function renderPitch() {
         <div class="bg-blue-600/90 text-white text-[11px] font-bold py-1 px-2 rounded text-center flex justify-between items-center shadow">
           <span>🔄 Swap with ${mySquad.find(p => p.id === pendingSubPlayerId)?.name}</span>
           <button onclick="cancelSub()" class="text-xs bg-black/30 px-2 py-0.5 rounded">Cancel</button>
+        </div>
+      ` : missingStarters > 0 ? `
+        <div class="bg-amber-600/90 text-white text-[11px] font-bold py-1 px-2 rounded text-center shadow">
+          ⚠️ You have empty starting spots! Tap a bench player to promote them, or tap (+) to buy.
         </div>
       ` : ''}
 
@@ -216,11 +219,36 @@ function createPlayerCard(p) {
 }
 
 function handlePlayerClick(id) {
+  const p = mySquad.find(item => item.id === id);
+  if (!p) return;
+
+  const startersCount = mySquad.filter(item => item.isStarter).length;
+
+  // If clicked player is on the bench AND there is an open starting spot (< 11 starters), promote them immediately!
+  if (!p.isStarter && startersCount < 11) {
+    p.isStarter = true;
+    saveUserData();
+    renderPitch();
+    return;
+  }
+
+  // Otherwise, standard behavior (open options modal or handle sub)
   if (pendingSubPlayerId === null) {
     activePlayerModalId = id;
     renderPitch();
   } else {
     executeSubstitution(pendingSubPlayerId, id);
+  }
+}
+
+function handlePlusClick() {
+  const benchPlayer = mySquad.find(item => !item.isStarter);
+  if (benchPlayer) {
+    benchPlayer.isStarter = true;
+    saveUserData();
+    renderPitch();
+  } else {
+    switchTab('transfers');
   }
 }
 
@@ -375,7 +403,8 @@ function buyPlayer(id) {
   if (mySquad.length >= 15) return alert("Squad full!");
   if (bankBalance < p.price) return alert("Not enough budget!");
 
-  mySquad.push({ ...p, purchasePrice: p.price, isStarter: mySquad.length < 11, isCaptain: false, isViceCaptain: false, gwPoints: 0 });
+  const startersCount = mySquad.filter(item => item.isStarter).length;
+  mySquad.push({ ...p, purchasePrice: p.price, isStarter: startersCount < 11, isCaptain: false, isViceCaptain: false, gwPoints: 0 });
   bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
   transfersMadeInGW++;
 
@@ -391,11 +420,9 @@ function sellPlayer(id) {
 
   const wasStarter = p.isStarter;
 
-  // Remove player from squad
   mySquad = mySquad.filter(item => item.id !== id);
   bankBalance = parseFloat((bankBalance + p.price).toFixed(1));
 
-  // If the sold player was a starter and we have benched players available, promote the first bench player automatically
   if (wasStarter) {
     const benchPlayer = mySquad.find(item => !item.isStarter);
     if (benchPlayer) {
