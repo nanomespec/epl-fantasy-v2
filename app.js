@@ -5,7 +5,7 @@ if (tg) { tg.expand(); tg.ready(); }
 const userId = tg?.initDataUnsafe?.user?.id || 'guest_user';
 const STORAGE_KEY = `epl_fantasy_squad_${userId}`;
 
-// 1. Extended Dataset with Player Stats & Upcoming Fixture Difficulty (FDR)
+// 1. Extended Dataset with Player Stats, FDR, and Purchase/Market Prices
 const playerMarket = [
   { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, goals: 0, assists: 0, cleans: 3, form: 5.2, fdr: [{ opp: "NEG (H)", diff: 2 }, { opp: "SHE (A)", diff: 4 }, { opp: "CBE (H)", diff: 3 }] },
   { id: 2, name: "A. Nuri", club: "Ethiopian Coffee", pos: "GKP", price: 5.0, goals: 0, assists: 0, cleans: 2, form: 4.1, fdr: [{ opp: "SHE (H)", diff: 3 }, { opp: "STG (H)", diff: 5 }, { opp: "FAS (A)", diff: 4 }] },
@@ -67,6 +67,7 @@ function loadUserData() {
 function setDefaultSquad() {
   mySquad = playerMarket.map((p) => ({
     ...p,
+    purchasePrice: p.price,
     isStarter: defaultStarterIds.includes(p.id),
     isCaptain: p.id === 12,
     isViceCaptain: p.id === 13,
@@ -154,7 +155,7 @@ function handlePlayerClick(id) {
   const player = mySquad.find(p => p.id === id);
 
   document.getElementById('modal-player-name').innerText = player.name;
-  document.getElementById('modal-player-details').innerText = `${player.pos} • ${player.club} • ${player.price}M ETB`;
+  document.getElementById('modal-player-details').innerText = `${player.pos} • ${player.club} • Current: ${player.price}M ETB`;
   
   document.getElementById('stat-goals').innerText = player.goals || 0;
   document.getElementById('stat-assists').innerText = player.assists || 0;
@@ -199,14 +200,13 @@ function setViceCaptain() {
   renderPitch();
 }
 
-// 6. Simulation Engine & FPL Auto-Substitutions Engine
+// 6. Simulation Engine & Dynamic Price Shifts
 function simulateGameweek() {
   let currentGwPoints = 0;
   let autoSubLogs = [];
 
-  // 1. Simulate match minutes & raw points
+  // 1. Simulate match performance & dynamic price changes
   mySquad.forEach(player => {
-    // 15% chance player gets 0 minutes (DNP)
     const played = Math.random() > 0.15;
     if (!played) {
       player.gwPoints = 0;
@@ -215,7 +215,7 @@ function simulateGameweek() {
     }
 
     player.dnp = false;
-    let pts = 2; // Appearance points
+    let pts = 2;
     const rand = Math.random();
     if (player.pos === 'FWD' && rand > 0.4) { pts += 4; player.goals = (player.goals || 0) + 1; }
     if (player.pos === 'MID' && rand > 0.5) { pts += 5; player.goals = (player.goals || 0) + 1; }
@@ -223,9 +223,16 @@ function simulateGameweek() {
     if ((player.pos === 'DEF' || player.pos === 'GKP') && rand > 0.5) { pts += 4; player.cleans = (player.cleans || 0) + 1; }
 
     player.gwPoints = pts;
+
+    // High scorers experience dynamic price increases
+    if (pts >= 8) {
+      player.price = parseFloat((player.price + 0.1).toFixed(1));
+      const marketRef = playerMarket.find(m => m.id === player.id);
+      if (marketRef) marketRef.price = player.price;
+    }
   });
 
-  // 2. Process Captain / Vice-Captain Failover
+  // 2. Captain / Vice-Captain Failover
   const captain = mySquad.find(p => p.isCaptain);
   const vice = mySquad.find(p => p.isViceCaptain);
   if (captain && captain.dnp && vice && !vice.dnp) {
@@ -233,18 +240,16 @@ function simulateGameweek() {
     autoSubLogs.push(`Captain ${captain.name} DNP ➔ Vice-Captain ${vice.name} inherited Captaincy!`);
   }
 
-  // 3. Process Auto-Substitutions (if Bench Boost is NOT active)
+  // 3. Auto-Substitutions
   if (activeChip !== 'bb') {
     const startersDNP = mySquad.filter(p => p.isStarter && p.dnp);
     const benchAvailable = mySquad.filter(p => !p.isStarter && !p.dnp);
 
     startersDNP.forEach(absentPlayer => {
-      // Find candidate from bench (GK for GK, Outfield for Outfield)
       const validSub = benchAvailable.find(sub => {
         if (absentPlayer.pos === 'GKP') return sub.pos === 'GKP';
         if (sub.pos === 'GKP') return false;
 
-        // Verify formation remains valid after swap
         const testSquad = mySquad.map(p => {
           if (p.id === absentPlayer.id) return { ...p, isStarter: false };
           if (p.id === sub.id) return { ...p, isStarter: true };
@@ -256,7 +261,6 @@ function simulateGameweek() {
       if (validSub) {
         absentPlayer.isStarter = false;
         validSub.isStarter = true;
-        // Remove validSub from available bench list
         const idx = benchAvailable.findIndex(b => b.id === validSub.id);
         if (idx > -1) benchAvailable.splice(idx, 1);
 
@@ -305,16 +309,26 @@ function simulateGameweek() {
   alert(`Gameweek Simulated!\nGross Points: ${currentGwPoints}\nTransfer Hits: -${hitsCost} pts\nNet Points Earned: ${netGwPoints} 🚀${autoSubMsg}`);
 }
 
-// 7. Transfer Market Actions
+// 7. Transfer Market Actions & FPL Selling Profit Mechanics
 function renderMarket() {
   const list = document.getElementById('market-list');
   list.innerHTML = playerMarket.map(p => {
-    const inSquad = mySquad.some(s => s.id === p.id);
+    const inSquad = mySquad.find(s => s.id === p.id);
+    let sellValue = p.price;
+
+    if (inSquad) {
+      const priceDiff = p.price - (inSquad.purchasePrice || p.price);
+      if (priceDiff > 0) {
+        // FPL 50% Profit Rule (rounded down to nearest 0.1M)
+        sellValue = parseFloat(((inSquad.purchasePrice || p.price) + Math.floor(priceDiff * 5) / 10).toFixed(1));
+      }
+    }
+
     return `
       <div class="bg-[#242f3d] p-3 rounded-lg border border-gray-700 flex justify-between items-center">
         <div>
           <div class="font-bold text-sm text-white">${p.name} <span class="text-xs font-normal text-gray-400">(${p.club})</span></div>
-          <div class="text-xs text-blue-400 font-semibold">${p.pos} • ${p.price}M ETB</div>
+          <div class="text-xs text-blue-400 font-semibold">${p.pos} • ${p.price}M ETB ${inSquad ? `<span class="text-green-400 font-bold ml-1">(Sell: ${sellValue}M)</span>` : ''}</div>
         </div>
         <button onclick="${inSquad ? `sellPlayer(${p.id})` : `buyPlayer(${p.id})`}" 
           class="px-3 py-1 rounded text-xs font-bold ${inSquad ? 'bg-red-500/20 text-red-400 border border-red-500/50' : 'bg-green-500/20 text-green-400 border border-green-500/50'}">
@@ -334,7 +348,7 @@ function buyPlayer(id) {
 
   if (bankBalance < p.price && activeChip !== 'wc' && activeChip !== 'fh') return alert("Not enough budget!");
 
-  mySquad.push({ ...p, isStarter: mySquad.length < 11, isCaptain: false, isViceCaptain: false, gwPoints: 0 });
+  mySquad.push({ ...p, purchasePrice: p.price, isStarter: mySquad.length < 11, isCaptain: false, isViceCaptain: false, gwPoints: 0 });
   bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
   transfersMadeInGW++;
 
@@ -346,8 +360,16 @@ function buyPlayer(id) {
 function sellPlayer(id) {
   const p = mySquad.find(item => item.id === id);
   if (!p) return;
+
+  // Calculate sell price using 50% profit rule
+  let sellPrice = p.price;
+  const priceDiff = p.price - (p.purchasePrice || p.price);
+  if (priceDiff > 0) {
+    sellPrice = parseFloat(((p.purchasePrice || p.price) + Math.floor(priceDiff * 5) / 10).toFixed(1));
+  }
+
   mySquad = mySquad.filter(item => item.id !== id);
-  bankBalance = parseFloat((bankBalance + p.price).toFixed(1));
+  bankBalance = parseFloat((bankBalance + sellPrice).toFixed(1));
 
   saveUserData();
   renderPitch();
