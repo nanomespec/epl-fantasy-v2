@@ -462,3 +462,7 @@ function updateHeader() {
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', loadData);
+<button onclick="switchTab('pitch')">Pick Team</button>
+<button onclick="switchTab('transfers')">Transfers</button>
+<button onclick="switchTab('leagues')">Leagues</button>
+<button onclick="switchTab('points')">Points</button>
