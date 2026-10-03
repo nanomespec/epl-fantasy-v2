@@ -44,7 +44,7 @@ let freeTransfers = 1;
 let transfersMadeInGW = 0;
 let myLeagues = ["Overall League"];
 let activePlayerModalId = null;
-let pendingSubPlayerId = null; // FPL Real Substitution source selection
+let pendingSubPlayerId = null;
 
 const defaultStarterIds = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
 
@@ -113,20 +113,20 @@ function resetSquadData() {
 }
 
 // ==========================================
-// 4. NAVIGATION & FOUR COLUMNS/TABS
+// 4. NAVIGATION & FOUR TABS
 // ==========================================
 function switchTab(tab) {
   ['pitch', 'transfers', 'league', 'points'].forEach(t => {
     const el = document.getElementById(`tab-${t}`);
     const btn = document.getElementById(`btn-${t}`);
     if (el) el.classList.add('hidden');
-    if (btn) btn.className = "flex-1 py-1 text-gray-400 font-bold text-[10px] sm:text-xs text-center";
+    if (btn) btn.className = "flex-1 py-1 text-gray-400 font-bold text-[10px] text-center";
   });
   
   const targetTab = document.getElementById(`tab-${tab}`);
   const targetBtn = document.getElementById(`btn-${tab}`);
   if (targetTab) targetTab.classList.remove('hidden');
-  if (targetBtn) targetBtn.className = "flex-1 py-1 text-blue-400 font-bold text-[10px] sm:text-xs text-center border-b-2 border-blue-400";
+  if (targetBtn) targetBtn.className = "flex-1 py-1 text-blue-400 font-bold text-[10px] text-center border-b-2 border-blue-400";
 
   if (tab === 'transfers') renderMarket();
   if (tab === 'league') renderLeague();
@@ -134,14 +134,10 @@ function switchTab(tab) {
 }
 
 // ==========================================
-// 5. PITCH RENDERING & FPL SUB WORKFLOW
+// 5. PITCH RENDERING & SUB WORKFLOW
 // ==========================================
 function renderPitch() {
-  const container = document.getElementById('pitch-container') || 
-                    document.getElementById('squad-pitch') || 
-                    document.querySelector('.green-pitch-container') ||
-                    document.querySelector('main div');
-
+  const container = document.getElementById('pitch-container');
   if (!container) return;
   if (!mySquad || mySquad.length === 0) setDefaultSquad();
 
@@ -157,7 +153,7 @@ function renderPitch() {
     <div class="flex flex-col justify-between w-full h-full p-1 space-y-1 text-xs">
       ${pendingSubPlayerId ? `
         <div class="bg-blue-600/90 text-white text-[11px] font-bold py-1 px-2 rounded text-center flex justify-between items-center shadow">
-          <span>🔄 Select player to substitute with ${mySquad.find(p => p.id === pendingSubPlayerId)?.name}</span>
+          <span>🔄 Swap with ${mySquad.find(p => p.id === pendingSubPlayerId)?.name}</span>
           <button onclick="cancelSub()" class="text-xs bg-black/30 px-2 py-0.5 rounded">Cancel</button>
         </div>
       ` : ''}
@@ -206,11 +202,9 @@ function createPlayerCard(p) {
 
 function handlePlayerClick(id) {
   if (pendingSubPlayerId === null) {
-    // Open action modal for Captaincy / Sub initiation
     activePlayerModalId = id;
     renderPitch();
   } else {
-    // Execute FPL Real Sub between pendingSubPlayerId and clicked id
     executeSubstitution(pendingSubPlayerId, id);
   }
 }
@@ -238,7 +232,6 @@ function executeSubstitution(id1, id2) {
 
   if (!p1 || !p2) return;
 
-  // Swap starter status
   const tempStatus = p1.isStarter;
   p1.isStarter = p2.isStarter;
   p2.isStarter = tempStatus;
@@ -304,7 +297,7 @@ function setViceCaptain(id) {
 }
 
 // ==========================================
-// 6. REAL FPL CHIPS (STAGED UNTIL CONFIRMED)
+// 6. REAL FPL CHIPS LOGIC
 // ==========================================
 function stageChip(chipName) {
   if (chipsUsed[chipName]) {
@@ -437,7 +430,7 @@ function joinLeague() {
 }
 
 // ==========================================
-// 9. POINTS COLUMN VIEW
+// 9. POINTS TAB VIEW
 // ==========================================
 function renderPointsTab() {
   const list = document.getElementById('points-list');
@@ -455,7 +448,7 @@ function renderPointsTab() {
   list.innerHTML = `
     <div class="bg-[#242f3d] p-3 rounded-lg border border-gray-700 mb-3 flex justify-between items-center">
       <div>
-        <div class="text-[10px] text-gray-400 uppercase font-bold">Gameweek ${gameweek - 1} Score</div>
+        <div class="text-[10px] text-gray-400 uppercase font-bold">Gameweek ${Math.max(1, gameweek - 1)} Score</div>
         <div class="text-lg font-black text-green-400">${gwTotal} Points</div>
       </div>
       <div class="text-right">
