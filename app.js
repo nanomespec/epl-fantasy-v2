@@ -34,6 +34,7 @@ let gameweek = 1;
 
 let freeTransfers = 1;
 let transfersMadeInGW = 0;
+let myLeagues = ["Overall League"];
 
 let selectedPlayerId = null;
 let pendingSubId = null;
@@ -54,6 +55,7 @@ function loadUserData() {
       gameweek = data.gameweek || 1;
       freeTransfers = data.freeTransfers !== undefined ? data.freeTransfers : 1;
       transfersMadeInGW = data.transfersMadeInGW || 0;
+      myLeagues = data.myLeagues || ["Overall League"];
       return;
     } catch (e) {
       console.error("Failed to parse local storage", e);
@@ -73,6 +75,7 @@ function setDefaultSquad() {
   bankBalance = 100.0 - mySquad.reduce((sum, p) => sum + p.price, 0);
   freeTransfers = 1;
   transfersMadeInGW = 0;
+  myLeagues = ["Overall League"];
   saveUserData();
 }
 
@@ -88,7 +91,7 @@ function resetSquadData() {
 }
 
 function saveUserData() {
-  const payload = { mySquad, bankBalance, activeChip, chipsUsed, totalPoints, gameweek, freeTransfers, transfersMadeInGW };
+  const payload = { mySquad, bankBalance, activeChip, chipsUsed, totalPoints, gameweek, freeTransfers, transfersMadeInGW, myLeagues };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
 
@@ -161,7 +164,6 @@ function simulateGameweek() {
     }
   });
 
-  // Calculate Hits Penalty (-4 pts per transfer over free transfers)
   let hitsCost = 0;
   if (activeChip !== 'wc' && activeChip !== 'fh') {
     const extraTransfers = Math.max(0, transfersMadeInGW - freeTransfers);
@@ -171,7 +173,6 @@ function simulateGameweek() {
   const netGwPoints = currentGwPoints - hitsCost;
   totalPoints += netGwPoints;
 
-  // Carry over unused transfers (max 5)
   if (activeChip !== 'wc' && activeChip !== 'fh') {
     const unused = Math.max(0, freeTransfers - transfersMadeInGW);
     freeTransfers = Math.min(5, unused + 1);
@@ -253,15 +254,15 @@ function renderPitch() {
   const fwds = starters.filter(p => p.pos === 'FWD');
 
   container.innerHTML = `
-    <div class="flex flex-col justify-around h-full space-y-3 my-auto">
+    <div class="flex flex-col justify-around h-full space-y-2">
       <div class="flex justify-center gap-2">${gkps.map(createPlayerCard).join('')}</div>
       <div class="flex justify-center gap-2 flex-wrap">${defs.map(createPlayerCard).join('')}</div>
       <div class="flex justify-center gap-2 flex-wrap">${mids.map(createPlayerCard).join('')}</div>
       <div class="flex justify-center gap-2 flex-wrap">${fwds.map(createPlayerCard).join('')}</div>
     </div>
-    <div class="mt-4 p-3 bg-[#242f3d]/60 border ${activeChip === 'bb' ? 'border-green-400 bg-green-950/20' : 'border-gray-700'} rounded-xl text-center">
-      <p class="text-[10px] font-bold ${activeChip === 'bb' ? 'text-green-400' : 'text-gray-400'} uppercase tracking-wider mb-2">
-        Substitutes ${activeChip === 'bb' ? '(Bench Boost Active! 🚀)' : ''}
+    <div class="mt-2 p-2 bg-[#17212b]/80 border ${activeChip === 'bb' ? 'border-green-400 bg-green-950/40' : 'border-gray-700'} rounded-xl text-center backdrop-blur-sm">
+      <p class="text-[10px] font-bold ${activeChip === 'bb' ? 'text-green-400' : 'text-gray-300'} uppercase tracking-wider mb-1">
+        Bench ${activeChip === 'bb' ? '(Bench Boost Active! 🚀)' : ''}
       </p>
       <div class="flex justify-center gap-2 flex-wrap">${bench.map(createPlayerCard).join('')}</div>
     </div>
@@ -284,15 +285,62 @@ function createPlayerCard(p) {
 
   return `
     <div onclick="handlePlayerClick(${p.id})" 
-      class="bg-[#242f3d] border ${isPending ? 'border-yellow-400 animate-pulse' : 'border-gray-700'} rounded-lg p-2 text-center min-w-[72px] shadow-md cursor-pointer active:scale-95 transition-all">
-      <div class="text-[9px] text-blue-400 font-bold uppercase">${p.pos}${captainBadge}</div>
-      <div class="text-xs font-bold text-white my-0.5 truncate max-w-[68px]">${p.name}</div>
+      class="bg-[#242f3d]/90 backdrop-blur-md border ${isPending ? 'border-yellow-400 animate-pulse' : 'border-gray-600'} rounded-lg p-1.5 text-center min-w-[68px] shadow-lg cursor-pointer active:scale-95 transition-all">
+      <div class="text-[9px] text-blue-300 font-bold uppercase">${p.pos}${captainBadge}</div>
+      <div class="text-[11px] font-bold text-white my-0.5 truncate max-w-[64px]">${p.name}</div>
       <div class="text-[10px] font-black text-green-400">${p.gwPoints || 0} pts</div>
     </div>
   `;
 }
 
-// 8. Navigation & Event Handlers
+// 8. League Creation & Join Logic
+function createLeague() {
+  const code = 'ETH-' + Math.floor(100 + Math.random() * 900);
+  const name = prompt("Enter League Name:", "Ethiopian Super League");
+  if (!name) return;
+  myLeagues.push(`${name} (${code})`);
+  saveUserData();
+  renderLeague();
+  alert(`League created successfully!\nShare code: ${code}`);
+}
+
+function joinLeague() {
+  const input = document.getElementById('league-code-input');
+  if (!input || !input.value) return alert("Please enter a valid league code.");
+  const code = input.value.trim().toUpperCase();
+  myLeagues.push(`Private League (${code})`);
+  input.value = '';
+  saveUserData();
+  renderLeague();
+  alert(`Successfully joined League ${code}!`);
+}
+
+function renderLeague() {
+  const list = document.getElementById('league-list');
+  const userName = tg?.initDataUnsafe?.user?.first_name ? `${tg.initDataUnsafe.user.first_name}'s Team` : "Gulit FC (You)";
+  
+  const leaderboard = [
+    { rank: 1, name: userName, pts: totalPoints },
+    { rank: 2, name: "Sheger Warriors", pts: Math.max(0, totalPoints - 12) },
+    { rank: 3, name: "Addis Strikers", pts: Math.max(0, totalPoints - 24) },
+    { rank: 4, name: "Fasil Dynasty", pts: Math.max(0, totalPoints - 31) }
+  ];
+
+  list.innerHTML = `
+    <div class="mb-3 text-xs text-blue-400 font-bold">Active Leagues: ${myLeagues.join(', ')}</div>
+    ${leaderboard.map(user => `
+      <div class="flex justify-between items-center py-1.5 border-b border-gray-700/50 last:border-0">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold text-gray-400 w-4">#${user.rank}</span>
+          <span class="text-sm font-semibold text-white">${user.name}</span>
+        </div>
+        <span class="text-sm font-bold text-green-400">${user.pts} pts</span>
+      </div>
+    `).join('')}
+  `;
+}
+
+// 9. Navigation & Event Handlers
 function switchTab(tab) {
   ['pitch', 'transfers', 'league'].forEach(t => {
     document.getElementById(`tab-${t}`).classList.add('hidden');
@@ -365,27 +413,6 @@ function setViceCaptain() {
   saveUserData();
   closeModal();
   renderPitch();
-}
-
-function renderLeague() {
-  const list = document.getElementById('league-list');
-  const userName = tg?.initDataUnsafe?.user?.first_name ? `${tg.initDataUnsafe.user.first_name}'s Team` : "Gulit FC (You)";
-  const leaderboard = [
-    { rank: 1, name: userName, pts: totalPoints },
-    { rank: 2, name: "Sheger Warriors", pts: Math.max(0, totalPoints - 12) },
-    { rank: 3, name: "Addis Strikers", pts: Math.max(0, totalPoints - 24) },
-    { rank: 4, name: "Fasil Dynasty", pts: Math.max(0, totalPoints - 31) }
-  ];
-
-  list.innerHTML = leaderboard.map(user => `
-    <div class="flex justify-between items-center py-1.5 border-b border-gray-700/50 last:border-0">
-      <div class="flex items-center gap-2">
-        <span class="text-xs font-bold text-gray-400 w-4">#${user.rank}</span>
-        <span class="text-sm font-semibold text-white">${user.name}</span>
-      </div>
-      <span class="text-sm font-bold text-green-400">${user.pts} pts</span>
-    </div>
-  `).join('');
 }
 
 function updateHeader() {
