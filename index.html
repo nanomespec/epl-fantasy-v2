@@ -3,43 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ethio Fantasy | Play to Win</title>
-    <script src="[https://telegram.org/js/telegram-web-app.js](https://telegram.org/js/telegram-web-app.js)"></script>
+    <title>Ethiopian Premier League Fantasy</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header class="app-header">
-        <h1>Ethio Fantasy</h1>
-        <div class="user-status">Manager: <span id="manager-name">Nate</span></div>
+
+    <header class="fpl-header">
+        <div class="nav-brand">
+            <h1>ETHIO PREMIER FANTASY</h1>
+            <span id="manager-name" class="manager-badge">Manager: Nate</span>
+        </div>
+        <div class="nav-stats">
+            <div class="stat-box">
+                <span>Gameweek</span>
+                <strong id="gw-display">GW 1</strong>
+            </div>
+            <div class="stat-box">
+                <span>Budget</span>
+                <strong id="budget-display">£100.0m</strong>
+            </div>
+            <div class="stat-box">
+                <span>Points</span>
+                <strong id="points-display">0</strong>
+            </div>
+        </div>
     </header>
 
-    <nav class="tabs">
-        <button class="tab active" data-target="pitch">Pitch</button>
-        <button class="tab" data-target="transfers">Transfers</button>
-        <button class="tab" data-target="leagues">Mini-Leagues</button>
+    <nav class="sub-nav">
+        <button class="tab-btn active" data-tab="pitch-view">Pick Team</button>
+        <button class="tab-btn" data-tab="market-view">Transfers</button>
+        <button class="tab-btn" data-tab="leagues-view">Leaderboard</button>
     </nav>
 
-    <main class="content">
-        <section id="pitch" class="view active">
+    <main class="container">
+        
+        <!-- PITCH VIEW -->
+        <section id="pitch-view" class="tab-content active">
             <div class="pitch-container">
-                <div class="pitch-row gkp" id="pos-gkp"></div>
-                <div class="pitch-row def" id="pos-def"></div>
-                <div class="pitch-row mid" id="pos-mid"></div>
-                <div class="pitch-row fwd" id="pos-fwd"></div>
+                <div class="fpl-pitch">
+                    <div id="row-gkp" class="pitch-row"></div>
+                    <div id="row-def" class="pitch-row"></div>
+                    <div id="row-mid" class="pitch-row"></div>
+                    <div id="row-fwd" class="pitch-row"></div>
+                </div>
+                
+                <div class="bench-container">
+                    <h3>Substitutes Bench</h3>
+                    <div id="row-bench" class="bench-row"></div>
+                </div>
             </div>
         </section>
 
-        <section id="transfers" class="view hidden">
-            <h2>Player Market</h2>
-            <div id="market-list"></div>
+        <!-- TRANSFER MARKET VIEW -->
+        <section id="market-view" class="tab-content">
+            <div class="market-controls">
+                <h2>Transfer Market</h2>
+                <div class="filters">
+                    <button class="filter-btn active" data-pos="ALL">ALL</button>
+                    <button class="filter-btn" data-pos="GKP">GKP</button>
+                    <button class="filter-btn" data-pos="DEF">DEF</button>
+                    <button class="filter-btn" data-pos="MID">MID</button>
+                    <button class="filter-btn" data-pos="FWD">FWD</button>
+                </div>
+            </div>
+            <div id="market-list" class="market-grid"></div>
         </section>
 
-        <section id="leagues" class="view hidden">
-            <h2>Global & Private Leagues</h2>
-            <div id="league-standings"></div>
+        <!-- LEADERBOARD VIEW -->
+        <section id="leagues-view" class="tab-content">
+            <h2>Ethiopian Mini-Leagues</h2>
+            <div class="leaderboard-card">
+                <div class="lb-row header">
+                    <span>Rank</span>
+                    <span>Manager</span>
+                    <span>GW</span>
+                    <span>Total</span>
+                </div>
+                <div class="lb-row highlight">
+                    <span>1</span>
+                    <span>Nate (Ethio Stars)</span>
+                    <span>--</span>
+                    <span>0</span>
+                </div>
+            </div>
         </section>
+
     </main>
 
-    <script src="script.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
