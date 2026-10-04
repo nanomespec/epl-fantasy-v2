@@ -17,7 +17,7 @@ const managerId = tgUser?.id || 'local_user';
 // ==========================================
 // 2. STATE & STORAGE
 // ==========================================
-const STORAGE_KEY = 'efpl_official_v6';
+const STORAGE_KEY = 'efpl_official_v7';
 
 // Club Kit / Crest Color Schemes (Inspired by Ethiopian Football Federation Clubs)
 const clubColors = {
@@ -57,17 +57,25 @@ let activeModalId = null;
 let pendingSubId = null;
 let chipConfirmModal = null;
 let gwHistory = [];
+let lastGwEvents = [];
 
 // Transfer Rules State
 let freeTransfers = 1;
 let transfersMade = 0;
 let transferCostPenalty = 0;
 
-// Leagues State
+// Leagues State (Classic & H2H)
 let userLeagues = [
-  { id: 'global', name: 'Ethiopian Premier League (Global)', code: 'GLOBAL', members: [{ name: managerName, team: 'Gulit FC', points: 0 }] }
+  { 
+    id: 'global', 
+    name: 'Ethiopian Premier League (Global)', 
+    code: 'GLOBAL', 
+    type: 'classic',
+    members: [{ name: managerName, team: 'Gulit FC', points: 0, p: 0, w: 0, d: 0, l: 0, h2hPts: 0 }] 
+  }
 ];
 let activeLeagueId = 'global';
+let leagueViewMode = 'classic'; // 'classic' or 'h2h'
 
 const defaultStarters = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
 
@@ -84,13 +92,14 @@ function loadData() {
       chipsUsed = data.chipsUsed || chipsUsed;
       activeChip = data.activeChip || null;
       gwHistory = data.gwHistory || [];
+      lastGwEvents = data.lastGwEvents || [];
       freeTransfers = data.freeTransfers ?? 1;
       transfersMade = data.transfersMade ?? 0;
       transferCostPenalty = data.transferCostPenalty ?? 0;
       if (data.playerMarket) playerMarket = data.playerMarket;
       if (data.userLeagues) userLeagues = data.userLeagues;
       
-      syncGlobalLeaguePoints();
+      syncLeagueData();
       renderAll();
       return;
     }
@@ -101,10 +110,10 @@ function loadData() {
 }
 
 function saveData() {
-  syncGlobalLeaguePoints();
+  syncLeagueData();
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ 
-      mySquad, preFreeHitSquad, bankBalance, totalPoints, gameweek, chipsUsed, activeChip, gwHistory,
+      mySquad, preFreeHitSquad, bankBalance, totalPoints, gameweek, chipsUsed, activeChip, gwHistory, lastGwEvents,
       freeTransfers, transfersMade, transferCostPenalty, playerMarket, userLeagues
     }));
   } catch (e) {
@@ -112,21 +121,21 @@ function saveData() {
   }
 }
 
-function syncGlobalLeaguePoints() {
-  const globalLeague = userLeagues.find(l => l.id === 'global');
-  if (globalLeague) {
-    let member = globalLeague.members.find(m => m.name === managerName);
+function syncLeagueData() {
+  userLeagues.forEach(league => {
+    let member = league.members.find(m => m.name === managerName);
     if (member) {
       member.points = totalPoints;
     } else {
-      globalLeague.members.push({ name: managerName, team: 'Gulit FC', points: totalPoints });
+      league.members.push({ name: managerName, team: 'Gulit FC', points: totalPoints, p: gameweek - 1, w: 0, d: 0, l: 0, h2hPts: 0 });
     }
-  }
+  });
 }
 
 function resetSquad() {
   mySquad = playerMarket.map(p => ({
     ...p,
+    purchasePrice: p.price,
     isStarter: defaultStarters.includes(p.id),
     isCaptain: p.id === 12,
     isViceCaptain: p.id === 13,
@@ -140,11 +149,18 @@ function resetSquad() {
   activeChip = null;
   preFreeHitSquad = null;
   gwHistory = [];
+  lastGwEvents = [];
   freeTransfers = 1;
   transfersMade = 0;
   transferCostPenalty = 0;
   userLeagues = [
-    { id: 'global', name: 'Ethiopian Premier League (Global)', code: 'GLOBAL', members: [{ name: managerName, team: 'Gulit FC', points: 0 }] }
+    { 
+      id: 'global', 
+      name: 'Ethiopian Premier League (Global)', 
+      code: 'GLOBAL', 
+      type: 'classic',
+      members: [{ name: managerName, team: 'Gulit FC', points: 0, p: 0, w: 0, d: 0, l: 0, h2hPts: 0 }] 
+    }
   ];
   saveData();
   renderAll();
@@ -338,6 +354,10 @@ function renderModal() {
   if (p.fdr >= 4) fdrBg = 'bg-red-600 text-white';
   else if (p.fdr === 3) fdrBg = 'bg-gray-400 text-white';
 
+  const purchasePrice = p.purchasePrice || p.price;
+  const profit = p.price - purchasePrice;
+  const sellVal = profit > 0 ? parseFloat((purchasePrice + profit / 2).toFixed(1)) : p.price;
+
   return `
     <div class="fixed inset-0 bg-fpl-dark/80 flex items-end justify-center z-50">
       <div class="bg-white w-full rounded-t-2xl p-5 shadow-2xl animate-[slideUp_0.2s_ease-out]">
@@ -354,6 +374,10 @@ function renderModal() {
           <div class="flex justify-between items-center border-b pb-2">
             <span class="font-bold text-gray-500 uppercase text-[9px]">Next Fixture (FDR)</span>
             <span class="px-2 py-0.5 rounded font-black ${fdrBg}">${p.nextOpp} (FDR ${p.fdr})</span>
+          </div>
+          <div class="flex justify-between items-center border-b pb-2">
+            <span class="font-bold text-gray-500 uppercase text-[9px]">Value & Sell Return</span>
+            <span class="font-black text-fpl-dark">Buy: £${purchasePrice}m | Sell: <span class="text-red-600">£${sellVal}m</span></span>
           </div>
           <div class="flex justify-around text-center pt-1">
             <div><div class="font-bold text-gray-400 text-[9px] uppercase">Goals</div><div class="font-black text-fpl-purple">${stats.goals}</div></div>
@@ -397,7 +421,7 @@ function setCap(id, isC) {
 }
 
 // ==========================================
-// 6. MARKET / TRANSFERS
+// 6. MARKET / TRANSFERS (WITH PROFIT TAX)
 // ==========================================
 function renderMarket() {
   const container = document.getElementById('tab-transfers');
@@ -471,7 +495,15 @@ function buyPlayer(id) {
     transfersMade++;
   }
 
-  mySquad.push({ ...p, isStarter: mySquad.filter(s => s.isStarter).length < 11, isCaptain: false, isViceCaptain: false, gwPoints: 0, stats: { goals: 0, assists: 0, cleanSheet: 0, yellow: 0 } });
+  mySquad.push({ 
+    ...p, 
+    purchasePrice: p.price,
+    isStarter: mySquad.filter(s => s.isStarter).length < 11, 
+    isCaptain: false, 
+    isViceCaptain: false, 
+    gwPoints: 0, 
+    stats: { goals: 0, assists: 0, cleanSheet: 0, yellow: 0 } 
+  });
   if (bankBalance >= p.price && activeChip !== 'wc' && activeChip !== 'fh') {
     bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
   }
@@ -495,21 +527,27 @@ function sellPlayer(id) {
 
   const p = mySquad.find(x => x.id === id);
   mySquad = mySquad.filter(x => x.id !== id);
-  bankBalance = parseFloat((bankBalance + p.price).toFixed(1));
+
+  const purchasePrice = p.purchasePrice || p.price;
+  const profit = p.price - purchasePrice;
+  const sellValue = profit > 0 ? parseFloat((purchasePrice + profit / 2).toFixed(1)) : p.price;
+
+  bankBalance = parseFloat((bankBalance + sellValue).toFixed(1));
   
   saveData();
   renderAll();
 }
 
 // ==========================================
-// 7. MINI-LEAGUES & JOIN CODES
+// 7. MINI-LEAGUES (CLASSIC & H2H)
 // ==========================================
 function renderLeagues() {
   const container = document.getElementById('tab-leagues');
   if (!container) return;
 
   const activeLeague = userLeagues.find(l => l.id === activeLeagueId) || userLeagues[0];
-  const sortedMembers = [...activeLeague.members].sort((a, b) => b.points - a.points);
+  const sortedMembersClassic = [...activeLeague.members].sort((a, b) => b.points - a.points);
+  const sortedMembersH2H = [...activeLeague.members].sort((a, b) => b.h2hPts - a.h2hPts || b.points - a.points);
 
   container.innerHTML = `
     <div class="space-y-4">
@@ -522,7 +560,7 @@ function renderLeagues() {
         `).join('')}
       </div>
 
-      <!-- Active League Leaderboard -->
+      <!-- Active League Header & Standings Toggle -->
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
         <div class="flex justify-between items-center mb-3 border-b pb-2">
           <div>
@@ -535,27 +573,72 @@ function renderLeagues() {
           </div>
         </div>
 
-        <div class="space-y-2">
-          ${sortedMembers.map((m, idx) => {
-            const isMe = m.name === managerName;
-            return `
-              <div class="flex items-center gap-3 p-3 rounded-lg border ${isMe ? 'bg-fpl-purple/5 border-fpl-purple/30' : 'bg-gray-50 border-gray-200'}">
-                <div class="font-black text-lg w-6 text-center ${idx === 0 ? 'text-amber-500' : idx === 1 ? 'text-gray-400' : idx === 2 ? 'text-amber-700' : 'text-gray-400'}">${idx + 1}</div>
-                <div class="flex-1">
-                  <div class="font-bold text-sm text-fpl-dark flex items-center gap-1.5">
-                    ${m.team}${isMe ? '<span class="text-[9px] bg-fpl-purple text-fpl-green px-1.5 py-0.2 rounded font-black">YOU</span>' : ''}
-                  </div>
-                  <div class="text-[10px] text-gray-500">Manager: ${m.name}</div>
-                </div>
-                <div class="font-black text-base text-fpl-purple">${m.points} pts</div>
-              </div>
-            `;
-          }).join('')}
+        <!-- Standings Mode Toggle -->
+        <div class="flex bg-gray-100 p-1 rounded-lg mb-3">
+          <button onclick="setLeagueViewMode('classic')" class="flex-1 py-1 text-xs font-bold rounded ${leagueViewMode === 'classic' ? 'bg-fpl-purple text-fpl-green shadow' : 'text-gray-600'}">Classic Standings</button>
+          <button onclick="setLeagueViewMode('h2h')" class="flex-1 py-1 text-xs font-bold rounded ${leagueViewMode === 'h2h' ? 'bg-fpl-purple text-fpl-green shadow' : 'text-gray-600'}">Head-to-Head (H2H)</button>
         </div>
+
+        ${leagueViewMode === 'classic' ? `
+          <div class="space-y-2">
+            ${sortedMembersClassic.map((m, idx) => {
+              const isMe = m.name === managerName;
+              return `
+                <div class="flex items-center gap-3 p-3 rounded-lg border ${isMe ? 'bg-fpl-purple/5 border-fpl-purple/30' : 'bg-gray-50 border-gray-200'}">
+                  <div class="font-black text-lg w-6 text-center ${idx === 0 ? 'text-amber-500' : idx === 1 ? 'text-gray-400' : idx === 2 ? 'text-amber-700' : 'text-gray-400'}">${idx + 1}</div>
+                  <div class="flex-1">
+                    <div class="font-bold text-sm text-fpl-dark flex items-center gap-1.5">
+                      ${m.team} ${isMe ? '<span class="text-[9px] bg-fpl-purple text-fpl-green px-1.5 py-0.2 rounded font-black">YOU</span>' : ''}
+                    </div>
+                    <div class="text-[10px] text-gray-500">Manager: ${m.name}</div>
+                  </div>
+                  <div class="font-black text-base text-fpl-purple">${m.points} pts</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        ` : `
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-gray-50 text-gray-500 border-b">
+                <tr>
+                  <th class="p-2">Pos</th>
+                  <th class="p-2">Team</th>
+                  <th class="p-2 text-center">P</th>
+                  <th class="p-2 text-center">W</th>
+                  <th class="p-2 text-center">D</th>
+                  <th class="p-2 text-center">L</th>
+                  <th class="p-2 text-right">Pts</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                ${sortedMembersH2H.map((m, idx) => {
+                  const isMe = m.name === managerName;
+                  return `
+                    <tr class="${isMe ? 'bg-fpl-purple/5 font-bold' : ''}">
+                      <td class="p-2 font-black">${idx + 1}</td>
+                      <td class="p-2">${m.team} ${isMe ? '(You)' : ''}</td>
+                      <td class="p-2 text-center text-gray-600">${m.p || 0}</td>
+                      <td class="p-2 text-center text-green-600">${m.w || 0}</td>
+                      <td class="p-2 text-center text-gray-500">${m.d || 0}</td>
+                      <td class="p-2 text-center text-red-600">${m.l || 0}</td>
+                      <td class="p-2 text-right font-black text-fpl-purple">${m.h2hPts || 0}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `}
       </div>
     </div>
     ${renderLeagueModals()}
   `;
+}
+
+function setLeagueViewMode(mode) {
+  leagueViewMode = mode;
+  renderLeagues();
 }
 
 function switchLeague(id) {
@@ -563,7 +646,7 @@ function switchLeague(id) {
   renderLeagues();
 }
 
-let leagueModalType = null; // 'create' or 'join'
+let leagueModalType = null;
 function openCreateLeagueModal() { leagueModalType = 'create'; renderLeagues(); }
 function openJoinLeagueModal() { leagueModalType = 'join'; renderLeagues(); }
 function closeLeagueModal() { leagueModalType = null; renderLeagues(); }
@@ -577,7 +660,8 @@ function handleCreateLeague(e) {
     id: 'league_' + Date.now(),
     name: name,
     code: code,
-    members: [{ name: managerName, team: 'Gulit FC', points: totalPoints }]
+    type: 'classic',
+    members: [{ name: managerName, team: 'Gulit FC', points: totalPoints, p: gameweek - 1, w: 0, d: 0, l: 0, h2hPts: 0 }]
   };
   userLeagues.push(newLeague);
   activeLeagueId = newLeague.id;
@@ -593,7 +677,7 @@ function handleJoinLeague(e) {
   if (!league) return showNotification("Invalid league code!");
   if (league.members.some(m => m.name === managerName)) return showNotification("You are already in this league!");
   
-  league.members.push({ name: managerName, team: 'Gulit FC', points: totalPoints });
+  league.members.push({ name: managerName, team: 'Gulit FC', points: totalPoints, p: gameweek - 1, w: 0, d: 0, l: 0, h2hPts: 0 });
   activeLeagueId = league.id;
   closeLeagueModal();
   saveData();
@@ -628,27 +712,43 @@ function renderLeagueModals() {
 }
 
 // ==========================================
-// 8. POINTS & HISTORY TAB
+// 8. POINTS & LIVE MATCH TICKER TAB
 // ==========================================
 function renderPoints() {
   const container = document.getElementById('tab-points');
   if (!container) return;
 
   container.innerHTML = `
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <div class="bg-fpl-purple text-white p-4 text-center">
-        <div class="text-xs font-bold text-gray-300 uppercase tracking-widest mb-1">Overall Points</div>
-        <div class="text-4xl font-black text-fpl-green">${totalPoints}</div>
+    <div class="space-y-4">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-fpl-purple text-white p-4 text-center">
+          <div class="text-xs font-bold text-gray-300 uppercase tracking-widest mb-1">Overall Points</div>
+          <div class="text-4xl font-black text-fpl-green">${totalPoints}</div>
+        </div>
+        
+        <div class="p-4">
+          <h3 class="font-bold text-sm text-gray-500 uppercase mb-3">Gameweek History</h3>
+          ${gwHistory.length === 0 ? '<div class="text-center text-sm text-gray-400 py-4">No data yet. Play a Gameweek!</div>' : `
+            <div class="space-y-2">
+              ${gwHistory.map(h => `
+                <div class="flex justify-between items-center p-3 border rounded-lg bg-gray-50">
+                  <span class="font-bold text-fpl-dark">Gameweek ${h.gameweek}</span>
+                  <span class="font-black text-fpl-purple bg-gray-200 px-3 py-1 rounded-full">${h.points} pts</span>
+                </div>
+              `).join('')}
+            </div>
+          `}
+        </div>
       </div>
-      
-      <div class="p-4">
-        <h3 class="font-bold text-sm text-gray-500 uppercase mb-3">Gameweek History</h3>
-        ${gwHistory.length === 0 ? '<div class="text-center text-sm text-gray-400 py-4">No data yet. Play a Gameweek!</div>' : `
-          <div class="space-y-2">
-            ${gwHistory.map(h => `
-              <div class="flex justify-between items-center p-3 border rounded-lg bg-gray-50">
-                <span class="font-bold text-fpl-dark">Gameweek ${h.gameweek}</span>
-                <span class="font-black text-fpl-purple bg-gray-200 px-3 py-1 rounded-full">${h.points} pts</span>
+
+      <!-- Live Match Ticker Feed -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <h3 class="font-bold text-sm text-fpl-purple uppercase mb-3 border-b pb-2">⚡ Latest Gameweek Match Ticker</h3>
+        ${lastGwEvents.length === 0 ? '<div class="text-xs text-gray-400 text-center py-3">Simulate a Gameweek to view live match events.</div>' : `
+          <div class="space-y-2 max-h-48 overflow-y-auto text-xs">
+            ${lastGwEvents.map(ev => `
+              <div class="p-2 rounded bg-gray-50 border border-gray-100 flex items-center justify-between">
+                <span class="text-gray-700">${ev}</span>
               </div>
             `).join('')}
           </div>
@@ -659,7 +759,7 @@ function renderPoints() {
 }
 
 // ==========================================
-// 9. SIMULATION LOGIC (WITH FDR ROTATION)
+// 9. SIMULATION LOGIC (WITH MATCH TICKER & H2H)
 // ==========================================
 function simulateGameweek() {
   const fixturePool = [
@@ -669,6 +769,8 @@ function simulateGameweek() {
     { opp: "Fasil Kenema (A)", fdr: 4 },
     { opp: "Mechal (H)", fdr: 2 }
   ];
+
+  lastGwEvents = [`📢 Gameweek ${gameweek} kickoff underway across stadiums!`];
 
   mySquad.forEach(p => {
     let goals = 0;
@@ -696,6 +798,11 @@ function simulateGameweek() {
       if (Math.random() > 0.7) assists = 1;
     }
     if (Math.random() > 0.8) yellow = 1;
+
+    // Log ticker events
+    if (goals > 0) lastGwEvents.push(`⚽ GOAL! ${p.name} (${p.club}) scores ${goals > 1 ? 'a brace' : ''}!`);
+    if (assists > 0) lastGwEvents.push(`🎯 ASSIST! ${p.name} (${p.club}) sets up a teammate.`);
+    if (yellow > 0) lastGwEvents.push(`🟨 YELLOW CARD for ${p.name} (${p.club}).`);
 
     pts = 2;
     if (p.pos === 'GKP' || p.pos === 'DEF') {
@@ -738,6 +845,27 @@ function simulateGameweek() {
 
   totalPoints += gwTotal;
   gwHistory.push({ gameweek, points: gwTotal });
+
+  // Update H2H records for all leagues
+  userLeagues.forEach(l => {
+    l.members.forEach(m => {
+      m.p = (m.p || 0) + 1;
+      // Simulated opponent score for H2H
+      const oppScore = Math.floor(Math.random() * 40) + 35;
+      if (m.name === managerName) {
+        if (gwTotal > oppScore) { m.w = (m.w || 0) + 1; m.h2hPts = (m.h2hPts || 0) + 3; }
+        else if (gwTotal === oppScore) { m.d = (m.d || 0) + 1; m.h2hPts = (m.h2hPts || 0) + 1; }
+        else { m.l = (m.l || 0) + 1; }
+      } else {
+        // Dummy opponents
+        const dScore = Math.floor(Math.random() * 45) + 30;
+        if (m.points > dScore) { m.w = (m.w || 0) + 1; m.h2hPts = (m.h2hPts || 0) + 3; }
+        else if (m.points === dScore) { m.d = (m.d || 0) + 1; m.h2hPts = (m.h2hPts || 0) + 1; }
+        else { m.l = (m.l || 0) + 1; }
+      }
+    });
+  });
+
   gameweek++;
 
   freeTransfers = Math.min(2, freeTransfers + 1);
@@ -783,7 +911,7 @@ function simulateGameweek() {
   activeChip = null;
   saveData();
   renderAll();
-  showNotification(`Gameweek ${gameweek - 1} finished! Fixtures updated.`);
+  showNotification(`Gameweek ${gameweek - 1} finished! Check the Live Match Ticker for events.`);
 }
 
 function updateHeader() {
