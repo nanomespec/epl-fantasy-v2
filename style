@@ -1,58 +1,258 @@
-/* ==========================================
-   EPL FANTASY COMPLETE STYLESHEET
-   ========================================== */
+:root {
+  --bg-color: #0f172a;
+  --card-bg: #1e293b;
+  --accent-color: #10b981;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --pitch-green: #15803d;
+  --pitch-lines: rgba(255, 255, 255, 0.2);
+}
 
-/* Pitch Background & Grass Pattern */
-.pitch-bg {
-  background: 
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.35)),
-    repeating-linear-gradient(
-      0deg,
-      #2b7a32 0px,
-      #2b7a32 40px,
-      #236b29 40px,
-      #236b29 80px
-    );
-  position: relative;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  padding-bottom: 20px;
+}
+
+/* Header */
+.app-header {
+  background: var(--card-bg);
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #334155;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  font-size: 24px;
+}
+
+.user-meta h3 {
+  font-size: 16px;
+}
+
+.user-meta p {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.stats-banner {
+  display: flex;
+  gap: 12px;
+}
+
+.stat-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.stat-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-weight: bold;
+  font-size: 14px;
+  color: var(--accent-color);
+}
+
+/* Navigation */
+.nav-tabs {
+  display: flex;
+  background-color: #0f172a;
+  border-bottom: 1px solid #334155;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 12px 0;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab-btn.active {
+  color: var(--accent-color);
+  border-bottom: 2px solid var(--accent-color);
+}
+
+/* Content Views */
+.content-container {
+  padding: 12px;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* Football Pitch Layout */
+.pitch-container {
+  background: linear-gradient(180deg, #166534 0%, var(--pitch-green) 100%);
+  border: 2px solid var(--pitch-lines);
+  border-radius: 8px;
+  padding: 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 380px;
+}
+
+.pitch-row {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+/* Bench Layout */
+.bench-container {
+  margin-top: 12px;
+  background: var(--card-bg);
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.bench-container h4 {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.bench-row {
+  display: flex;
+  justify-content: space-around;
+}
+
+/* Player Card Component */
+.player-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 60px;
+  text-align: center;
+}
+
+.player-icon {
+  width: 36px;
+  height: 36px;
+  background-color: #334155;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  margin-bottom: 4px;
+  border: 1px solid #64748b;
+}
+
+.player-name {
+  font-size: 10px;
+  font-weight: bold;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 2px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
   overflow: hidden;
-  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
+  text-overflow: ellipsis;
+  width: 100%;
 }
 
-/* Vector SVG Pitch Lines Overlay */
-.pitch-lines {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect x='3%25' y='3%25' width='94%25' height='94%25' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='2'/%3E%3Cline x1='3%25' y1='50%25' x2='97%25' y2='50%25' stroke='rgba(255,255,255,0.3)' stroke-width='2'/%3E%3Ccircle cx='50%25' cy='50%25' r='12%25' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='2'/%3E%3Ccircle cx='50%25' cy='50%25' r='2' fill='rgba(255,255,255,0.5)'/%3E%3Crect x='25%25' y='3%25' width='50%25' height='16%25' fill='none' stroke='rgba(255,255,255,0.25)' stroke-width='2'/%3E%3Crect x='35%25' y='3%25' width='30%25' height='7%25' fill='none' stroke='rgba(255,255,255,0.25)' stroke-width='2'/%3E%3Crect x='25%25' y='81%25' width='50%25' height='16%25' fill='none' stroke='rgba(255,255,255,0.25)' stroke-width='2'/%3E%3Crect x='35%25' y='90%25' width='30%25' height='7%25' fill='none' stroke='rgba(255,255,255,0.25)' stroke-width='2'/%3E%3C/svg%3E");
+.player-price {
+  font-size: 9px;
+  color: var(--text-muted);
 }
 
-/* Dynamic Card Shadow Effects */
-.player-card-shadow {
-  filter: drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.4));
-  transition: transform 0.15s ease-in-out, filter 0.15s ease-in-out;
+/* Market & List Items */
+.market-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
-.player-card-shadow:hover {
-  transform: translateY(-2px) scale(1.04);
-  filter: drop-shadow(0px 6px 10px rgba(0, 0, 0, 0.6));
+.market-controls input, .market-controls select {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--card-bg);
+  border: 1px solid #334155;
+  color: var(--text-main);
+  border-radius: 6px;
 }
 
-.player-name-badge {
-  background: #37003c;
-  color: #ffffff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+.market-item {
+  background: var(--card-bg);
+  padding: 10px 14px;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
-.player-stats-badge {
-  background: #00ff85;
-  color: #37003c;
+.btn-add {
+  background: var(--accent-color);
+  color: #000;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
 }
 
-/* Nav Button Active Glow */
-.nav-btn.active {
-  color: #00ff85 !important;
+/* Tables & Lists */
+.league-card, .fixture-list {
+  background: var(--card-bg);
+  padding: 16px;
+  border-radius: 8px;
 }
 
-.nav-btn.active span:first-child {
-  transform: scale(1.15);
+.subtext {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.league-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.league-table th, .league-table td {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid #334155;
+}
+
+.fixture-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #334155;
+  font-weight: 500;
+}
+
+.fixture-item .vs {
+  color: var(--accent-color);
+  font-size: 12px;
 }
