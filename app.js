@@ -29,21 +29,21 @@ const clubColors = {
 };
 
 const playerMarket = [
-  { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, form: 5.2 },
-  { id: 2, name: "A. Nuri", club: "Ethiopian Coffee", pos: "GKP", price: 5.0, form: 4.1 },
-  { id: 3, name: "A. K. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, form: 6.0 },
-  { id: 4, name: "E. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, form: 5.8 },
-  { id: 5, name: "A. Tefera", club: "Ethiopian Coffee", pos: "DEF", price: 5.0, form: 4.5 },
-  { id: 6, name: "S. Bereket", club: "CBE SA", pos: "DEF", price: 5.0, form: 4.8 },
-  { id: 7, name: "Y. Endale", club: "Fasil Kenema", pos: "DEF", price: 5.0, form: 3.5 },
-  { id: 8, name: "B. Belay", club: "Saint George", pos: "MID", price: 7.0, form: 7.2 },
-  { id: 9, name: "E. Tadesse", club: "Ethiopian Coffee", pos: "MID", price: 7.5, form: 7.8 },
-  { id: 10, name: "A. Gidey", club: "CBE SA", pos: "MID", price: 7.5, form: 6.9 },
-  { id: 11, name: "G. Panom", club: "Mechal", pos: "MID", price: 7.0, form: 6.1 },
-  { id: 12, name: "A. Okutu", club: "Saint George", pos: "FWD", price: 9.0, form: 8.5 },
-  { id: 13, name: "H. Konkoni", club: "Ethiopian Coffee", pos: "FWD", price: 8.0, form: 7.0 },
-  { id: 14, name: "D. Nathaniel", club: "CBE SA", pos: "FWD", price: 8.5, form: 7.4 },
-  { id: 15, name: "B. Gugsa", club: "Fasil Kenema", pos: "FWD", price: 8.0, form: 5.9 }
+  { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, form: 5.2, status: 'a' },
+  { id: 2, name: "A. Nuri", club: "Ethiopian Coffee", pos: "GKP", price: 5.0, form: 4.1, status: 'a' },
+  { id: 3, name: "A. K. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, form: 6.0, status: 'a' },
+  { id: 4, name: "E. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, form: 5.8, status: 'i' }, // Injured example
+  { id: 5, name: "A. Tefera", club: "Ethiopian Coffee", pos: "DEF", price: 5.0, form: 4.5, status: 'a' },
+  { id: 6, name: "S. Bereket", club: "CBE SA", pos: "DEF", price: 5.0, form: 4.8, status: 'a' },
+  { id: 7, name: "Y. Endale", club: "Fasil Kenema", pos: "DEF", price: 5.0, form: 3.5, status: 's' }, // Suspended example
+  { id: 8, name: "B. Belay", club: "Saint George", pos: "MID", price: 7.0, form: 7.2, status: 'a' },
+  { id: 9, name: "E. Tadesse", club: "Ethiopian Coffee", pos: "MID", price: 7.5, form: 7.8, status: 'a' },
+  { id: 10, name: "A. Gidey", club: "CBE SA", pos: "MID", price: 7.5, form: 6.9, status: 'd' }, // Doubtful example
+  { id: 11, name: "G. Panom", club: "Mechal", pos: "MID", price: 7.0, form: 6.1, status: 'a' },
+  { id: 12, name: "A. Okutu", club: "Saint George", pos: "FWD", price: 9.0, form: 8.5, status: 'a' },
+  { id: 13, name: "H. Konkoni", club: "Ethiopian Coffee", pos: "FWD", price: 8.0, form: 7.0, status: 'a' },
+  { id: 14, name: "D. Nathaniel", club: "CBE SA", pos: "FWD", price: 8.5, form: 7.4, status: 'a' },
+  { id: 15, name: "B. Gugsa", club: "Fasil Kenema", pos: "FWD", price: 8.0, form: 5.9, status: 'a' }
 ];
 
 let mySquad = [];
@@ -245,14 +245,20 @@ function renderPitch() {
 }
 
 function cardHtml(p) {
-  let isCap = p.isCaptain ? '<div class="absolute -top-2 -right-1 bg-black text-fpl-green text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-fpl-green shadow">C</div>' : '';
-  let isVice = p.isViceCaptain ? '<div class="absolute -top-2 -right-1 bg-white text-black text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-black shadow">V</div>' : '';
+  let isCap = p.isCaptain ? '<div class="absolute -top-2 -right-1 bg-black text-fpl-green text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-fpl-green shadow z-10">C</div>' : '';
+  let isVice = p.isViceCaptain ? '<div class="absolute -top-2 -right-1 bg-white text-black text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-black shadow z-10">V</div>' : '';
+
+  // Status flag badge
+  let statusBadge = '';
+  if (p.status === 'i') statusBadge = '<div class="absolute -bottom-1 -left-1 bg-red-600 text-white text-[7px] font-black px-1 rounded shadow z-10">INJ</div>';
+  else if (p.status === 's') statusBadge = '<div class="absolute -bottom-1 -left-1 bg-amber-600 text-white text-[7px] font-black px-1 rounded shadow z-10">SUS</div>';
+  else if (p.status === 'd') statusBadge = '<div class="absolute -bottom-1 -left-1 bg-yellow-400 text-black text-[7px] font-black px-1 rounded shadow z-10">75%</div>';
 
   const colors = clubColors[p.club] || { primary: "#37003c", secondary: "#00ff85", accent: "#ffffff" };
 
   return `
     <div onclick="handleCardClick(${p.id})" class="player-card pos-${p.pos} relative text-center w-[74px] p-1.5 cursor-pointer group select-none">
-      ${isCap} ${isVice}
+      ${isCap} ${isVice} ${statusBadge}
       <div class="mx-auto w-8 h-8 rounded-full flex items-center justify-center shadow-md mb-1 relative overflow-hidden border border-white/30 group-hover:scale-105 transition-transform" style="background: linear-gradient(135deg, ${colors.primary}, ${colors.secondary});">
         <span class="text-[9px] font-black drop-shadow tracking-tighter" style="color: ${colors.accent};">${p.club.split(' ').map(w => w[0]).join('')}</span>
       </div>
@@ -298,6 +304,11 @@ function renderModal() {
   const p = mySquad.find(x => x.id === activeModalId);
   const stats = p.stats || { goals: 0, assists: 0, cleanSheet: 0, yellow: 0 };
   
+  let statusText = '<span class="text-green-600 font-bold">🟢 Available (100% Chance)</span>';
+  if (p.status === 'i') statusText = '<span class="text-red-600 font-bold">❌ Injured (0% Chance)</span>';
+  else if (p.status === 's') statusText = '<span class="text-amber-600 font-bold">⛔ Suspended</span>';
+  else if (p.status === 'd') statusText = '<span class="text-yellow-600 font-bold">⚠️ Doubtful (75% Chance)</span>';
+
   return `
     <div class="fixed inset-0 bg-fpl-dark/80 flex items-end justify-center z-50">
       <div class="bg-white w-full rounded-t-2xl p-5 shadow-2xl animate-[slideUp_0.2s_ease-out]">
@@ -306,12 +317,18 @@ function renderModal() {
           <button onclick="activeModalId=null; renderPitch();" class="text-gray-400 font-bold text-xl">&times;</button>
         </div>
         
-        <!-- Granular Match Breakdown Card -->
-        <div class="bg-gray-50 border rounded-lg p-2.5 mb-3 text-xs flex justify-around text-center">
-          <div><div class="font-bold text-gray-400 text-[9px] uppercase">Goals</div><div class="font-black text-fpl-purple">${stats.goals}</div></div>
-          <div><div class="font-bold text-gray-400 text-[9px] uppercase">Assists</div><div class="font-black text-fpl-purple">${stats.assists}</div></div>
-          <div><div class="font-bold text-gray-400 text-[9px] uppercase">Clean Sheet</div><div class="font-black text-fpl-purple">${stats.cleanSheet}</div></div>
-          <div><div class="font-bold text-gray-400 text-[9px] uppercase">Cards</div><div class="font-black text-red-500">${stats.yellow}🟨</div></div>
+        <!-- Status & Granular Breakdown Card -->
+        <div class="bg-gray-50 border rounded-lg p-3 mb-3 text-xs space-y-2">
+          <div class="flex justify-between items-center border-b pb-2">
+            <span class="font-bold text-gray-500 uppercase text-[9px]">Match Status</span>
+            <span>${statusText}</span>
+          </div>
+          <div class="flex justify-around text-center pt-1">
+            <div><div class="font-bold text-gray-400 text-[9px] uppercase">Goals</div><div class="font-black text-fpl-purple">${stats.goals}</div></div>
+            <div><div class="font-bold text-gray-400 text-[9px] uppercase">Assists</div><div class="font-black text-fpl-purple">${stats.assists}</div></div>
+            <div><div class="font-bold text-gray-400 text-[9px] uppercase">Clean Sheet</div><div class="font-black text-fpl-purple">${stats.cleanSheet}</div></div>
+            <div><div class="font-bold text-gray-400 text-[9px] uppercase">Cards</div><div class="font-black text-red-500">${stats.yellow}🟨</div></div>
+          </div>
         </div>
 
         <button onclick="pendingSubId=${p.id}; activeModalId=null; renderPitch();" class="w-full bg-gray-100 text-fpl-purple py-3 rounded-lg text-sm font-bold mb-3 shadow-sm border border-gray-200">🔄 Substitute Player</button>
@@ -374,12 +391,16 @@ function renderMarket() {
       <div class="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
         ${playerMarket.map(p => {
           const owned = mySquad.some(s => s.id === p.id);
+          let badge = '';
+          if (p.status === 'i') badge = '<span class="text-[9px] bg-red-100 text-red-600 font-bold px-1 rounded ml-1">INJ</span>';
+          if (p.status === 's') badge = '<span class="text-[9px] bg-amber-100 text-amber-700 font-bold px-1 rounded ml-1">SUS</span>';
+          
           return `
             <div class="p-3 flex justify-between items-center bg-white hover:bg-gray-50">
               <div class="flex items-center gap-3">
                 <div class="w-8 h-8 bg-gray-100 border border-gray-200 rounded-full flex items-center justify-center text-[10px] font-bold text-gray-600">${p.pos}</div>
                 <div>
-                  <div class="font-bold text-sm text-fpl-dark">${p.name}</div>
+                  <div class="font-bold text-sm text-fpl-dark flex items-center">${p.name}${badge}</div>
                   <div class="text-[10px] text-gray-500">${p.club} • Form: ${p.form}</div>
                 </div>
               </div>
@@ -505,7 +526,7 @@ function renderPoints() {
 }
 
 // ==========================================
-// 8. SIMULATION LOGIC (GRANULAR STATS)
+// 8. SIMULATION LOGIC (WITH STATUS & STATS)
 // ==========================================
 function simulateGameweek() {
   mySquad.forEach(p => {
@@ -513,9 +534,16 @@ function simulateGameweek() {
     let assists = 0;
     let cleanSheet = 0;
     let yellow = 0;
+    let pts = 0;
+
+    // If player is injured ('i') or suspended ('s'), they score 0 points
+    if (p.status === 'i' || p.status === 's') {
+      p.gwPoints = 0;
+      p.stats = { goals: 0, assists: 0, cleanSheet: 0, yellow: 0 };
+      return;
+    }
 
     let roll = Math.random();
-    // Position-weighted match event simulation
     if (p.pos === 'FWD') {
       if (roll > 0.4) goals = Math.random() > 0.8 ? 2 : 1;
       if (Math.random() > 0.6) assists = 1;
@@ -529,8 +557,7 @@ function simulateGameweek() {
     }
     if (Math.random() > 0.8) yellow = 1;
 
-    // Calculate FPL official point formulas
-    let pts = 2; // Appearance points
+    pts = 2; // Appearance points
     if (p.pos === 'GKP' || p.pos === 'DEF') {
       pts += (goals * 6) + (cleanSheet * 4);
     } else if (p.pos === 'MID') {
@@ -573,10 +600,19 @@ function simulateGameweek() {
   gwHistory.push({ gameweek, points: gwTotal });
   gameweek++;
 
-  // Reset transfer counts for next GW (accumulate up to 2 free transfers)
+  // Reset transfer counts & update random statuses for realism
   freeTransfers = Math.min(2, freeTransfers + 1);
   transfersMade = 0;
   transferCostPenalty = 0;
+
+  // Randomly update status flags across player market for next GW
+  playerMarket.forEach(p => {
+    let rand = Math.random();
+    if (rand < 0.05) p.status = 'i';       // 5% chance injury
+    else if (rand < 0.08) p.status = 's';  // 3% chance suspension
+    else if (rand < 0.12) p.status = 'd';  // 4% chance doubtful
+    else p.status = 'a';                   // Otherwise available
+  });
 
   if (activeChip === 'fh' && preFreeHitSquad) {
     mySquad = preFreeHitSquad;
