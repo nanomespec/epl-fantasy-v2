@@ -11,224 +11,394 @@ if (window.Telegram && window.Telegram.WebApp) {
   tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
 }
 
-const managerName = tgUser ? `${tgUser.first_name} ${tgUser.last_name || ''}`.trim() : 'Nate Wolde';
+const managerName = tgUser ? `${tgUser.first_name} ${tgUser.last_name || ''}`.trim() : 'Nate';
+const managerId = tgUser?.id || 'local_user';
 
 // ==========================================
-// 2. STATE MANAGEMENT & STORAGE
+// 2. STATE & STORAGE
 // ==========================================
-const STORAGE_KEY = 'efpl_official_v12';
+const STORAGE_KEY = 'efpl_official_v11';
 
+// Club Kit & Crest Colors (Ethiopian Premier League)
 const clubColors = {
-  Arsenal: { primary: "#EF0107", secondary: "#FFFFFF", accent: "#063672" },
-  AstonVilla: { primary: "#95BFE5", secondary: "#670E36", accent: "#FEE505" },
-  Bournemouth: { primary: "#DA291C", secondary: "#000000", accent: "#FFFFFF" },
-  Brentford: { primary: "#E30613", secondary: "#FFFFFF", accent: "#000000" },
-  Brighton: { primary: "#0057B8", secondary: "#FFFFFF", accent: "#FFCD00" },
-  Chelsea: { primary: "#034694", secondary: "#FFFFFF", accent: "#DBA111" },
-  CrystalPalace: { primary: "#1B458F", secondary: "#C41230", accent: "#A7A5A6" },
-  Everton: { primary: "#003399", secondary: "#FFFFFF", accent: "#003399" },
-  Fulham: { primary: "#FFFFFF", secondary: "#000000", accent: "#CC0000" },
-  Ipswich: { primary: "#0000FF", secondary: "#FFFFFF", accent: "#FF0000" },
-  Leicester: { primary: "#0053A0", secondary: "#FDBE11", accent: "#FFFFFF" },
-  Liverpool: { primary: "#C8102E", secondary: "#00B2A9", accent: "#FDE100" },
-  ManCity: { primary: "#6CABDD", secondary: "#FFFFFF", accent: "#1C2C5B" },
-  ManUtd: { primary: "#DA291C", secondary: "#FFFFFF", accent: "#000000" },
-  Newcastle: { primary: "#241F20", secondary: "#FFFFFF", accent: "#F1B733" },
-  NottmForest: { primary: "#DD0000", secondary: "#FFFFFF", accent: "#DD0000" },
-  Southampton: { primary: "#D71921", secondary: "#FFFFFF", accent: "#130F14" },
-  Spurs: { primary: "#132257", secondary: "#FFFFFF", accent: "#132257" },
-  WestHam: { primary: "#7A263A", secondary: "#1BB1E7", accent: "#F3A91D" },
-  Wolves: { primary: "#FDB913", secondary: "#231F20", accent: "#231F20" }
+  "Saint George": { primary: "#FFD700", secondary: "#000080", accent: "#FFFFFF" },
+  "Ethiopian Coffee": { primary: "#FF6600", secondary: "#008000", accent: "#FFFFFF" },
+  "CBE SA": { primary: "#0047AB", secondary: "#FFFFFF", accent: "#FFD700" },
+  "Fasil Kenema": { primary: "#CC0000", secondary: "#FFCC00", accent: "#FFFFFF" },
+  "Mechal": { primary: "#006400", secondary: "#FFD700", accent: "#FFFFFF" },
+  "Bahir Dar City": { primary: "#FF4500", secondary: "#000080", accent: "#FFFFFF" },
+  "Hawassa City": { primary: "#008080", secondary: "#FFFFFF", accent: "#FFD700" },
+  "Adama City": { primary: "#800080", secondary: "#FFD700", accent: "#FFFFFF" },
+  "Sidama Coffee": { primary: "#008000", secondary: "#FFD700", accent: "#FFFFFF" },
+  "Wolayta Dicha": { primary: "#0000FF", secondary: "#FFFFFF", accent: "#FF0000" }
 };
 
-// Global Market Player Pool for Transfers
-const globalPlayerPool = [
-  { id: 101, name: "David Raya", club: "Arsenal", pos: "GKP", price: 5.5, gwPoints: 6 },
-  { id: 102, name: "Alisson Becker", club: "Liverpool", pos: "GKP", price: 5.5, gwPoints: 7 },
-  { id: 103, name: "Ederson", club: "ManCity", pos: "GKP", price: 5.5, gwPoints: 4 },
-  { id: 104, name: "Bart Verbruggen", club: "Brighton", pos: "GKP", price: 4.5, gwPoints: 2 },
-  { id: 105, name: "Gabriel Magalhães", club: "Arsenal", pos: "DEF", price: 6.2, gwPoints: 8 },
-  { id: 106, name: "William Saliba", club: "Arsenal", pos: "DEF", price: 6.0, gwPoints: 6 },
-  { id: 107, name: "Trent Alexander-Arnold", club: "Liverpool", pos: "DEF", price: 7.0, gwPoints: 9 },
-  { id: 108, name: "Josko Gvardiol", club: "ManCity", pos: "DEF", price: 6.0, gwPoints: 5 },
-  { id: 109, name: "Pedro Porro", club: "Spurs", pos: "DEF", price: 5.5, gwPoints: 3 },
-  { id: 110, name: "Antonee Robinson", club: "Fulham", pos: "DEF", price: 4.7, gwPoints: 2 },
-  { id: 111, name: "Mohamed Salah", club: "Liverpool", pos: "MID", price: 12.8, gwPoints: 12 },
-  { id: 112, name: "Cole Palmer", club: "Chelsea", pos: "MID", price: 10.8, gwPoints: 10 },
-  { id: 113, name: "Bukayo Saka", club: "Arsenal", pos: "MID", price: 10.1, gwPoints: 7 },
-  { id: 114, name: "Bryan Mbeumo", club: "Brentford", pos: "MID", price: 7.8, gwPoints: 6 },
-  { id: 115, name: "Morgan Rogers", club: "AstonVilla", pos: "MID", price: 5.4, gwPoints: 3 },
-  { id: 116, name: "Phil Foden", club: "ManCity", pos: "MID", price: 9.3, gwPoints: 2 },
-  { id: 117, name: "Erling Haaland", club: "ManCity", pos: "FWD", price: 15.3, gwPoints: 13 },
-  { id: 118, name: "Ollie Watkins", club: "AstonVilla", pos: "FWD", price: 9.0, gwPoints: 8 },
-  { id: 119, name: "Chris Wood", club: "NottmForest", pos: "FWD", price: 6.5, gwPoints: 5 },
-  { id: 120, name: "Nicolas Jackson", club: "Chelsea", pos: "FWD", price: 7.9, gwPoints: 6 },
-  { id: 121, name: "Dominic Solanke", club: "Spurs", pos: "FWD", price: 7.5, gwPoints: 4 }
+let playerMarket = [
+  // Goalkeepers (GKP)
+  { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, form: 5.2, status: 'a', nextOpp: "CBE SA (H)", fdr: 3 },
+  { id: 2, name: "A. Nuri", club: "Ethiopian Coffee", pos: "GKP", price: 5.0, form: 4.1, status: 'a', nextOpp: "Mechal (A)", fdr: 4 },
+  { id: 3, name: "T. Yigezu", club: "Bahir Dar City", pos: "GKP", price: 4.8, form: 4.6, status: 'a', nextOpp: "Hawassa (H)", fdr: 2 },
+  { id: 4, name: "M. Tilahun", club: "Fasil Kenema", pos: "GKP", price: 5.0, form: 4.9, status: 'a', nextOpp: "Adama (A)", fdr: 3 },
+  { id: 5, name: "B. Desta", club: "Hawassa City", pos: "GKP", price: 4.5, form: 3.8, status: 'a', nextOpp: "Sidama (H)", fdr: 3 },
+
+  // Defenders (DEF)
+  { id: 6, name: "A. K. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, form: 6.0, status: 'a', nextOpp: "CBE SA (H)", fdr: 3 },
+  { id: 7, name: "E. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, form: 5.8, status: 'i', nextOpp: "CBE SA (H)", fdr: 3 },
+  { id: 8, name: "A. Tefera", club: "Ethiopian Coffee", pos: "DEF", price: 5.0, form: 4.5, status: 'a', nextOpp: "Mechal (A)", fdr: 4 },
+  { id: 9, name: "S. Bereket", club: "CBE SA", pos: "DEF", price: 5.0, form: 4.8, status: 'a', nextOpp: "St. George (A)", fdr: 4 },
+  { id: 10, name: "Y. Endale", club: "Fasil Kenema", pos: "DEF", price: 5.0, form: 3.5, status: 's', nextOpp: "Coffee (H)", fdr: 2 },
+  { id: 11, name: "D. Girma", club: "Bahir Dar City", pos: "DEF", price: 4.5, form: 5.0, status: 'a', nextOpp: "Hawassa (H)", fdr: 2 },
+  { id: 12, name: "K. Asrat", club: "Adama City", pos: "DEF", price: 4.5, form: 4.2, status: 'a', nextOpp: "Wolayta (A)", fdr: 3 },
+  { id: 13, name: "H. Lemma", club: "Sidama Coffee", pos: "DEF", price: 4.8, form: 4.7, status: 'a', nextOpp: "Mechal (H)", fdr: 3 },
+
+  // Midfielders (MID)
+  { id: 14, name: "B. Belay", club: "Saint George", pos: "MID", price: 7.0, form: 7.2, status: 'a', nextOpp: "CBE SA (H)", fdr: 3 },
+  { id: 15, name: "E. Tadesse", club: "Ethiopian Coffee", pos: "MID", price: 7.5, form: 7.8, status: 'a', nextOpp: "Mechal (A)", fdr: 4 },
+  { id: 16, name: "A. Gidey", club: "CBE SA", pos: "MID", price: 7.5, form: 6.9, status: 'd', nextOpp: "St. George (A)", fdr: 4 },
+  { id: 17, name: "G. Panom", club: "Mechal", pos: "MID", price: 7.0, form: 6.1, status: 'a', nextOpp: "Coffee (H)", fdr: 2 },
+  { id: 18, name: "F. Alemu", club: "Bahir Dar City", pos: "MID", price: 6.5, form: 5.9, status: 'a', nextOpp: "Hawassa (H)", fdr: 2 },
+  { id: 19, name: "M. Mekonnen", club: "Hawassa City", pos: "MID", price: 6.0, form: 5.2, status: 'a', nextOpp: "Sidama (H)", fdr: 3 },
+  { id: 20, name: "T. Kebede", club: "Adama City", pos: "MID", price: 6.5, form: 5.5, status: 'a', nextOpp: "Wolayta (A)", fdr: 3 },
+  { id: 21, name: "W. Tesfaye", club: "Wolayta Dicha", pos: "MID", price: 5.5, form: 4.8, status: 'a', nextOpp: "Adama (H)", fdr: 3 },
+
+  // Forwards (FWD)
+  { id: 22, name: "A. Okutu", club: "Saint George", pos: "FWD", price: 9.0, form: 8.5, status: 'a', nextOpp: "CBE SA (H)", fdr: 3 },
+  { id: 23, name: "H. Konkoni", club: "Ethiopian Coffee", pos: "FWD", price: 8.0, form: 7.0, status: 'a', nextOpp: "Mechal (A)", fdr: 4 },
+  { id: 24, name: "D. Nathaniel", club: "CBE SA", pos: "FWD", price: 8.5, form: 7.4, status: 'a', nextOpp: "St. George (A)", fdr: 4 },
+  { id: 25, name: "B. Gugsa", club: "Fasil Kenema", pos: "FWD", price: 8.0, form: 5.9, status: 'a', nextOpp: "Coffee (H)", fdr: 2 },
+  { id: 26, name: "O. Okiki", club: "Bahir Dar City", pos: "FWD", price: 7.5, form: 6.8, status: 'a', nextOpp: "Hawassa (H)", fdr: 2 },
+  { id: 27, name: "S. Getachew", club: "Sidama Coffee", pos: "FWD", price: 7.0, form: 6.2, status: 'a', nextOpp: "Mechal (H)", fdr: 3 }
 ];
 
-let currentTab = 'pitch';
-let bank = 1.0;
-let freeTransfers = 1;
 let mySquad = [];
-let pendingSubId = null;
-let activeModalPlayerId = null;
+let preFreeHitSquad = null;
+let bankBalance = 1.0;
+let totalPoints = 0;
+let gameweek = 1;
 let activeChip = null;
 let chipsUsed = { wc: false, tc: false, bb: false, fh: false };
-let pendingChipToConfirm = null;
+let activeModalId = null;
+let pendingSubId = null;
+let chipConfirmModal = null;
+let gwHistory = [];
+let lastGwEvents = [];
 
-// Transfer state
-let transferOutPlayer = null;
-let transferSearch = '';
-let transferPosFilter = 'ALL';
-let pendingTransfersCount = 0;
+// FPL Squad Constraints
+const SQUAD_LIMITS = { GKP: 2, DEF: 5, MID: 5, FWD: 3 };
+const MAX_PLAYERS_PER_CLUB = 3;
+const TOTAL_SQUAD_SIZE = 15;
 
-function getInitialSquad() {
-  return [
-    { id: 1, name: "Raya", club: "Arsenal", pos: "GKP", price: 5.5, gwPoints: 6, isStarter: true, isCaptain: false, isViceCaptain: false, status: "a" },
-    { id: 2, name: "Verbruggen", club: "Brighton", pos: "GKP", price: 4.5, gwPoints: 2, isStarter: false, isCaptain: false, isViceCaptain: false, status: "a", benchOrder: 0 },
-    { id: 3, name: "Gabriel", club: "Arsenal", pos: "DEF", price: 6.2, gwPoints: 8, isStarter: true, isCaptain: false, isViceCaptain: false, status: "a" },
-    { id: 4, name: "Gvardiol", club: "ManCity", pos: "DEF", price: 6.0, gwPoints: 5, isStarter: true, isCaptain: false, isViceCaptain: false, status: "a" },
-    { id: 5, name: "Alexander-Arnold", club: "Liverpool", pos: "DEF", price: 7.0, gwPoints: 9, isStarter: true, isCaptain: false, isViceCaptain: false, status: "a" },
-    { id: 6, name: "Robinson", club: "Fulham", pos: "DEF", price: 4.7, gwPoints: 2, isStarter: false, isCaptain: false, isViceCaptain: false, status: "a", benchOrder: 1 },
-    { id: 7, name: "Porro", club: "Spurs", pos: "DEF", price: 5.5, gwPoints: 3, isStarter: false, isCaptain: false, isViceCaptain: false, status: "a", benchOrder: 2 },
-    { id: 8, name: "Salah", club: "Liverpool", pos: "MID", price: 12.8, gwPoints: 12, isStarter: true, isCaptain: true, isViceCaptain: false, status: "a" },
-    { id: 9, name: "Palmer", club: "Chelsea", pos: "MID", price: 10.8, gwPoints: 10, isStarter: true, isCaptain: false, isViceCaptain: true, status: "a" },
-    { id: 10, name: "Saka", club: "Arsenal", pos: "MID", price: 10.1, gwPoints: 7, isStarter: true, isCaptain: false, isViceCaptain: false, status: "a" },
-    { id: 11, name: "Mbeumo", club: "Brentford", pos: "MID", price: 7.8, gwPoints: 6, isStarter: true, isCaptain: false, isViceCaptain: false, status: "a" },
-    { id: 12, name: "Rogers", club: "AstonVilla", pos: "MID", price: 5.4, gwPoints: 3, isStarter: true, isCaptain: false, isViceCaptain: false, status: "a" },
-    { id: 13, name: "Haaland", club: "ManCity", pos: "FWD", price: 15.3, gwPoints: 13, isStarter: true, isCaptain: false, isViceCaptain: false, status: "a" },
-    { id: 14, name: "Wood", club: "NottmForest", pos: "FWD", price: 6.5, gwPoints: 5, isStarter: true, isCaptain: false, isViceCaptain: false, status: "a" },
-    { id: 15, name: "Jackson", club: "Chelsea", pos: "FWD", price: 7.9, gwPoints: 6, isStarter: false, isCaptain: false, isViceCaptain: false, status: "a", benchOrder: 3 }
-  ];
-}
+// FPL Transfer State
+let freeTransfers = 1;
+let transfersMade = 0;
+let transferCostPenalty = 0;
 
-function loadState() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      mySquad = parsed.mySquad || getInitialSquad();
-      chipsUsed = parsed.chipsUsed || { wc: false, tc: false, bb: false, fh: false };
-      activeChip = parsed.activeChip || null;
-      bank = parsed.bank ?? 1.0;
-      freeTransfers = parsed.freeTransfers ?? 1;
-    } catch (e) {
-      mySquad = getInitialSquad();
-    }
-  } else {
-    mySquad = getInitialSquad();
+// Leagues State
+let userLeagues = [
+  { 
+    id: 'global', 
+    name: 'Ethiopian Premier League (Global)', 
+    code: 'GLOBAL', 
+    type: 'classic',
+    members: [{ name: managerName, team: 'Gulit FC', points: 0, p: 0, w: 0, d: 0, l: 0, h2hPts: 0 }] 
   }
-  updateHeaderInfo();
+];
+let activeLeagueId = 'global';
+let leagueViewMode = 'classic';
+
+// ==========================================
+// 3. FPL PRICE & VALUE CALCULATIONS
+// ==========================================
+function getSellingPrice(player) {
+  const purchasePrice = player.purchasePrice ?? player.price;
+  const currentPrice = player.price;
+  if (currentPrice > purchasePrice) {
+    const profit = currentPrice - purchasePrice;
+    const profitKeep = Math.floor((profit + 0.00001) * 10 / 2) / 10;
+    return parseFloat((purchasePrice + profitKeep).toFixed(1));
+  }
+  return currentPrice;
 }
 
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({
-    mySquad,
-    chipsUsed,
-    activeChip,
-    bank,
-    freeTransfers
+// ==========================================
+// 4. AUTO-PICK 11 STARTERS & BENCH ASSIGNMENT
+// ==========================================
+function autoAssignStarters() {
+  if (!mySquad || mySquad.length === 0) return;
+
+  mySquad.forEach(p => { p.isStarter = false; p.benchOrder = 0; });
+
+  const gks = mySquad.filter(p => p.pos === 'GKP').sort((a, b) => b.price - a.price || b.form - a.form);
+  const defs = mySquad.filter(p => p.pos === 'DEF').sort((a, b) => b.price - a.price || b.form - a.form);
+  const mids = mySquad.filter(p => p.pos === 'MID').sort((a, b) => b.price - a.price || b.form - a.form);
+  const fwds = mySquad.filter(p => p.pos === 'FWD').sort((a, b) => b.price - a.price || b.form - a.form);
+
+  // 1. Mandatory base starters (1 GKP, 3 DEF, 2 MID, 1 FWD = 7 players)
+  if (gks.length > 0) gks[0].isStarter = true;
+  for (let i = 0; i < Math.min(3, defs.length); i++) defs[i].isStarter = true;
+  for (let i = 0; i < Math.min(2, mids.length); i++) mids[i].isStarter = true;
+  if (fwds.length > 0) fwds[0].isStarter = true;
+
+  // 2. Fill remaining 4 outfield starter spots up to 11 total starters
+  const unpickedOutfield = mySquad
+    .filter(p => !p.isStarter && p.pos !== 'GKP')
+    .sort((a, b) => b.price - a.price || b.form - a.form);
+
+  for (let p of unpickedOutfield) {
+    const currentStarters = mySquad.filter(x => x.isStarter).length;
+    if (currentStarters >= 11) break;
+
+    const currentDefs = mySquad.filter(x => x.isStarter && x.pos === 'DEF').length;
+    const currentMids = mySquad.filter(x => x.isStarter && x.pos === 'MID').length;
+    const currentFwds = mySquad.filter(x => x.isStarter && x.pos === 'FWD').length;
+
+    if (p.pos === 'DEF' && currentDefs < 5) { p.isStarter = true; }
+    else if (p.pos === 'MID' && currentMids < 5) { p.isStarter = true; }
+    else if (p.pos === 'FWD' && currentFwds < 3) { p.isStarter = true; }
+  }
+
+  // 3. Assign Bench Orders (Bench GKP = 0, Outfield Bench = 1, 2, 3)
+  const benchOutfield = mySquad
+    .filter(p => !p.isStarter && p.pos !== 'GKP')
+    .sort((a, b) => b.price - a.price);
+
+  benchOutfield.forEach((p, idx) => { p.benchOrder = idx + 1; });
+
+  // 4. Set Captain & Vice-Captain
+  const starters = mySquad.filter(p => p.isStarter).sort((a, b) => b.price - a.price);
+  if (starters.length > 0) {
+    mySquad.forEach(p => { p.isCaptain = false; p.isViceCaptain = false; });
+    starters[0].isCaptain = true;
+    if (starters[1]) starters[1].isViceCaptain = true;
+    else starters[0].isViceCaptain = true;
+  }
+}
+
+function loadData() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const data = JSON.parse(saved);
+      mySquad = data.mySquad || [];
+      preFreeHitSquad = data.preFreeHitSquad || null;
+      bankBalance = data.bankBalance ?? 1.0;
+      totalPoints = data.totalPoints ?? 0;
+      gameweek = data.gameweek ?? 1;
+      chipsUsed = data.chipsUsed || chipsUsed;
+      activeChip = data.activeChip || null;
+      gwHistory = data.gwHistory || [];
+      lastGwEvents = data.lastGwEvents || [];
+      freeTransfers = data.freeTransfers ?? 1;
+      transfersMade = data.transfersMade ?? 0;
+      transferCostPenalty = data.transferCostPenalty ?? 0;
+      if (data.playerMarket) playerMarket = data.playerMarket;
+      if (data.userLeagues) userLeagues = data.userLeagues;
+      
+      const fwdsCount = mySquad.filter(p => p.pos === 'FWD').length;
+      if (mySquad.length < 15 || fwdsCount === 0) {
+        resetSquad();
+        return;
+      }
+
+      autoAssignStarters();
+      syncLeagueData();
+      renderAll();
+      return;
+    }
+  } catch (e) {
+    console.warn("Storage restricted", e);
+  }
+  resetSquad();
+}
+
+function saveData() {
+  syncLeagueData();
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ 
+      mySquad, preFreeHitSquad, bankBalance, totalPoints, gameweek, chipsUsed, activeChip, gwHistory, lastGwEvents,
+      freeTransfers, transfersMade, transferCostPenalty, playerMarket, userLeagues
+    }));
+  } catch (e) {
+    console.warn("Could not save to localStorage", e);
+  }
+}
+
+function syncLeagueData() {
+  userLeagues.forEach(league => {
+    let member = league.members.find(m => m.name === managerName);
+    if (member) {
+      member.points = totalPoints;
+    } else {
+      league.members.push({ name: managerName, team: 'Gulit FC', points: totalPoints, p: gameweek - 1, w: 0, d: 0, l: 0, h2hPts: 0 });
+    }
+  });
+}
+
+function resetSquad() {
+  // Correctly select 15 FPL players: 2 GKPs, 5 DEFs, 5 MIDs, 3 FWDs
+  const initialGkps = playerMarket.filter(p => p.pos === 'GKP').slice(0, 2);
+  const initialDefs = playerMarket.filter(p => p.pos === 'DEF').slice(0, 5);
+  const initialMids = playerMarket.filter(p => p.pos === 'MID').slice(0, 5);
+  const initialFwds = playerMarket.filter(p => p.pos === 'FWD').slice(0, 3);
+
+  const initialSquadList = [...initialGkps, ...initialDefs, ...initialMids, ...initialFwds];
+
+  mySquad = initialSquadList.map(p => ({
+    ...p,
+    purchasePrice: p.price,
+    isStarter: false,
+    benchOrder: 0,
+    isCaptain: false,
+    isViceCaptain: false,
+    gwPoints: 0,
+    minutes: 0,
+    stats: { goals: 0, assists: 0, cleanSheet: 0, goalsConceded: 0, yellow: 0 }
   }));
-  updateHeaderInfo();
+
+  autoAssignStarters();
+
+  bankBalance = 1.0;
+  totalPoints = 0;
+  gameweek = 1;
+  chipsUsed = { wc: false, tc: false, bb: false, fh: false };
+  activeChip = null;
+  preFreeHitSquad = null;
+  gwHistory = [];
+  lastGwEvents = [];
+  freeTransfers = 1;
+  transfersMade = 0;
+  transferCostPenalty = 0;
+  userLeagues = [
+    { 
+      id: 'global', 
+      name: 'Ethiopian Premier League (Global)', 
+      code: 'GLOBAL', 
+      type: 'classic',
+      members: [{ name: managerName, team: 'Gulit FC', points: 0, p: 0, w: 0, d: 0, l: 0, h2hPts: 0 }] 
+    }
+  ];
+  saveData();
+  renderAll();
 }
 
-function updateHeaderInfo() {
-  const displayName = document.getElementById('user-display-name');
-  if (displayName) displayName.innerText = managerName.toUpperCase();
+// ==========================================
+// 5. NAVIGATION & RENDER
+// ==========================================
+function switchTab(tabName) {
+  ['pitch', 'transfers', 'leagues', 'points'].forEach(t => {
+    const section = document.getElementById(`tab-${t}`);
+    if (section) section.classList.add('hidden');
+    
+    const navItem = document.getElementById(`nav-${t}`);
+    if (navItem) {
+      navItem.classList.remove('text-fpl-purple', 'border-t-2', 'border-fpl-purple');
+      navItem.classList.add('text-gray-500', 'border-transparent');
+    }
+  });
+
+  const activeSection = document.getElementById(`tab-${tabName}`);
+  if (activeSection) activeSection.classList.remove('hidden');
   
-  const bankInfo = document.getElementById('header-bank-info');
-  if (bankInfo) bankInfo.innerText = `£${bank.toFixed(1)}m | ${freeTransfers} FT`;
+  const activeNav = document.getElementById(`nav-${tabName}`);
+  if (activeNav) {
+    activeNav.classList.remove('text-gray-500', 'border-transparent');
+    activeNav.classList.add('text-fpl-purple', 'border-t-2', 'border-fpl-purple');
+  }
+  
+  renderAll();
+}
+
+function updateHeader() {
+  const managerElem = document.getElementById('header-manager-name');
+  const gwElem = document.getElementById('header-gw');
+  const ptsElem = document.getElementById('header-pts');
+  const bankElem = document.getElementById('header-bank');
+
+  if (managerElem) managerElem.textContent = managerName;
+  if (gwElem) gwElem.textContent = `GW ${gameweek}`;
+  if (ptsElem) ptsElem.textContent = `${totalPoints} pts`;
+  if (bankElem) bankElem.textContent = `£${bankBalance}m`;
+}
+
+function renderAll() {
+  renderPitch();
+  renderMarket();
+  renderLeagues();
+  renderPoints();
+  updateHeader();
 }
 
 // ==========================================
-// 3. TAB SWITCHING SYSTEM
+// 6. CHIPS & MODALS
 // ==========================================
-function switchTab(tab) {
-  currentTab = tab;
-  document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-  const activeBtn = document.getElementById(`nav-${tab}`);
-  if (activeBtn) activeBtn.classList.add('active');
-  renderMain();
+function promptChip(chipName) {
+  if (chipsUsed[chipName]) return showNotification(`You used ${chipName.toUpperCase()} already!`);
+  if (activeChip) return showNotification(`Chip ${activeChip.toUpperCase()} is already active!`);
+  chipConfirmModal = chipName;
+  renderPitch();
 }
 
-function renderMain() {
-  const container = document.getElementById('app-container');
+function confirmChipPlay() {
+  activeChip = chipConfirmModal;
+  if (chipConfirmModal === 'fh') preFreeHitSquad = JSON.parse(JSON.stringify(mySquad));
+  chipConfirmModal = null;
+  saveData();
+  renderPitch();
+}
+
+function cancelChipPlay() { chipConfirmModal = null; renderPitch(); }
+
+function showNotification(msg) {
+  if (window.Telegram?.WebApp?.showAlert) {
+    window.Telegram.WebApp.showAlert(msg);
+  } else {
+    alert(msg);
+  }
+}
+
+// ==========================================
+// 7. PITCH, BENCH ORDERING & FORMATION VALIDATION
+// ==========================================
+function isValidFormation(starters) {
+  if (starters.length !== 11) return false;
+  const gk = starters.filter(p => p.pos === 'GKP').length;
+  const def = starters.filter(p => p.pos === 'DEF').length;
+  const mid = starters.filter(p => p.pos === 'MID').length;
+  const fwd = starters.filter(p => p.pos === 'FWD').length;
+  return gk === 1 && def >= 3 && def <= 5 && mid >= 2 && mid <= 5 && fwd >= 1 && fwd <= 3;
+}
+
+function shiftBenchOrder(id, direction) {
+  const p = mySquad.find(x => x.id === id);
+  if (!p || p.isStarter || p.pos === 'GKP') return;
+
+  const outfieldBench = mySquad.filter(x => !x.isStarter && x.pos !== 'GKP')
+    .sort((a, b) => a.benchOrder - b.benchOrder);
+
+  const currIdx = outfieldBench.findIndex(x => x.id === id);
+  const targetIdx = currIdx + direction;
+
+  if (targetIdx >= 0 && targetIdx < outfieldBench.length) {
+    const swapPlayer = outfieldBench[targetIdx];
+    const tempOrder = p.benchOrder;
+    p.benchOrder = swapPlayer.benchOrder;
+    swapPlayer.benchOrder = tempOrder;
+    saveData();
+    renderPitch();
+  }
+}
+
+function handleAutoPickUI() {
+  autoAssignStarters();
+  saveData();
+  renderPitch();
+  showNotification("⚡ Starting 11 auto-selected with strict FPL formation!");
+}
+
+function renderPitch() {
+  const container = document.getElementById('pitch-container');
   if (!container) return;
 
-  if (currentTab === 'pitch') renderPitch(container);
-  else if (currentTab === 'points') renderPointsView(container);
-  else if (currentTab === 'transfers') renderTransfersView(container);
-  else if (currentTab === 'leagues') renderLeaguesView(container);
-}
-
-// ==========================================
-// 4. KIT & GRAPHICS RENDERER
-// ==========================================
-function getKitSvg(clubName, isGkp = false) {
-  const colors = clubColors[clubName] || { primary: "#37003c", secondary: "#00ff85", accent: "#ffffff" };
-  
-  if (isGkp) {
-    return `
-      <svg viewBox="0 0 64 64" class="w-10 h-10 player-card-shadow mx-auto">
-        <path d="M14 16 L22 8 L42 8 L50 16 L60 24 L52 34 L46 28 L46 56 L18 56 L18 28 L12 34 L4 24 Z" fill="#00e676" stroke="#004d40" stroke-width="1" />
-        <path d="M14 16 L22 8 L28 18 L18 28 Z" fill="#00b0ff" opacity="0.8" />
-        <path d="M50 16 L42 8 L36 18 L46 28 Z" fill="#00b0ff" opacity="0.8" />
-        <path d="M22 8 L32 16 L42 8" fill="none" stroke="#ffffff" stroke-width="2" />
-      </svg>
-    `;
-  }
-
-  return `
-    <svg viewBox="0 0 64 64" class="w-10 h-10 player-card-shadow mx-auto">
-      <path d="M14 16 L22 8 L42 8 L50 16 L60 24 L52 34 L46 28 L46 56 L18 56 L18 28 L12 34 L4 24 Z" fill="${colors.primary}" stroke="#ffffff" stroke-width="0.8" />
-      <path d="M14 16 L4 24 L12 34 L18 28 Z" fill="${colors.secondary}" />
-      <path d="M50 16 L60 24 L52 34 L46 28 Z" fill="${colors.secondary}" />
-      <rect x="26" y="16" width="4" height="40" fill="${colors.secondary}" opacity="0.85" />
-      <rect x="34" y="16" width="4" height="40" fill="${colors.secondary}" opacity="0.85" />
-      <path d="M22 8 L32 15 L42 8" fill="none" stroke="${colors.accent}" stroke-width="2" />
-    </svg>
-  `;
-}
-
-function cardHtml(p) {
-  const isCap = p.isCaptain 
-    ? `<div class="absolute -top-1.5 -right-1.5 bg-yellow-400 text-fpl-purple font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center border-2 border-fpl-purple shadow-md z-20">C</div>` 
-    : '';
-
-  const isVice = p.isViceCaptain 
-    ? `<div class="absolute -top-1.5 -right-1.5 bg-white text-fpl-purple font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center border-2 border-fpl-purple shadow-md z-20">V</div>` 
-    : '';
-
-  const kitSvg = getKitSvg(p.club, p.pos === 'GKP');
-  const surname = p.name.split(' ').pop();
-  const isSelectedForSub = pendingSubId === p.id;
-
-  return `
-    <div onclick="handleCardClick(${p.id})" class="relative text-center w-[76px] cursor-pointer group select-none transition-transform active:scale-95 ${isSelectedForSub ? 'ring-2 ring-yellow-300 rounded-lg scale-105' : ''}">
-      ${isCap}
-      ${isVice}
-      
-      <div class="relative py-1">
-        ${kitSvg}
-      </div>
-
-      <div class="rounded-md overflow-hidden shadow-lg border border-black/20">
-        <div class="player-name-badge text-[9px] font-black truncate px-1 py-0.5 uppercase tracking-tighter">
-          ${surname}
-        </div>
-        <div class="flex justify-between items-center bg-gray-100 text-[8px] font-black px-1 py-0.5 border-t border-gray-300">
-          <span class="text-gray-600">£${p.price}m</span>
-          <span class="text-fpl-purple font-extrabold bg-fpl-green px-1 rounded-sm">${p.gwPoints ?? 0}</span>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-// ==========================================
-// 5. VIEW 1: PICK TEAM (PITCH VIEW)
-// ==========================================
-function renderPitch(container) {
   const starters = mySquad.filter(p => p.isStarter);
   const benchGkp = mySquad.find(p => !p.isStarter && p.pos === 'GKP');
   const benchOutfield = mySquad.filter(p => !p.isStarter && p.pos !== 'GKP')
@@ -237,47 +407,50 @@ function renderPitch(container) {
   const chipLabels = { wc: 'Wildcard', tc: 'Triple Captain', bb: 'Bench Boost', fh: 'Free Hit' };
 
   container.innerHTML = `
-    <div class="bg-white rounded-xl shadow-sm p-2 mb-3 border border-gray-200">
-      <div class="flex gap-1.5 mb-2">
+    <div class="bg-white rounded-lg shadow-sm p-2 mb-3">
+      <div class="flex gap-2 mb-2">
         ${['wc', 'tc', 'bb', 'fh'].map(c => `
           <button onclick="promptChip('${c}')" ${chipsUsed[c] || activeChip ? 'disabled' : ''} 
-            class="flex-1 py-1.5 text-[9px] font-black uppercase rounded-lg transition-all ${chipsUsed[c] ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : activeChip === c ? 'bg-fpl-purple text-fpl-green shadow-md' : 'bg-gray-50 border border-gray-300 text-fpl-purple hover:bg-fpl-purple/5'}">
+            class="flex-1 py-1.5 text-[9px] font-bold rounded ${chipsUsed[c] ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : activeChip === c ? 'bg-fpl-purple text-fpl-green' : 'bg-white border border-gray-300 text-fpl-purple hover:bg-gray-50'}">
             ${chipLabels[c]}
           </button>
         `).join('')}
       </div>
-      <button onclick="handleAutoPickUI()" class="w-full bg-fpl-purple text-fpl-green text-xs font-black py-2 rounded-lg shadow hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-1">
-        <span>⚡</span> AUTO-PICK STARTING 11
+      <button onclick="handleAutoPickUI()" class="w-full bg-fpl-purple text-fpl-green text-xs font-bold py-1.5 rounded shadow-sm hover:opacity-90">
+        ⚡ Auto-Pick Starting XI (11 Players)
       </button>
-      ${activeChip ? `<div class="mt-2 text-center text-xs font-black text-fpl-purple bg-fpl-green py-1 rounded-lg border border-fpl-purple/20">⚡ Active Chip: ${chipLabels[activeChip]}</div>` : ''}
+      ${activeChip ? `<div class="mt-2 text-center text-xs font-bold text-fpl-purple bg-fpl-green py-1 rounded">⚡ Active Chip: ${chipLabels[activeChip]}</div>` : ''}
     </div>
 
-    ${pendingSubId ? `<div class="bg-fpl-purple text-fpl-green text-xs p-2 text-center font-black mb-3 rounded-xl shadow-lg border border-fpl-green/30 animate-pulse">🔄 Select player to swap with</div>` : ''}
+    ${pendingSubId ? `<div class="bg-fpl-purple text-fpl-green text-xs p-2 text-center font-bold mb-3 rounded-lg shadow">🔄 Select player to swap with</div>` : ''}
     
-    <div class="pitch-bg rounded-t-2xl p-3 flex flex-col justify-between min-h-[420px] mb-0">
-      <div class="pitch-lines"></div>
-      <div class="relative z-10 flex justify-center gap-2 pt-2">${starters.filter(p => p.pos === 'GKP').map(cardHtml).join('')}</div>
-      <div class="relative z-10 flex justify-center gap-2">${starters.filter(p => p.pos === 'DEF').map(cardHtml).join('')}</div>
-      <div class="relative z-10 flex justify-center gap-2">${starters.filter(p => p.pos === 'MID').map(cardHtml).join('')}</div>
-      <div class="relative z-10 flex justify-center gap-2 pb-2">${starters.filter(p => p.pos === 'FWD').map(cardHtml).join('')}</div>
+    <!-- Pitch Graphic -->
+    <div class="football-pitch rounded-t-2xl p-3 flex flex-col justify-around min-h-[360px] mb-1">
+      <div class="flex justify-center gap-1.5">${starters.filter(p => p.pos === 'GKP').map(cardHtml).join('')}</div>
+      <div class="flex justify-center gap-1.5">${starters.filter(p => p.pos === 'DEF').map(cardHtml).join('')}</div>
+      <div class="flex justify-center gap-1.5">${starters.filter(p => p.pos === 'MID').map(cardHtml).join('')}</div>
+      <div class="flex justify-center gap-1.5">${starters.filter(p => p.pos === 'FWD').map(cardHtml).join('')}</div>
     </div>
 
-    <div class="bg-gradient-to-b from-gray-900 to-fpl-dark rounded-b-2xl p-3 shadow-xl border-t-2 border-fpl-green">
-      <div class="text-[10px] text-fpl-green font-black uppercase mb-2 flex justify-between items-center px-1 tracking-wider">
-        <span>Substitutes Bench</span>
-        ${activeChip === 'bb' ? '<span class="text-fpl-green font-black animate-bounce">Bench Boost Active ⚡</span>' : ''}
+    <!-- Bench Container -->
+    <div class="bg-white rounded-b-2xl p-3 shadow-md border border-gray-200">
+      <div class="text-[10px] text-fpl-purple font-black uppercase mb-2 flex justify-between px-1">
+        <span>Substitutes (Auto-Sub Priority)</span>
+        ${activeChip === 'bb' ? '<span class="text-green-600 font-bold">Bench Boost Active ⚡</span>' : ''}
       </div>
-      <div class="grid grid-cols-4 gap-2 text-center">
-        <div class="flex flex-col items-center bg-white/5 p-1.5 rounded-xl border border-white/10">
-          <span class="text-[8px] font-black text-gray-400 mb-1 uppercase tracking-widest">GKP</span>
+      <div class="grid grid-cols-4 gap-1 text-center">
+        <!-- GK Sub -->
+        <div class="flex flex-col items-center">
+          <span class="text-[8px] font-bold text-gray-400 mb-1">GK</span>
           ${benchGkp ? cardHtml(benchGkp) : ''}
         </div>
+        <!-- Outfield Subs -->
         ${benchOutfield.map((p, idx) => `
-          <div class="flex flex-col items-center bg-white/5 p-1.5 rounded-xl border border-white/10">
+          <div class="flex flex-col items-center">
             <div class="flex items-center gap-1 mb-1">
-              <button onclick="shiftBenchOrder(${p.id}, -1)" class="text-[9px] px-1 bg-white/10 text-white rounded font-black hover:bg-fpl-green hover:text-fpl-purple">‹</button>
-              <span class="text-[8px] font-black text-fpl-green uppercase tracking-wider">Sub ${idx + 1}</span>
-              <button onclick="shiftBenchOrder(${p.id}, 1)" class="text-[9px] px-1 bg-white/10 text-white rounded font-black hover:bg-fpl-green hover:text-fpl-purple">›</button>
+              <button onclick="shiftBenchOrder(${p.id}, -1)" class="text-[8px] px-1 bg-gray-200 rounded font-black hover:bg-gray-300">‹</button>
+              <span class="text-[8px] font-bold text-fpl-purple">Sub ${idx + 1}</span>
+              <button onclick="shiftBenchOrder(${p.id}, 1)" class="text-[8px] px-1 bg-gray-200 rounded font-black hover:bg-gray-300">›</button>
             </div>
             ${cardHtml(p)}
           </div>
@@ -290,59 +463,212 @@ function renderPitch(container) {
   `;
 }
 
-// ==========================================
-// 6. VIEW 2: GAMEWEEK POINTS
-// ==========================================
-function renderPointsView(container) {
-  let totalPoints = 0;
-  const starters = mySquad.filter(p => p.isStarter);
+function cardHtml(p) {
+  let isCap = p.isCaptain ? '<div class="absolute -top-2 -right-1 bg-black text-fpl-green text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-fpl-green shadow z-10">C</div>' : '';
+  let isVice = p.isViceCaptain ? '<div class="absolute -top-2 -right-1 bg-white text-black text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-black shadow z-10">V</div>' : '';
 
-  starters.forEach(p => {
-    let multiplier = 1;
-    if (p.isCaptain) multiplier = activeChip === 'tc' ? 3 : 2;
-    totalPoints += (p.gwPoints || 0) * multiplier;
-  });
+  let statusBadge = '';
+  if (p.status === 'i') statusBadge = '<div class="absolute -bottom-1 -left-1 bg-red-600 text-white text-[7px] font-black px-1 rounded shadow z-10">INJ</div>';
+  else if (p.status === 's') statusBadge = '<div class="absolute -bottom-1 -left-1 bg-amber-600 text-white text-[7px] font-black px-1 rounded shadow z-10">SUS</div>';
+  else if (p.status === 'd') statusBadge = '<div class="absolute -bottom-1 -left-1 bg-yellow-400 text-black text-[7px] font-black px-1 rounded shadow z-10">75%</div>';
 
-  if (activeChip === 'bb') {
-    mySquad.filter(p => !p.isStarter).forEach(p => {
-      totalPoints += (p.gwPoints || 0);
-    });
+  const colors = clubColors[p.club] || { primary: "#37003c", secondary: "#00ff85", accent: "#ffffff" };
+
+  return `
+    <div onclick="handleCardClick(${p.id})" class="player-card pos-${p.pos} relative text-center w-[74px] p-1.5 cursor-pointer group select-none">
+      ${isCap} ${isVice} ${statusBadge}
+      <div class="mx-auto w-8 h-8 rounded-full flex items-center justify-center shadow-md mb-1 relative overflow-hidden border border-white/30 group-hover:scale-105 transition-transform" style="background: linear-gradient(135deg, ${colors.primary}, ${colors.secondary});">
+        <span class="text-[9px] font-black drop-shadow tracking-tighter" style="color: ${colors.accent};">${p.club.split(' ').map(w => w[0]).join('')}</span>
+      </div>
+      <div class="text-white text-[9px] font-bold truncate px-0.5">${p.name.split(' ').pop()}</div>
+      <div class="flex justify-between items-center bg-black/40 rounded px-1 mt-1 text-[8px]">
+        <span class="text-gray-300 font-medium">£${p.price}m</span>
+        <span class="text-fpl-green font-bold">${p.gwPoints ?? 0} pts</span>
+      </div>
+    </div>
+  `;
+}
+
+function handleCardClick(id) {
+  if (pendingSubId === null) {
+    activeModalId = id;
+    renderPitch();
+  } else {
+    executeSwap(pendingSubId, id);
+  }
+}
+
+function executeSwap(id1, id2) {
+  if (id1 === id2) { pendingSubId = null; renderPitch(); return; }
+  const p1 = mySquad.find(p => p.id === id1);
+  const p2 = mySquad.find(p => p.id === id2);
+
+  if (!p1 || !p2) { pendingSubId = null; renderPitch(); return; }
+
+  if (p1.pos === 'GKP' || p2.pos === 'GKP') {
+    if (p1.pos !== p2.pos) {
+      pendingSubId = null;
+      showNotification("Goalkeepers can only swap with another Goalkeeper!");
+      renderPitch();
+      return;
+    }
   }
 
-  container.innerHTML = `
-    <div class="bg-fpl-purple text-white rounded-2xl p-4 shadow-xl mb-4 border border-fpl-green/30 text-center relative overflow-hidden">
-      <div class="text-[10px] uppercase font-black tracking-widest text-fpl-green mb-1">GAMEWEEK 1 SCORE</div>
-      <div class="text-5xl font-black text-white my-1">${totalPoints}</div>
-      <div class="text-xs font-bold text-gray-300">Average: 48 pts | Highest: 112 pts</div>
-    </div>
+  const origP1Starter = p1.isStarter;
+  const origP2Starter = p2.isStarter;
 
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-      <div class="bg-gray-50 px-4 py-2 border-b border-gray-200 font-black text-xs text-fpl-purple uppercase tracking-wider">
-        Squad Breakdown
+  p1.isStarter = origP2Starter;
+  p2.isStarter = origP1Starter;
+
+  if (!isValidFormation(mySquad.filter(p => p.isStarter))) {
+    p1.isStarter = origP1Starter;
+    p2.isStarter = origP2Starter;
+    showNotification("Invalid FPL formation! Must have exactly 11 starters: 1 GKP, 3-5 DEF, 2-5 MID, 1-3 FWD.");
+    pendingSubId = null;
+    renderPitch();
+    return;
+  }
+
+  const outfieldBench = mySquad.filter(x => !x.isStarter && x.pos !== 'GKP');
+  outfieldBench.forEach((p, idx) => { p.benchOrder = idx + 1; });
+
+  pendingSubId = null;
+  saveData();
+  renderPitch();
+}
+
+function renderModal() {
+  if (!activeModalId) return '';
+  const p = mySquad.find(x => x.id === activeModalId);
+  const stats = p.stats || { goals: 0, assists: 0, cleanSheet: 0, goalsConceded: 0, yellow: 0 };
+  
+  let statusText = '<span class="text-green-600 font-bold">🟢 Available (100% Chance)</span>';
+  if (p.status === 'i') statusText = '<span class="text-red-600 font-bold">❌ Injured (0% Chance)</span>';
+  else if (p.status === 's') statusText = '<span class="text-amber-600 font-bold">⛔ Suspended</span>';
+  else if (p.status === 'd') statusText = '<span class="text-yellow-600 font-bold">⚠️ Doubtful (75% Chance)</span>';
+
+  let fdrBg = 'bg-green-500 text-white';
+  if (p.fdr >= 4) fdrBg = 'bg-red-600 text-white';
+  else if (p.fdr === 3) fdrBg = 'bg-gray-400 text-white';
+
+  const purchasePrice = p.purchasePrice || p.price;
+  const sellVal = getSellingPrice(p);
+
+  return `
+    <div class="fixed inset-0 bg-fpl-dark/80 flex items-end justify-center z-50">
+      <div class="bg-white w-full rounded-t-2xl p-5 shadow-2xl animate-[slideUp_0.2s_ease-out]">
+        <div class="flex justify-between items-center mb-2 border-b pb-2">
+          <div class="font-black text-lg text-fpl-purple">${p.name} <span class="text-xs font-normal text-gray-500">(${p.club})</span></div>
+          <button onclick="activeModalId=null; renderPitch();" class="text-gray-400 font-bold text-xl">&times;</button>
+        </div>
+        
+        <div class="bg-gray-50 border rounded-lg p-3 mb-3 text-xs space-y-2">
+          <div class="flex justify-between items-center border-b pb-2">
+            <span class="font-bold text-gray-500 uppercase text-[9px]">Match Status</span>
+            <span>${statusText}</span>
+          </div>
+          <div class="flex justify-between items-center border-b pb-2">
+            <span class="font-bold text-gray-500 uppercase text-[9px]">Next Fixture (FDR)</span>
+            <span class="px-2 py-0.5 rounded font-black ${fdrBg}">${p.nextOpp} (FDR ${p.fdr})</span>
+          </div>
+          <div class="flex justify-between items-center border-b pb-2">
+            <span class="font-bold text-gray-500 uppercase text-[9px]">FPL Valuation</span>
+            <span class="font-black text-fpl-dark">Bought: £${purchasePrice}m | Current: £${p.price}m | Sell: <span class="text-green-600">£${sellVal}m</span></span>
+          </div>
+          <div class="flex justify-around text-center pt-1">
+            <div><div class="font-bold text-gray-400 text-[9px] uppercase">Goals</div><div class="font-black text-fpl-purple">${stats.goals}</div></div>
+            <div><div class="font-bold text-gray-400 text-[9px] uppercase">Assists</div><div class="font-black text-fpl-purple">${stats.assists}</div></div>
+            <div><div class="font-bold text-gray-400 text-[9px] uppercase">Clean Sheet</div><div class="font-black text-fpl-purple">${stats.cleanSheet}</div></div>
+            <div><div class="font-bold text-gray-400 text-[9px] uppercase">Conceded</div><div class="font-black text-red-500">${stats.goalsConceded || 0}</div></div>
+          </div>
+        </div>
+
+        <button onclick="pendingSubId=${p.id}; activeModalId=null; renderPitch();" class="w-full bg-gray-100 text-fpl-purple py-3 rounded-lg text-sm font-bold mb-3 shadow-sm border border-gray-200">🔄 Swap / Substitute</button>
+        <button onclick="setCap(${p.id}, true)" class="w-full bg-fpl-purple text-white py-3 rounded-lg text-sm font-bold mb-3 shadow-sm">👑 Make Captain (2x)</button>
+        <button onclick="setCap(${p.id}, false)" class="w-full bg-white border-2 border-fpl-purple text-fpl-purple py-3 rounded-lg text-sm font-bold shadow-sm">⭐ Make Vice-Captain</button>
       </div>
-      <div class="divide-y divide-gray-100">
-        ${mySquad.map(p => {
-          let pts = p.gwPoints || 0;
+    </div>
+  `;
+}
+
+function renderChipConfirmModal() {
+  if (!chipConfirmModal) return '';
+  return `
+    <div class="fixed inset-0 bg-fpl-dark/80 flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-xl p-5 w-72 text-center shadow-2xl">
+        <div class="text-xs text-gray-500 font-bold uppercase mb-1">Confirm FPL Chip</div>
+        <div class="font-black text-fpl-purple text-xl mb-2">Play ${chipConfirmModal.toUpperCase()}?</div>
+        <p class="text-xs text-gray-600 mb-5">This chip will apply to Gameweek ${gameweek}.</p>
+        <button onclick="confirmChipPlay()" class="w-full bg-fpl-green text-fpl-purple py-3 rounded-lg text-sm font-black mb-2">Confirm</button>
+        <button onclick="cancelChipPlay()" class="w-full bg-gray-100 text-gray-600 py-2.5 rounded-lg text-sm font-bold">Cancel</button>
+      </div>
+    </div>
+  `;
+}
+
+function setCap(id, isC) {
+  mySquad.forEach(p => {
+    if (isC) p.isCaptain = (p.id === id);
+    else p.isViceCaptain = (p.id === id);
+  });
+  activeModalId = null;
+  saveData();
+  renderPitch();
+}
+
+// ==========================================
+// 8. MARKET & REAL FPL TRANSFER SYSTEM
+// ==========================================
+function renderMarket() {
+  const container = document.getElementById('tab-transfers');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="bg-fpl-purple text-white p-3 flex justify-between items-center">
+        <span class="font-black">Player Market</span>
+        <div class="flex gap-2 text-xs">
+          <span class="bg-fpl-green text-fpl-purple px-2 py-0.5 rounded font-bold">Bank: £${bankBalance}M</span>
+          <span class="bg-white/20 text-white px-2 py-0.5 rounded font-bold">FT: ${freeTransfers}/5</span>
+        </div>
+      </div>
+      
+      ${transferCostPenalty > 0 ? `<div class="bg-red-50 text-red-600 text-xs px-4 py-2 font-bold border-b border-red-100 flex justify-between items-center"><span>⚠️ Transfer Hits Deducted:</span><span>-${transferCostPenalty} pts</span></div>` : ''}
+
+      <div class="p-2 bg-gray-50 text-xs text-gray-500 font-bold border-b flex justify-between px-4">
+        <span class="w-2/3">Player & Fixture</span>
+        <span class="w-1/3 text-right">Price / Action</span>
+      </div>
+
+      <div class="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
+        ${playerMarket.map(p => {
+          const owned = mySquad.find(s => s.id === p.id);
           let badge = '';
-          if (p.isStarter && p.isCaptain) {
-            const mult = activeChip === 'tc' ? 3 : 2;
-            pts *= mult;
-            badge = `<span class="bg-yellow-400 text-fpl-purple text-[9px] font-black px-1.5 py-0.5 rounded ml-1">C (${mult}x)</span>`;
-          } else if (p.isStarter && p.isViceCaptain) {
-            badge = `<span class="bg-gray-200 text-fpl-purple text-[9px] font-black px-1.5 py-0.5 rounded ml-1">V</span>`;
-          }
+          if (p.status === 'i') badge = '<span class="text-[9px] bg-red-100 text-red-600 font-bold px-1 rounded ml-1">INJ</span>';
+          if (p.status === 's') badge = '<span class="text-[9px] bg-amber-100 text-amber-700 font-bold px-1 rounded ml-1">SUS</span>';
+          
+          let fdrColor = 'bg-green-100 text-green-700';
+          if (p.fdr >= 4) fdrColor = 'bg-red-100 text-red-700';
+          else if (p.fdr === 3) fdrColor = 'bg-gray-200 text-gray-700';
+
+          const sellVal = owned ? getSellingPrice(owned) : p.price;
 
           return `
-            <div class="flex items-center justify-between p-3 ${!p.isStarter ? 'bg-gray-50/60 opacity-75' : ''}">
-              <div class="flex items-center gap-2">
-                <span class="text-[10px] font-black px-1.5 py-0.5 rounded ${p.isStarter ? 'bg-fpl-purple text-fpl-green' : 'bg-gray-300 text-gray-700'}">${p.pos}</span>
+            <div class="p-3 flex justify-between items-center bg-white hover:bg-gray-50">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-gray-100 border border-gray-200 rounded-full flex items-center justify-center text-[10px] font-bold text-gray-600">${p.pos}</div>
                 <div>
-                  <div class="text-xs font-black text-gray-900 flex items-center">${p.name}${badge}</div>
-                  <div class="text-[10px] text-gray-500 font-bold">${p.club}</div>
+                  <div class="font-bold text-sm text-fpl-dark flex items-center">${p.name}${badge}</div>
+                  <div class="text-[10px] text-gray-500">${p.club} • Form: ${p.form}</div>
+                  <div class="mt-1"><span class="text-[9px] px-1.5 py-0.5 rounded font-bold ${fdrColor}">vs ${p.nextOpp}</span></div>
                 </div>
               </div>
-              <div class="text-sm font-black text-fpl-purple bg-fpl-green/20 px-2.5 py-1 rounded-lg">
-                ${pts} pts
+              <div class="flex flex-col items-end">
+                <span class="font-black text-fpl-purple mb-0.5">£${p.price}m</span>${owned ? `<span class="text-[9px] text-gray-400 font-bold mb-1">Sell: £${sellVal}m</span>` : ''}
+                <button onclick="${owned ? `sellPlayer(${p.id})` : `buyPlayer(${p.id})`}" 
+                  class="px-4 py-1 rounded text-xs font-bold shadow-sm ${owned ? 'bg-white border border-red-500 text-red-500' : 'bg-fpl-green text-fpl-purple'}">
+                  ${owned ? 'Sell' : 'Buy'}
+                </button>
               </div>
             </div>
           `;
@@ -352,401 +678,507 @@ function renderPointsView(container) {
   `;
 }
 
-// ==========================================
-// 7. VIEW 3: TRANSFERS MARKET
-// ==========================================
-function renderTransfersView(container) {
-  const filteredPool = globalPlayerPool.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(transferSearch.toLowerCase()) || p.club.toLowerCase().includes(transferSearch.toLowerCase());
-    const matchesPos = transferPosFilter === 'ALL' || p.pos === transferPosFilter;
-    const notInSquad = !mySquad.some(sq => sq.id === p.id);
-    return matchesSearch && matchesPos && notInSquad;
+function canAddPlayer(player) {
+  if (mySquad.some(p => p.id === player.id)) {
+    return { success: false, message: `${player.name} is already in your squad.` };
+  }
+  if (mySquad.length >= TOTAL_SQUAD_SIZE) {
+    return { success: false, message: "Squad is full (15 players). Sell a player first!" };
+  }
+  if (bankBalance < player.price) {
+    return { success: false, message: `Insufficient budget. Need £${player.price}m (Bank: £${bankBalance}m).` };
+  }
+  const currentPosCount = mySquad.filter(p => p.pos === player.pos).length;
+  if (currentPosCount >= SQUAD_LIMITS[player.pos]) {
+    return { success: false, message: `Max position limit reached for ${player.pos}s.` };
+  }
+  const currentClubCount = mySquad.filter(p => p.club === player.club).length;
+  if (currentClubCount >= MAX_PLAYERS_PER_CLUB) {
+    return { success: false, message: `Max 3 players allowed from ${player.club}.` };
+  }
+  return { success: true };
+}
+
+function buyPlayer(id) {
+  const p = playerMarket.find(x => x.id === id);
+  if (!p) return;
+
+  const validation = canAddPlayer(p);
+  if (!validation.success) {
+    return showNotification(validation.message);
+  }
+
+  if (activeChip !== 'wc' && activeChip !== 'fh') {
+    if (freeTransfers > 0) {
+      freeTransfers--;
+    } else {
+      transferCostPenalty += 4;
+      showNotification("⚠️️ Extra transfer used! -4 point hit applied.");
+    }
+    transfersMade++;
+  }
+
+  mySquad.push({ 
+    ...p, 
+    purchasePrice: p.price,
+    isStarter: false, 
+    benchOrder: 0,
+    isCaptain: false, 
+    isViceCaptain: false, 
+    gwPoints: 0,
+    minutes: 0,
+    stats: { goals: 0, assists: 0, cleanSheet: 0, goalsConceded: 0, yellow: 0 } 
   });
 
+  bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
+  
+  autoAssignStarters();
+  saveData();
+  renderAll();
+  showNotification(`Bought ${p.name} for £${p.price}m.`);
+}
+
+function sellPlayer(id) {
+  if (mySquad.length <= 11) return showNotification("Must maintain at least 11 players!");
+  
+  const p = mySquad.find(x => x.id === id);
+  if (!p) return;
+
+  if (activeChip !== 'wc' && activeChip !== 'fh') {
+    if (freeTransfers > 0) {
+      freeTransfers--;
+    } else {
+      transferCostPenalty += 4;
+      showNotification("⚠️ Extra transfer used! -4 point hit applied.");
+    }
+    transfersMade++;
+  }
+
+  const sellValue = getSellingPrice(p);
+  mySquad = mySquad.filter(x => x.id !== id);
+
+  bankBalance = parseFloat((bankBalance + sellValue).toFixed(1));
+  
+  autoAssignStarters();
+  saveData();
+  renderAll();
+  showNotification(`Sold ${p.name}. £${sellValue}m returned to bank.`);
+}
+
+// ==========================================
+// 9. MINI-LEAGUES
+// ==========================================
+function renderLeagues() {
+  const container = document.getElementById('tab-leagues');
+  if (!container) return;
+
+  const activeLeague = userLeagues.find(l => l.id === activeLeagueId) || userLeagues[0];
+  const sortedMembersClassic = [...activeLeague.members].sort((a, b) => b.points - a.points);
+  const sortedMembersH2H = [...activeLeague.members].sort((a, b) => b.h2hPts - a.h2hPts || b.points - a.points);
+
   container.innerHTML = `
-    <div class="bg-white rounded-xl p-3 shadow-sm mb-3 border border-gray-200">
-      <div class="text-xs font-black text-fpl-purple uppercase tracking-wider mb-2">
-        ${transferOutPlayer ? `Replacing: <span class="text-fpl-pink">${transferOutPlayer.name} (£${transferOutPlayer.price}m)</span>` : 'Select a player from your squad to transfer out'}
-      </div>
-      
-      <!-- Current Squad List for Transferring Out -->
-      <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-        ${mySquad.map(p => `
-          <button onclick="setTransferOut(${p.id})" class="flex-shrink-0 p-2 rounded-xl border text-left transition-all ${transferOutPlayer?.id === p.id ? 'bg-fpl-purple text-white border-fpl-green shadow-md scale-105' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'}">
-            <div class="text-[9px] font-black ${transferOutPlayer?.id === p.id ? 'text-fpl-green' : 'text-gray-500'} uppercase">${p.pos} •${p.club}</div>
-            <div class="text-xs font-black truncate max-w-[80px]">${p.name}</div>
-            <div class="text-[10px] font-bold">£${p.price}m</div>
+    <div class="space-y-4">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-3 flex gap-2 overflow-x-auto">
+        ${userLeagues.map(l => `
+          <button onclick="switchLeague('${l.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${l.id === activeLeagueId ? 'bg-fpl-purple text-fpl-green shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}">
+            ${l.name}
           </button>
         `).join('')}
       </div>
-    </div>
 
-    <!-- Search & Position Filter Header -->
-    <div class="bg-white rounded-xl p-3 shadow-sm mb-3 border border-gray-200">
-      <input type="text" placeholder="Search player or club..." value="${transferSearch}" oninput="handleTransferSearch(this.value)" 
-        class="w-full bg-gray-100 text-xs font-bold p-2.5 rounded-lg mb-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-fpl-purple">
-      
-      <div class="flex gap-1">
-        ${['ALL', 'GKP', 'DEF', 'MID', 'FWD'].map(pos => `
-          <button onclick="setTransferPosFilter('${pos}')" class="flex-1 py-1 text-[10px] font-black rounded-md ${transferPosFilter === pos ? 'bg-fpl-purple text-fpl-green' : 'bg-gray-100 text-gray-600'}">${pos}</button>
-        `).join('')}
-      </div>
-    </div>
-
-    <!-- Available Transfer Market Pool -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-      <div class="bg-gray-50 px-4 py-2 border-b border-gray-200 font-black text-xs text-fpl-purple uppercase tracking-wider">
-        Transfer Market
-      </div>
-      <div class="divide-y divide-gray-100 max-h-[320px] overflow-y-auto">
-        ${filteredPool.map(p => `
-          <div class="flex items-center justify-between p-3 hover:bg-gray-50 transition-colors">
-            <div class="flex items-center gap-2">
-              <span class="text-[10px] font-black px-1.5 py-0.5 rounded bg-fpl-purple text-fpl-green">${p.pos}</span>
-              <div>
-                <div class="text-xs font-black text-gray-900">${p.name}</div>
-                <div class="text-[10px] text-gray-500 font-bold">${p.club}</div>
-              </div>
-            </div>
-            <div class="flex items-center gap-3">
-              <div class="text-right">
-                <div class="text-xs font-black text-fpl-purple">£${p.price}m</div>
-                <div class="text-[9px] text-gray-400 font-bold">${p.gwPoints} pts</div>
-              </div>
-              <button onclick="buyPlayer(${p.id})" ${!transferOutPlayer ? 'disabled' : ''} class="bg-fpl-green text-fpl-purple font-black text-xs px-3 py-1.5 rounded-lg shadow disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-105 active:scale-95">
-                BUY
-              </button>
-            </div>
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <div class="flex justify-between items-center mb-3 border-b pb-2">
+          <div>
+            <h2 class="font-black text-fpl-purple text-base">${activeLeague.name}</h2>
+            <div class="text-[10px] text-gray-400 font-mono">Code: <span class="bg-gray-100 px-1 py-0.5 rounded text-fpl-dark font-bold">${activeLeague.code}</span></div>
           </div>
-        `).join('')}
+          <div class="flex gap-2">
+            <button onclick="openCreateLeagueModal()" class="bg-fpl-green text-fpl-purple px-3 py-1.5 rounded-lg text-xs font-black shadow-sm">+ Create</button>
+            <button onclick="openJoinLeagueModal()" class="bg-gray-100 text-fpl-purple border border-gray-200 px-3 py-1.5 rounded-lg text-xs font-bold">Join</button>
+          </div>
+        </div>
+
+        <div class="flex bg-gray-100 p-1 rounded-lg mb-3">
+          <button onclick="setLeagueViewMode('classic')" class="flex-1 py-1 text-xs font-bold rounded ${leagueViewMode === 'classic' ? 'bg-fpl-purple text-fpl-green shadow' : 'text-gray-600'}">Classic</button>
+          <button onclick="setLeagueViewMode('h2h')" class="flex-1 py-1 text-xs font-bold rounded ${leagueViewMode === 'h2h' ? 'bg-fpl-purple text-fpl-green shadow' : 'text-gray-600'}">Head-to-Head</button>
+        </div>
+
+        ${leagueViewMode === 'classic' ? `
+          <div class="space-y-2">
+            ${sortedMembersClassic.map((m, idx) => {
+              const isMe = m.name === managerName;
+              return `
+                <div class="flex items-center gap-3 p-3 rounded-lg border ${isMe ? 'bg-fpl-purple/5 border-fpl-purple/30' : 'bg-gray-50 border-gray-200'}">
+                  <div class="font-black text-lg w-6 text-center ${idx === 0 ? 'text-amber-500' : idx === 1 ? 'text-gray-400' : idx === 2 ? 'text-amber-700' : 'text-gray-400'}">${idx + 1}</div>
+                  <div class="flex-1">
+                    <div class="font-bold text-sm text-fpl-dark flex items-center gap-1.5">
+                      ${m.team} ${isMe ? '<span class="text-[9px] bg-fpl-purple text-fpl-green px-1.5 py-0.2 rounded font-black">YOU</span>' : ''}
+                    </div>
+                    <div class="text-[10px] text-gray-500">Manager: ${m.name}</div>
+                  </div>
+                  <div class="font-black text-base text-fpl-purple">${m.points} pts</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        ` : `
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-gray-50 text-gray-500 border-b">
+                <tr>
+                  <th class="p-2">Pos</th>
+                  <th class="p-2">Team</th>
+                  <th class="p-2 text-center">P</th>
+                  <th class="p-2 text-center">W</th>
+                  <th class="p-2 text-center">D</th>
+                  <th class="p-2 text-center">L</th>
+                  <th class="p-2 text-right">Pts</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                ${sortedMembersH2H.map((m, idx) => {
+                  const isMe = m.name === managerName;
+                  return `
+                    <tr class="${isMe ? 'bg-fpl-purple/5 font-bold' : ''}">
+                      <td class="p-2 font-black">${idx + 1}</td>
+                      <td class="p-2">${m.team} ${isMe ? '(You)' : ''}</td>
+                      <td class="p-2 text-center text-gray-600">${m.p || 0}</td>
+                      <td class="p-2 text-center text-green-600">${m.w || 0}</td>
+                      <td class="p-2 text-center text-gray-500">${m.d || 0}</td>
+                      <td class="p-2 text-center text-red-600">${m.l || 0}</td>
+                      <td class="p-2 text-right font-black text-fpl-purple">${m.h2hPts || 0}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `}
+      </div>
+    </div>
+    ${renderLeagueModals()}
+  `;
+}
+
+function setLeagueViewMode(mode) { leagueViewMode = mode; renderLeagues(); }
+function switchLeague(id) { activeLeagueId = id; renderLeagues(); }
+
+let leagueModalType = null;
+function openCreateLeagueModal() { leagueModalType = 'create'; renderLeagues(); }
+function openJoinLeagueModal() { leagueModalType = 'join'; renderLeagues(); }
+function closeLeagueModal() { leagueModalType = null; renderLeagues(); }
+
+function handleCreateLeague(e) {
+  e.preventDefault();
+  const name = document.getElementById('new-league-name').value.trim();
+  if (!name) return;
+  const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const newLeague = {
+    id: 'league_' + Date.now(),
+    name, code, type: 'classic',
+    members: [{ name: managerName, team: 'Gulit FC', points: totalPoints, p: gameweek - 1, w: 0, d: 0, l: 0, h2hPts: 0 }]
+  };
+  userLeagues.push(newLeague);
+  activeLeagueId = newLeague.id;
+  closeLeagueModal();
+  saveData();
+  showNotification(`League "${name}" created! Code: ${code}`);
+}
+
+function handleJoinLeague(e) {
+  e.preventDefault();
+  const code = document.getElementById('join-league-code').value.trim().toUpperCase();
+  const league = userLeagues.find(l => l.code === code);
+  if (!league) return showNotification("Invalid code!");
+  if (league.members.some(m => m.name === managerName)) return showNotification("Already joined!");
+  
+  league.members.push({ name: managerName, team: 'Gulit FC', points: totalPoints, p: gameweek - 1, w: 0, d: 0, l: 0, h2hPts: 0 });
+  activeLeagueId = league.id;
+  closeLeagueModal();
+  saveData();
+  showNotification(`Joined ${league.name}!`);
+}
+
+function renderLeagueModals() {
+  if (!leagueModalType) return '';
+  return `
+    <div class="fixed inset-0 bg-fpl-dark/80 flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-xl p-5 w-80 shadow-2xl">
+        ${leagueModalType === 'create' ? `
+          <div class="font-black text-fpl-purple text-lg mb-3">Create Private League</div>
+          <form onsubmit="handleCreateLeague(event)">
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">League Name</label>
+            <input type="text" id="new-league-name" required placeholder="e.g. Addis Ballers" class="w-full border rounded-lg p-2 text-sm mb-4">
+            <button type="submit" class="w-full bg-fpl-green text-fpl-purple py-2.5 rounded-lg text-sm font-black mb-2 shadow">Create</button>
+            <button type="button" onclick="closeLeagueModal()" class="w-full bg-gray-100 text-gray-600 py-2 rounded-lg text-xs font-bold">Cancel</button>
+          </form>
+        ` : `
+          <div class="font-black text-fpl-purple text-lg mb-3">Join Private League</div>
+          <form onsubmit="handleJoinLeague(event)">
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">6-Digit Code</label>
+            <input type="text" id="join-league-code" required placeholder="e.g. AB72X9" class="w-full border rounded-lg p-2 text-sm uppercase mb-4 tracking-widest font-mono">
+            <button type="submit" class="w-full bg-fpl-purple text-fpl-green py-2.5 rounded-lg text-sm font-black mb-2 shadow">Join</button>
+            <button type="button" onclick="closeLeagueModal()" class="w-full bg-gray-100 text-gray-600 py-2 rounded-lg text-xs font-bold">Cancel</button>
+          </form>
+        `}
       </div>
     </div>
   `;
 }
 
-function setTransferOut(id) {
-  transferOutPlayer = mySquad.find(p => p.id === id);
-  renderMain();
-}
-
-function handleTransferSearch(val) {
-  transferSearch = val;
-  renderMain();
-}
-
-function setTransferPosFilter(pos) {
-  transferPosFilter = pos;
-  renderMain();
-}
-
-function buyPlayer(marketId) {
-  if (!transferOutPlayer) return;
-  const target = globalPlayerPool.find(p => p.id === marketId);
-  if (!target) return;
-
-  if (target.pos !== transferOutPlayer.pos) {
-    alert(`Position mismatch! You must swap a ${transferOutPlayer.pos} for another ${transferOutPlayer.pos}.`);
-    return;
-  }
-
-  const costDifference = target.price - transferOutPlayer.price;
-  if (bank - costDifference < 0) {
-    alert("Insufficient bank funds for this transfer!");
-    return;
-  }
-
-  // Perform Transfer
-  bank -= costDifference;
-  if (freeTransfers > 0) {
-    freeTransfers -= 1;
-  }
-
-  const newPlayer = {
-    ...target,
-    isStarter: transferOutPlayer.isStarter,
-    isCaptain: transferOutPlayer.isCaptain,
-    isViceCaptain: transferOutPlayer.isViceCaptain,
-    benchOrder: transferOutPlayer.benchOrder
-  };
-
-  mySquad = mySquad.map(p => p.id === transferOutPlayer.id ? newPlayer : p);
-  transferOutPlayer = null;
-
-  saveState();
-  renderMain();
-  alert(`Transfer complete! Added ${target.name} to your squad.`);
-}
-
 // ==========================================
-// 8. VIEW 4: LEAGUES & STANDINGS
+// 10. POINTS & MATCH TICKER
 // ==========================================
-function renderLeaguesView(container) {
-  const mockStandings = [
-    { rank: 1, manager: "Nate Wolde", team: "Gulit FC", gw: 78, total: 112 },
-    { rank: 2, manager: "Alex Mercer", team: "Salah-brate", gw: 64, total: 98 },
-    { rank: 3, manager: "Daniel K.", team: "Haaland-ia", gw: 52, total: 89 },
-    { rank: 4, manager: "Muni G.", team: "No Rice No Party", gw: 49, total: 84 },
-    { rank: 5, manager: "Sami T.", team: "KDB Magic", gw: 41, total: 72 }
-  ];
+function renderPoints() {
+  const container = document.getElementById('tab-points');
+  if (!container) return;
 
   container.innerHTML = `
-    <!-- League Header Card -->
-    <div class="bg-gradient-to-r from-fpl-purple to-fpl-dark text-white p-4 rounded-2xl shadow-xl mb-3 border border-fpl-green/30">
-      <div class="text-[10px] font-black uppercase text-fpl-green tracking-widest">Global & Private Leagues</div>
-      <div class="text-xl font-black mt-1">Ethiopian Premier Fantasy League</div>
-      <div class="text-xs text-gray-200 mt-1">Code to Join: <span class="bg-black/30 font-mono px-2 py-0.5 rounded text-fpl-green font-bold">ETH-WIN-2026</span></div>
-    </div>
-
-    <!-- Join Private League Action -->
-    <div class="bg-white rounded-xl p-3 shadow-sm mb-3 border border-gray-200 flex gap-2">
-      <input type="text" id="league-code-input" placeholder="Enter League Code..." class="flex-1 bg-gray-100 text-xs font-bold p-2.5 rounded-lg border border-gray-200 focus:outline-none">
-      <button onclick="joinLeague()" class="bg-fpl-purple text-fpl-green text-xs font-black px-4 py-2 rounded-lg shadow">JOIN</button>
-    </div>
-
-    <!-- Standings Table -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-      <div class="bg-gray-50 px-4 py-2 border-b border-gray-200 font-black text-xs text-fpl-purple uppercase tracking-wider flex justify-between">
-        <span>Leaderboard</span>
-        <span>GW / Total</span>
+    <div class="space-y-4">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-fpl-purple text-white p-4 text-center">
+          <div class="text-xs font-bold text-gray-300 uppercase tracking-widest mb-1">Total Points</div>
+          <div class="text-4xl font-black text-fpl-green">${totalPoints}</div>
+        </div>
+        
+        <div class="p-4">
+          <h3 class="font-bold text-sm text-gray-500 uppercase mb-3">Gameweek History</h3>
+          ${gwHistory.length === 0 ? '<div class="text-center text-sm text-gray-400 py-4">No data yet. Play a Gameweek!</div>' : `
+            <div class="space-y-2">
+              ${gwHistory.map(h => `
+                <div class="flex justify-between items-center p-3 border rounded-lg bg-gray-50">
+                  <span class="font-bold text-fpl-dark">Gameweek ${h.gameweek}</span>
+                  <span class="font-black text-fpl-purple bg-gray-200 px-3 py-1 rounded-full">${h.points} pts</span>
+                </div>
+              `).join('')}
+            </div>
+          `}
+        </div>
       </div>
-      <div class="divide-y divide-gray-100">
-        ${mockStandings.map(s => `
-          <div class="flex items-center justify-between p-3 ${s.manager === managerName ? 'bg-fpl-green/10 font-bold' : ''}">
-            <div class="flex items-center gap-3">
-              <span class="text-xs font-black text-fpl-purple w-4 text-center">#${s.rank}</span>
-              <div>
-                <div class="text-xs font-black text-gray-900">${s.team}</div>
-                <div class="text-[10px] text-gray-500">${s.manager}</div>
-              </div>
-            </div>
-            <div class="text-right">
-              <span class="text-xs font-black text-fpl-purple">${s.total} pts</span>
-              <span class="block text-[9px] text-gray-400 font-bold">(+${s.gw} GW)</span>
-            </div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <h3 class="font-bold text-sm text-fpl-purple uppercase mb-3 border-b pb-2">⚡ Live Match Ticker</h3>
+        ${lastGwEvents.length === 0 ? '<div class="text-xs text-gray-400 text-center py-3">Simulate GW to see events.</div>' : `
+          <div class="space-y-2 max-h-48 overflow-y-auto text-xs">
+            ${lastGwEvents.map(ev => `
+              <div class="p-2 rounded bg-gray-50 border border-gray-100 flex items-center justify-between text-gray-700">${ev}</div>
+            `).join('')}
           </div>
-        `).join('')}
+        `}
       </div>
     </div>
   `;
 }
 
-function joinLeague() {
-  const input = document.getElementById('league-code-input');
-  if (input && input.value.trim()) {
-    alert(`Successfully joined league: ${input.value.trim().toUpperCase()}`);
-    input.value = '';
-  }
-}
-
 // ==========================================
-// 9. EVENT HANDLERS & MODAL LOGIC
+// 11. GAMEWEEK SIMULATION & STRICT FPL AUTO-SUBS
 // ==========================================
-function handleCardClick(id) {
-  if (!pendingSubId) {
-    activeModalPlayerId = id;
-    renderMain();
-  } else {
-    if (pendingSubId === id) {
-      pendingSubId = null;
-      renderMain();
-      return;
-    }
-
-    const p1 = mySquad.find(p => p.id === pendingSubId);
-    const p2 = mySquad.find(p => p.id === id);
-
-    if (p1.isStarter === p2.isStarter) {
-      pendingSubId = id;
-      renderMain();
-      return;
-    }
-
-    if ((p1.pos === 'GKP' || p2.pos === 'GKP') && p1.pos !== p2.pos) {
-      alert("Goalkeepers can only be swapped with Goalkeepers!");
-      pendingSubId = null;
-      renderMain();
-      return;
-    }
-
-    // Formation Validation
-    const starters = mySquad.filter(p => p.isStarter);
-    const starterOutfield = starters.filter(p => p.id !== p1.id && p.id !== p2.id);
-    const incomingPlayer = p1.isStarter ? p2 : p1;
-    
-    let defCount = starterOutfield.filter(p => p.pos === 'DEF').length + (incomingPlayer.pos === 'DEF' ? 1 : 0);
-    let midCount = starterOutfield.filter(p => p.pos === 'MID').length + (incomingPlayer.pos === 'MID' ? 1 : 0);
-    let fwdCount = starterOutfield.filter(p => p.pos === 'FWD').length + (incomingPlayer.pos === 'FWD' ? 1 : 0);
-
-    if (defCount < 3 || midCount < 2 || fwdCount < 1) {
-      alert("Invalid formation! Min requirements: 3 DEF, 2 MID, 1 FWD.");
-      pendingSubId = null;
-      renderMain();
-      return;
-    }
-
-    p1.isStarter = !p1.isStarter;
-    p2.isStarter = !p2.isStarter;
-
-    if (!p1.isStarter) p1.benchOrder = p2.benchOrder || 1;
-    if (!p2.isStarter) p2.benchOrder = p1.benchOrder || 1;
-
-    pendingSubId = null;
-    saveState();
-    renderMain();
-  }
-}
-
-function startSub(id) {
-  activeModalPlayerId = null;
-  pendingSubId = id;
-  renderMain();
-}
-
-function makeCaptain(id) {
-  mySquad.forEach(p => {
-    if (p.id === id) {
-      p.isCaptain = true;
-      p.isViceCaptain = false;
-    } else if (p.isCaptain) {
-      p.isCaptain = false;
-    }
-  });
-  activeModalPlayerId = null;
-  saveState();
-  renderMain();
-}
-
-function makeViceCaptain(id) {
-  mySquad.forEach(p => {
-    if (p.id === id) {
-      p.isViceCaptain = true;
-      p.isCaptain = false;
-    } else if (p.isViceCaptain) {
-      p.isViceCaptain = false;
-    }
-  });
-  activeModalPlayerId = null;
-  saveState();
-  renderMain();
-}
-
-function shiftBenchOrder(id, direction) {
-  const outfieldBench = mySquad.filter(p => !p.isStarter && p.pos !== 'GKP')
-    .sort((a, b) => a.benchOrder - b.benchOrder);
-  
-  const idx = outfieldBench.findIndex(p => p.id === id);
-  if (idx === -1) return;
-
-  const targetIdx = idx + direction;
-  if (targetIdx < 0 || targetIdx >= outfieldBench.length) return;
-
-  const temp = outfieldBench[idx].benchOrder;
-  outfieldBench[idx].benchOrder = outfieldBench[targetIdx].benchOrder;
-  outfieldBench[targetIdx].benchOrder = temp;
-
-  saveState();
-  renderMain();
-}
-
-function handleAutoPickUI() {
-  const gkps = mySquad.filter(p => p.pos === 'GKP').sort((a, b) => b.gwPoints - a.gwPoints);
-  const defs = mySquad.filter(p => p.pos === 'DEF').sort((a, b) => b.gwPoints - a.gwPoints);
-  const mids = mySquad.filter(p => p.pos === 'MID').sort((a, b) => b.gwPoints - a.gwPoints);
-  const fwds = mySquad.filter(p => p.pos === 'FWD').sort((a, b) => b.gwPoints - a.gwPoints);
-
-  mySquad.forEach(p => { p.isStarter = false; });
-
-  gkps[0].isStarter = true;
-  gkps[1].benchOrder = 0;
-
-  const selectedOutfield = [
-    ...defs.slice(0, 3),
-    ...mids.slice(0, 4),
-    ...fwds.slice(0, 2),
-    ...[...defs.slice(3), ...mids.slice(4), ...fwds.slice(2)].sort((a, b) => b.gwPoints - a.gwPoints).slice(0, 1)
+function simulateGameweek() {
+  const fixturePool = [
+    { opp: "St. George (H)", fdr: 3 },
+    { opp: "Ethiopian Coffee (A)", fdr: 4 },
+    { opp: "CBE SA (H)", fdr: 2 },
+    { opp: "Fasil Kenema (A)", fdr: 4 },
+    { opp: "Mechal (H)", fdr: 2 },
+    { opp: "Bahir Dar City (A)", fdr: 3 },
+    { opp: "Hawassa City (H)", fdr: 2 }
   ];
 
-  selectedOutfield.forEach(p => { p.isStarter = true; });
+  lastGwEvents = [`📢 Gameweek ${gameweek} kickoff across the league!`];
 
-  const remainingBench = mySquad.filter(p => !p.isStarter && p.pos !== 'GKP')
-    .sort((a, b) => b.gwPoints - a.gwPoints);
+  // 1. Simulate Player Performance & Minutes Played
+  mySquad.forEach(p => {
+    let goals = 0;
+    let assists = 0;
+    let cleanSheet = 0;
+    let goalsConceded = 0;
+    let yellow = 0;
+    let minutes = 0;
 
-  remainingBench.forEach((p, i) => { p.benchOrder = i + 1; });
+    if (p.status === 'i' || p.status === 's') {
+      minutes = 0;
+    } else {
+      const minRoll = Math.random();
+      if (minRoll > 0.15) minutes = 90;
+      else if (minRoll > 0.05) minutes = Math.floor(Math.random() * 59) + 1;
+      else minutes = 0;
+    }
 
-  saveState();
-  renderMain();
-}
+    p.minutes = minutes;
 
-function promptChip(chipKey) {
-  pendingChipToConfirm = chipKey;
-  renderMain();
-}
+    if (minutes > 0) {
+      goalsConceded = Math.floor(Math.random() * 3);
 
-function confirmChip() {
-  if (pendingChipToConfirm) {
-    activeChip = pendingChipToConfirm;
-    chipsUsed[pendingChipToConfirm] = true;
-    pendingChipToConfirm = null;
-    saveState();
-    renderMain();
+      if (p.pos === 'FWD') {
+        if (Math.random() > 0.45) goals = Math.random() > 0.8 ? 2 : 1;
+        if (Math.random() > 0.6) assists = 1;
+      } else if (p.pos === 'MID') {
+        if (Math.random() > 0.55) goals = Math.random() > 0.85 ? 2 : 1;
+        if (Math.random() > 0.5) assists = 1;
+        if (minutes >= 60 && goalsConceded === 0) cleanSheet = 1;
+      } else if (p.pos === 'DEF' || p.pos === 'GKP') {
+        if (minutes >= 60 && goalsConceded === 0) cleanSheet = 1;
+        if (Math.random() > 0.85) goals = 1;
+        if (Math.random() > 0.75) assists = 1;
+      }
+
+      if (Math.random() > 0.8) yellow = 1;
+
+      if (goals > 0) lastGwEvents.push(`⚽ GOAL! ${p.name} (${p.club}) scores ${goals > 1 ? 'a brace' : ''}!`);
+      if (assists > 0) lastGwEvents.push(`🎯 ASSIST! ${p.name} (${p.club}) delivers a goal pass.`);
+      if (yellow > 0) lastGwEvents.push(`🟨 YELLOW CARD for ${p.name} (${p.club}).`);
+
+      let pts = 0;
+      pts += (minutes >= 60 ? 2 : 1);
+
+      if (cleanSheet === 1) {
+        if (p.pos === 'GKP' || p.pos === 'DEF') pts += 4;
+        else if (p.pos === 'MID') pts += 1;
+      }
+
+      if ((p.pos === 'GKP' || p.pos === 'DEF') && minutes >= 60) {
+        pts -= Math.floor(goalsConceded / 2);
+      }
+
+      if (p.pos === 'GKP' || p.pos === 'DEF') pts += (goals * 6);
+      else if (p.pos === 'MID') pts += (goals * 5);
+      else if (p.pos === 'FWD') pts += (goals * 4);
+
+      pts += (assists * 3);
+      pts -= (yellow * 1);
+
+      p.gwPoints = Math.max(0, pts);
+      p.stats = { goals, assists, cleanSheet, goalsConceded, yellow };
+    } else {
+      p.gwPoints = 0;
+      p.stats = { goals: 0, assists: 0, cleanSheet: 0, goalsConceded: 0, yellow: 0 };
+    }
+
+    p.form = parseFloat(((p.form * 2 + p.gwPoints) / 3).toFixed(1));
+  });
+
+  // 2. Official FPL Auto-Substitutions Process
+  if (activeChip !== 'bb') {
+    const starterGkp = mySquad.find(p => p.isStarter && p.pos === 'GKP');
+    const benchGkp = mySquad.find(p => !p.isStarter && p.pos === 'GKP');
+
+    if (starterGkp && starterGkp.minutes === 0 && benchGkp && benchGkp.minutes > 0) {
+      starterGkp.isStarter = false;
+      benchGkp.isStarter = true;
+      lastGwEvents.push(`🔄 AUTO-SUB: ${benchGkp.name} (${benchGkp.gwPoints} pts) replaced GKP ${starterGkp.name} (0 mins).`);
+    }
+
+    const missingStarters = mySquad.filter(p => p.isStarter && p.pos !== 'GKP' && p.minutes === 0);
+    const benchCandidates = mySquad.filter(p => !p.isStarter && p.pos !== 'GKP')
+      .sort((a, b) => a.benchOrder - b.benchOrder);
+
+    for (let missing of missingStarters) {
+      for (let benchP of benchCandidates) {
+        if (!benchP.isStarter && benchP.minutes > 0) {
+          missing.isStarter = false;
+          benchP.isStarter = true;
+
+          const testStarters = mySquad.filter(p => p.isStarter);
+          if (isValidFormation(testStarters)) {
+            lastGwEvents.push(`🔄 AUTO-SUB: ${benchP.name} (Sub ${benchP.benchOrder}) replaced ${missing.name} (0 mins).`);
+            break;
+          } else {
+            missing.isStarter = true;
+            benchP.isStarter = false;
+          }
+        }
+      }
+    }
   }
+
+  // 3. Captain / Vice-Captain Fallback Logic
+  let capPlayer = mySquad.find(p => p.isCaptain);
+  let vicePlayer = mySquad.find(p => p.isViceCaptain);
+
+  let capMultiplier = (activeChip === 'tc' ? 3 : 2);
+
+  let activeCap = null;
+  if (capPlayer && capPlayer.minutes > 0 && capPlayer.isStarter) {
+    activeCap = capPlayer;
+  } else if (vicePlayer && vicePlayer.minutes > 0 && vicePlayer.isStarter) {
+    activeCap = vicePlayer;
+    lastGwEvents.push(`👑 VICE-CAPTAIN MULTIPLIER: ${vicePlayer.name} awarded ${capMultiplier}x points (Captain ${capPlayer?.name || 'N/A'} played 0 mins).`);
+  } else {
+    lastGwEvents.push(`⚠️ Neither Captain nor Vice-Captain played minutes.`);
+  }
+
+  // 4. Total Gameweek Score Calculation
+  let gwTotal = 0;
+  mySquad.forEach(p => {
+    let mult = 1;
+    if (activeCap && p.id === activeCap.id) mult = capMultiplier;
+    
+    if (p.isStarter || activeChip === 'bb') {
+      gwTotal += (p.gwPoints * mult);
+    }
+  });
+
+  gwTotal -= transferCostPenalty;
+
+  totalPoints += gwTotal;
+  gwHistory.push({ gameweek, points: gwTotal });
+
+  userLeagues.forEach(l => {
+    l.members.forEach(m => {
+      m.p = (m.p || 0) + 1;
+      const oppScore = Math.floor(Math.random() * 40) + 35;
+      if (m.name === managerName) {
+        if (gwTotal > oppScore) { m.w = (m.w || 0) + 1; m.h2hPts = (m.h2hPts || 0) + 3; }
+        else if (gwTotal === oppScore) { m.d = (m.d || 0) + 1; m.h2hPts = (m.h2hPts || 0) + 1; }
+        else { m.l = (m.l || 0) + 1; }
+      } else {
+        const dScore = Math.floor(Math.random() * 45) + 30;
+        if (m.points > dScore) { m.w = (m.w || 0) + 1; m.h2hPts = (m.h2hPts || 0) + 3; }
+        else if (m.points === dScore) { m.d = (m.d || 0) + 1; m.h2hPts = (m.h2hPts || 0) + 1; }
+        else { m.l = (m.l || 0) + 1; }
+      }
+    });
+  });
+
+  gameweek++;
+
+  freeTransfers = Math.min(5, freeTransfers + 1);
+  transfersMade = 0;
+  transferCostPenalty = 0;
+
+  playerMarket.forEach(p => {
+    let rand = Math.random();
+    if (rand < 0.05) p.status = 'i';
+    else if (rand < 0.08) p.status = 's';
+    else if (rand < 0.12) p.status = 'd';
+    else p.status = 'a';
+
+    if (p.form >= 7.5 && Math.random() > 0.4) {
+      p.price = parseFloat((p.price + 0.1).toFixed(1));
+    } else if ((p.form <= 4.0 || p.status === 'i') && Math.random() > 0.5 && p.price > 4.5) {
+      p.price = parseFloat((p.price - 0.1).toFixed(1));
+    }
+
+    const nextFixture = fixturePool[Math.floor(Math.random() * fixturePool.length)];
+    p.nextOpp = nextFixture.opp;
+    p.fdr = nextFixture.fdr;
+  });
+
+  // 5. Free Hit Restoration & Active Chip Clearing
+  if (activeChip === 'fh' && preFreeHitSquad) {
+    mySquad = JSON.parse(JSON.stringify(preFreeHitSquad));
+    preFreeHitSquad = null;
+    lastGwEvents.push("🔄 Free Hit active: Squad restored to pre-Free Hit selection.");
+  }
+
+  if (activeChip) {
+    chipsUsed[activeChip] = true;
+    activeChip = null;
+  }
+
+  saveData();
+  renderAll();
+  showNotification(`Gameweek ${gameweek - 1} simulated! GW Total: ${gwTotal} pts`);
 }
 
-function closeModal() {
-  activeModalPlayerId = null;
-  pendingChipToConfirm = null;
-  renderMain();
-}
-
-function renderModal() {
-  if (!activeModalPlayerId) return '';
-  const p = mySquad.find(x => x.id === activeModalPlayerId);
-  if (!p) return '';
-
-  return `
-    <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-2xl p-4 w-full max-w-xs shadow-2xl border border-gray-100 text-center relative">
-        <button onclick="closeModal()" class="absolute top-3 right-3 text-gray-400 font-bold text-lg">✕</button>
-        <div class="text-xs font-black text-fpl-purple uppercase tracking-widest mb-1">${p.club} • ${p.pos}</div>
-        <div class="text-xl font-black text-gray-900 mb-3">${p.name}</div>
-        <div class="grid grid-cols-2 gap-2 mb-4 bg-gray-50 p-2 rounded-xl text-center">
-          <div><span class="block text-[10px] text-gray-500 font-bold uppercase">Price</span><span class="text-sm font-black text-fpl-purple">£${p.price}m</span></div>
-          <div><span class="block text-[10px] text-gray-500 font-bold uppercase">GW Points</span><span class="text-sm font-black text-fpl-purple">${p.gwPoints}</span></div>
-        </div>
-        <div class="flex flex-col gap-2">
-          <button onclick="startSub(${p.id})" class="w-full bg-fpl-purple text-fpl-green font-black py-2 rounded-xl text-xs uppercase shadow">Switch Player</button>
-          ${p.isStarter ? `
-            <button onclick="makeCaptain(${p.id})" class="w-full bg-yellow-400 text-fpl-purple font-black py-2 rounded-xl text-xs uppercase shadow">Make Captain (C)</button>
-            <button onclick="makeViceCaptain(${p.id})" class="w-full bg-gray-200 text-fpl-purple font-black py-2 rounded-xl text-xs uppercase shadow">Make Vice Captain (V)</button>
-          ` : ''}
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function renderChipConfirmModal() {
-  if (!pendingChipToConfirm) return '';
-  const names = { wc: 'Wildcard', tc: 'Triple Captain', bb: 'Bench Boost', fh: 'Free Hit' };
-
-  return `
-    <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-2xl p-5 w-full max-w-xs shadow-2xl text-center relative">
-        <div class="text-lg font-black text-fpl-purple mb-2">Activate ${names[pendingChipToConfirm]}?</div>
-        <p class="text-xs text-gray-600 mb-4 font-medium">Are you sure you want to activate this chip for the upcoming Gameweek?</p>
-        <div class="flex gap-2">
-          <button onclick="closeModal()" class="flex-1 bg-gray-200 text-gray-800 font-black py-2 rounded-xl text-xs uppercase">Cancel</button>
-          <button onclick="confirmChip()" class="flex-1 bg-fpl-purple text-fpl-green font-black py-2 rounded-xl text-xs uppercase shadow">Activate</button>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-// ==========================================
-// 10. ENTRY POINT
-// ==========================================
-document.addEventListener('DOMContentLoaded', () => {
-  loadState();
-  renderMain();
-});
+document.addEventListener('DOMContentLoaded', loadData);
