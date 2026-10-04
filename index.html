@@ -2,88 +2,44 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ethiopian Premier League Fantasy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ethio Fantasy | Play to Win</title>
+    <script src="[https://telegram.org/js/telegram-web-app.js](https://telegram.org/js/telegram-web-app.js)"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-    <header class="fpl-header">
-        <div class="nav-brand">
-            <h1>ETHIOPIAN PREMIER LEAGUE FANTASY</h1>
-        </div>
-        <div class="nav-stats">
-            <div class="stat-box">
-                <span>Gameweek</span>
-                <strong id="gw-display">GW 1</strong>
-            </div>
-            <div class="stat-box">
-                <span>Budget</span>
-                <strong id="budget-display">£100.0m</strong>
-            </div>
-            <div class="stat-box">
-                <span>Total Points</span>
-                <strong id="points-display">0</strong>
-            </div>
-        </div>
+    <header class="app-header">
+        <h1>Ethio Fantasy</h1>
+        <div class="user-status">Manager: <span id="manager-name">Nate</span></div>
     </header>
 
-    <nav class="sub-nav">
-        <button class="tab-btn active" data-tab="pitch">Pick Team</button>
-        <button class="tab-btn" data-tab="points">Gameweek Live</button>
-        <button class="tab-btn" data-tab="market">Transfer Market</button>
+    <nav class="tabs">
+        <button class="tab active" data-target="pitch">Pitch</button>
+        <button class="tab" data-target="transfers">Transfers</button>
+        <button class="tab" data-target="leagues">Mini-Leagues</button>
     </nav>
 
-    <main class="container">
-        
-        <!-- PITCH / PICK TEAM VIEW -->
-        <section id="pitch-tab" class="tab-content active">
-            <div class="pitch-controls-top">
-                <button id="sim-gw-btn" class="action-btn">Simulate Gameweek</button>
-                <span class="hint-text">Select a player to set Captain (C), Vice-Captain (VC), or manage squad</span>
-            </div>
-
+    <main class="content">
+        <section id="pitch" class="view active">
             <div class="pitch-container">
-                <div class="fpl-pitch">
-                    <div id="row-gkp" class="pitch-row"></div>
-                    <div id="row-def" class="pitch-row"></div>
-                    <div id="row-mid" class="pitch-row"></div>
-                    <div id="row-fwd" class="pitch-row"></div>
-                </div>
-                
-                <div class="bench-container">
-                    <h3>Substitutes Bench</h3>
-                    <div id="row-bench" class="bench-row"></div>
-                </div>
+                <div class="pitch-row gkp" id="pos-gkp"></div>
+                <div class="pitch-row def" id="pos-def"></div>
+                <div class="pitch-row mid" id="pos-mid"></div>
+                <div class="pitch-row fwd" id="pos-fwd"></div>
             </div>
         </section>
 
-        <!-- GAMEWEEK LIVE VIEW -->
-        <section id="points-tab" class="tab-content">
-            <div class="points-header">
-                <h2>Gameweek Live Scores</h2>
-                <p>Real-time performance break-down for your starting XI.</p>
-            </div>
-            <div id="points-breakdown" class="points-grid"></div>
+        <section id="transfers" class="view hidden">
+            <h2>Player Market</h2>
+            <div id="market-list"></div>
         </section>
 
-        <!-- TRANSFER MARKET VIEW -->
-        <section id="market-tab" class="tab-content">
-            <div class="market-controls">
-                <h2>Transfer Market</h2>
-                <div class="filters">
-                    <button class="filter-btn active" data-pos="ALL">All</button>
-                    <button class="filter-btn" data-pos="GKP">GKP</button>
-                    <button class="filter-btn" data-pos="DEF">DEF</button>
-                    <button class="filter-btn" data-pos="MID">MID</button>
-                    <button class="filter-btn" data-pos="FWD">FWD</button>
-                </div>
-            </div>
-            <div id="market-list" class="market-grid"></div>
+        <section id="leagues" class="view hidden">
+            <h2>Global & Private Leagues</h2>
+            <div id="league-standings"></div>
         </section>
-
     </main>
 
-    <script src="app.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
