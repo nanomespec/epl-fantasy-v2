@@ -3,94 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ethiopian Premier League Fantasy</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>Ethio Premier Fantasy</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <header class="fpl-header">
-        <div class="nav-brand">
+    <header class="app-header">
+        <div class="brand">
             <h1>ETHIO PREMIER FANTASY</h1>
-            <span id="manager-name" class="manager-badge">Manager: Nate</span>
+            <span class="manager-name">Manager: Nate</span>
         </div>
-        <div class="nav-stats">
+        <div class="stats-bar">
             <div class="stat-box">
-                <span>Gameweek</span>
-                <strong id="gw-display">GW 1</strong>
+                <span>GW</span>
+                <strong>GW 1</strong>
             </div>
             <div class="stat-box">
                 <span>Budget</span>
-                <strong id="budget-display">£100.0m</strong>
+                <strong>£100.0m</strong>
             </div>
             <div class="stat-box">
                 <span>Points</span>
-                <strong id="points-display">0</strong>
+                <strong>0</strong>
             </div>
         </div>
     </header>
 
-    <nav class="sub-nav">
-        <button class="tab-btn active" data-tab="pitch-view">Pick Team</button>
-        <button class="tab-btn" data-tab="market-view">Transfers</button>
-        <button class="tab-btn" data-tab="leagues-view">Leaderboard</button>
-    </nav>
-
     <main class="container">
-        
-        <!-- PITCH VIEW -->
-        <section id="pitch-view" class="tab-content active">
-            <div class="pitch-container">
-                <div class="fpl-pitch">
-                    <div id="row-gkp" class="pitch-row"></div>
-                    <div id="row-def" class="pitch-row"></div>
-                    <div id="row-mid" class="pitch-row"></div>
-                    <div id="row-fwd" class="pitch-row"></div>
-                </div>
+        <div class="pitch-container">
+            <div class="fpl-pitch">
                 
-                <div class="bench-container">
-                    <h3>Substitutes Bench</h3>
-                    <div id="row-bench" class="bench-row"></div>
+                <!-- GOALKEEPER ROW -->
+                <div class="pitch-row">
+                    <div class="player-slot empty" onclick="openMarket('GKP')">
+                        <div class="plus-badge">+</div>
+                        <span class="slot-title">GKP</span>
+                    </div>
+                </div>
+
+                <!-- DEFENDERS ROW -->
+                <div class="pitch-row">
+                    <div class="player-slot empty" onclick="openMarket('DEF')">
+                        <div class="plus-badge">+</div>
+                        <span class="slot-title">DEF</span>
+                    </div>
+                    <div class="player-slot empty" onclick="openMarket('DEF')">
+                        <div class="plus-badge">+</div>
+                        <span class="slot-title">DEF</span>
+                    </div>
+                    <div class="player-slot empty" onclick="openMarket('DEF')">
+                        <div class="plus-badge">+</div>
+                        <span class="slot-title">DEF</span>
+                    </div>
+                    <div class="player-slot empty" onclick="openMarket('DEF')">
+                        <div class="plus-badge">+</div>
+                        <span class="slot-title">DEF</span>
+                    </div>
+                </div>
+
+                <!-- MIDFIELDERS ROW -->
+                <div class="pitch-row">
+                    <div class="player-slot empty" onclick="openMarket('MID')">
+                        <div class="plus-badge">+</div>
+                        <span class="slot-title">MID</span>
+                    </div>
+                    <div class="player-slot empty" onclick="openMarket('MID')">
+                        <div class="plus-badge">+</div>
+                        <span class="slot-title">MID</span>
+                    </div>
+                    <div class="player-slot empty" onclick="openMarket('MID')">
+                        <div class="plus-badge">+</div>
+                        <span class="slot-title">MID</span>
+                    </div>
+                    <div class="player-slot empty" onclick="openMarket('MID')">
+                        <div class="plus-badge">+</div>
+                        <span class="slot-title">MID</span>
+                    </div>
+                </div>
+
+                <!-- FORWARDS ROW -->
+                <div class="pitch-row">
+                    <div class="player-slot empty" onclick="openMarket('FWD')">
+                        <div class="plus-badge">+</div>
+                        <span class="slot-title">FWD</span>
+                    </div>
+                    <div class="player-slot empty" onclick="openMarket('FWD')">
+                        <div class="plus-badge">+</div>
+                        <span class="slot-title">FWD</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- BENCH PANEL -->
+            <div class="bench-container">
+                <h3>Substitutes Bench</h3>
+                <div class="bench-row">
+                    <div class="player-slot empty bench-slot" onclick="openMarket('GKP')">
+                        <div class="plus-badge">+</div>
+                        <span class="slot-title">GKP</span>
+                    </div>
+                    <div class="player-slot empty bench-slot" onclick="openMarket('DEF')">
+                        <div class="plus-badge">+</div>
+                        <span class="slot-title">SUB 1</span>
+                    </div>
+                    <div class="player-slot empty bench-slot" onclick="openMarket('MID')">
+                        <div class="plus-badge">+</div>
+                        <span class="slot-title">SUB 2</span>
+                    </div>
+                    <div class="player-slot empty bench-slot" onclick="openMarket('FWD')">
+                        <div class="plus-badge">+</div>
+                        <span class="slot-title">SUB 3</span>
+                    </div>
                 </div>
             </div>
-        </section>
-
-        <!-- TRANSFER MARKET VIEW -->
-        <section id="market-view" class="tab-content">
-            <div class="market-controls">
-                <h2>Transfer Market</h2>
-                <div class="filters">
-                    <button class="filter-btn active" data-pos="ALL">ALL</button>
-                    <button class="filter-btn" data-pos="GKP">GKP</button>
-                    <button class="filter-btn" data-pos="DEF">DEF</button>
-                    <button class="filter-btn" data-pos="MID">MID</button>
-                    <button class="filter-btn" data-pos="FWD">FWD</button>
-                </div>
-            </div>
-            <div id="market-list" class="market-grid"></div>
-        </section>
-
-        <!-- LEADERBOARD VIEW -->
-        <section id="leagues-view" class="tab-content">
-            <h2>Ethiopian Mini-Leagues</h2>
-            <div class="leaderboard-card">
-                <div class="lb-row header">
-                    <span>Rank</span>
-                    <span>Manager</span>
-                    <span>GW</span>
-                    <span>Total</span>
-                </div>
-                <div class="lb-row highlight">
-                    <span>1</span>
-                    <span>Nate (Ethio Stars)</span>
-                    <span>--</span>
-                    <span>0</span>
-                </div>
-            </div>
-        </section>
-
+        </div>
     </main>
 
-    <script src="app.js"></script>
+    <script>
+        function openMarket(position) {
+            alert(`Opening transfer market filter for: ${position}`);
+        }
+    </script>
 </body>
 </html>
