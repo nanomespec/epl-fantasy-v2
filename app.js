@@ -17,33 +17,57 @@ const managerId = tgUser?.id || 'local_user';
 // ==========================================
 // 2. STATE & STORAGE
 // ==========================================
-const STORAGE_KEY = 'efpl_official_v7';
+const STORAGE_KEY = 'efpl_official_v8';
 
-// Club Kit / Crest Color Schemes (Inspired by Ethiopian Football Federation Clubs)
+// Expanded Club Kit / Crest Color Schemes (Ethiopian Premier League Clubs)
 const clubColors = {
   "Saint George": { primary: "#FFD700", secondary: "#000080", accent: "#FFFFFF" }, // Yellow & Blue
   "Ethiopian Coffee": { primary: "#FF6600", secondary: "#008000", accent: "#FFFFFF" }, // Orange & Green
   "CBE SA": { primary: "#0047AB", secondary: "#FFFFFF", accent: "#FFD700" }, // Blue & White
   "Fasil Kenema": { primary: "#CC0000", secondary: "#FFCC00", accent: "#FFFFFF" }, // Red & Yellow
-  "Mechal": { primary: "#006400", secondary: "#FFD700", accent: "#FFFFFF" } // Green & Yellow
+  "Mechal": { primary: "#006400", secondary: "#FFD700", accent: "#FFFFFF" }, // Green & Yellow
+  "Bahir Dar City": { primary: "#FF4500", secondary: "#000080", accent: "#FFFFFF" }, // Orange & Blue
+  "Hawassa City": { primary: "#008080", secondary: "#FFFFFF", accent: "#FFD700" }, // Teal & White
+  "Adama City": { primary: "#800080", secondary: "#FFD700", accent: "#FFFFFF" }, // Purple & Yellow
+  "Sidama Coffee": { primary: "#008000", secondary: "#FFD700", accent: "#FFFFFF" }, // Green & Yellow
+  "Wolayta Dicha": { primary: "#0000FF", secondary: "#FFFFFF", accent: "#FF0000" }  // Blue & Red
 };
 
 let playerMarket = [
+  // Goalkeepers (GKP)
   { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, form: 5.2, status: 'a', nextOpp: "CBE SA (H)", fdr: 3 },
   { id: 2, name: "A. Nuri", club: "Ethiopian Coffee", pos: "GKP", price: 5.0, form: 4.1, status: 'a', nextOpp: "Mechal (A)", fdr: 4 },
-  { id: 3, name: "A. K. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, form: 6.0, status: 'a', nextOpp: "CBE SA (H)", fdr: 3 },
-  { id: 4, name: "E. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, form: 5.8, status: 'i', nextOpp: "CBE SA (H)", fdr: 3 },
-  { id: 5, name: "A. Tefera", club: "Ethiopian Coffee", pos: "DEF", price: 5.0, form: 4.5, status: 'a', nextOpp: "Mechal (A)", fdr: 4 },
-  { id: 6, name: "S. Bereket", club: "CBE SA", pos: "DEF", price: 5.0, form: 4.8, status: 'a', nextOpp: "St. George (A)", fdr: 4 },
-  { id: 7, name: "Y. Endale", club: "Fasil Kenema", pos: "DEF", price: 5.0, form: 3.5, status: 's', nextOpp: "Coffee (H)", fdr: 2 },
-  { id: 8, name: "B. Belay", club: "Saint George", pos: "MID", price: 7.0, form: 7.2, status: 'a', nextOpp: "CBE SA (H)", fdr: 3 },
-  { id: 9, name: "E. Tadesse", club: "Ethiopian Coffee", pos: "MID", price: 7.5, form: 7.8, status: 'a', nextOpp: "Mechal (A)", fdr: 4 },
-  { id: 10, name: "A. Gidey", club: "CBE SA", pos: "MID", price: 7.5, form: 6.9, status: 'd', nextOpp: "St. George (A)", fdr: 4 },
-  { id: 11, name: "G. Panom", club: "Mechal", pos: "MID", price: 7.0, form: 6.1, status: 'a', nextOpp: "Coffee (H)", fdr: 2 },
-  { id: 12, name: "A. Okutu", club: "Saint George", pos: "FWD", price: 9.0, form: 8.5, status: 'a', nextOpp: "CBE SA (H)", fdr: 3 },
-  { id: 13, name: "H. Konkoni", club: "Ethiopian Coffee", pos: "FWD", price: 8.0, form: 7.0, status: 'a', nextOpp: "Mechal (A)", fdr: 4 },
-  { id: 14, name: "D. Nathaniel", club: "CBE SA", pos: "FWD", price: 8.5, form: 7.4, status: 'a', nextOpp: "St. George (A)", fdr: 4 },
-  { id: 15, name: "B. Gugsa", club: "Fasil Kenema", pos: "FWD", price: 8.0, form: 5.9, status: 'a', nextOpp: "Coffee (H)", fdr: 2 }
+  { id: 3, name: "T. Yigezu", club: "Bahir Dar City", pos: "GKP", price: 4.8, form: 4.6, status: 'a', nextOpp: "Hawassa (H)", fdr: 2 },
+  { id: 4, name: "M. Tilahun", club: "Fasil Kenema", pos: "GKP", price: 5.0, form: 4.9, status: 'a', nextOpp: "Adama (A)", fdr: 3 },
+  { id: 5, name: "B. Desta", club: "Hawassa City", pos: "GKP", price: 4.5, form: 3.8, status: 'a', nextOpp: "Sidama (H)", fdr: 3 },
+
+  // Defenders (DEF)
+  { id: 6, name: "A. K. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, form: 6.0, status: 'a', nextOpp: "CBE SA (H)", fdr: 3 },
+  { id: 7, name: "E. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, form: 5.8, status: 'i', nextOpp: "CBE SA (H)", fdr: 3 },
+  { id: 8, name: "A. Tefera", club: "Ethiopian Coffee", pos: "DEF", price: 5.0, form: 4.5, status: 'a', nextOpp: "Mechal (A)", fdr: 4 },
+  { id: 9, name: "S. Bereket", club: "CBE SA", pos: "DEF", price: 5.0, form: 4.8, status: 'a', nextOpp: "St. George (A)", fdr: 4 },
+  { id: 10, name: "Y. Endale", club: "Fasil Kenema", pos: "DEF", price: 5.0, form: 3.5, status: 's', nextOpp: "Coffee (H)", fdr: 2 },
+  { id: 11, name: "D. Girma", club: "Bahir Dar City", pos: "DEF", price: 4.5, form: 5.0, status: 'a', nextOpp: "Hawassa (H)", fdr: 2 },
+  { id: 12, name: "K. Asrat", club: "Adama City", pos: "DEF", price: 4.5, form: 4.2, status: 'a', nextOpp: "Wolayta (A)", fdr: 3 },
+  { id: 13, name: "H. Lemma", club: "Sidama Coffee", pos: "DEF", price: 4.8, form: 4.7, status: 'a', nextOpp: "Mechal (H)", fdr: 3 },
+
+  // Midfielders (MID)
+  { id: 14, name: "B. Belay", club: "Saint George", pos: "MID", price: 7.0, form: 7.2, status: 'a', nextOpp: "CBE SA (H)", fdr: 3 },
+  { id: 15, name: "E. Tadesse", club: "Ethiopian Coffee", pos: "MID", price: 7.5, form: 7.8, status: 'a', nextOpp: "Mechal (A)", fdr: 4 },
+  { id: 16, name: "A. Gidey", club: "CBE SA", pos: "MID", price: 7.5, form: 6.9, status: 'd', nextOpp: "St. George (A)", fdr: 4 },
+  { id: 17, name: "G. Panom", club: "Mechal", pos: "MID", price: 7.0, form: 6.1, status: 'a', nextOpp: "Coffee (H)", fdr: 2 },
+  { id: 18, name: "F. Alemu", club: "Bahir Dar City", pos: "MID", price: 6.5, form: 5.9, status: 'a', nextOpp: "Hawassa (H)", fdr: 2 },
+  { id: 19, name: "M. Mekonnen", club: "Hawassa City", pos: "MID", price: 6.0, form: 5.2, status: 'a', nextOpp: "Sidama (H)", fdr: 3 },
+  { id: 20, name: "T. Kebede", club: "Adama City", pos: "MID", price: 6.5, form: 5.5, status: 'a', nextOpp: "Wolayta (A)", fdr: 3 },
+  { id: 21, name: "W. Tesfaye", club: "Wolayta Dicha", pos: "MID", price: 5.5, form: 4.8, status: 'a', nextOpp: "Adama (H)", fdr: 3 },
+
+  // Forwards (FWD)
+  { id: 22, name: "A. Okutu", club: "Saint George", pos: "FWD", price: 9.0, form: 8.5, status: 'a', nextOpp: "CBE SA (H)", fdr: 3 },
+  { id: 23, name: "H. Konkoni", club: "Ethiopian Coffee", pos: "FWD", price: 8.0, form: 7.0, status: 'a', nextOpp: "Mechal (A)", fdr: 4 },
+  { id: 24, name: "D. Nathaniel", club: "CBE SA", pos: "FWD", price: 8.5, form: 7.4, status: 'a', nextOpp: "St. George (A)", fdr: 4 },
+  { id: 25, name: "B. Gugsa", club: "Fasil Kenema", pos: "FWD", price: 8.0, form: 5.9, status: 'a', nextOpp: "Coffee (H)", fdr: 2 },
+  { id: 26, name: "O. Okiki", club: "Bahir Dar City", pos: "FWD", price: 7.5, form: 6.8, status: 'a', nextOpp: "Hawassa (H)", fdr: 2 },
+  { id: 27, name: "S. Getachew", club: "Sidama Coffee", pos: "FWD", price: 7.0, form: 6.2, status: 'a', nextOpp: "Mechal (H)", fdr: 3 }
 ];
 
 let mySquad = [];
@@ -82,7 +106,7 @@ let userLeagues = [
 let activeLeagueId = 'global';
 let leagueViewMode = 'classic'; // 'classic' or 'h2h'
 
-const defaultStarters = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
+const defaultStarters = [1, 6, 8, 9, 14, 15, 16, 17, 22, 23, 24];
 
 function loadData() {
   try {
@@ -138,12 +162,12 @@ function syncLeagueData() {
 }
 
 function resetSquad() {
-  mySquad = playerMarket.map(p => ({
+  mySquad = playerMarket.slice(0, 15).map(p => ({
     ...p,
     purchasePrice: p.price,
     isStarter: defaultStarters.includes(p.id),
-    isCaptain: p.id === 12,
-    isViceCaptain: p.id === 13,
+    isCaptain: p.id === 22,
+    isViceCaptain: p.id === 23,
     gwPoints: 0,
     stats: { goals: 0, assists: 0, cleanSheet: 0, yellow: 0 }
   }));
@@ -798,7 +822,9 @@ function simulateGameweek() {
     { opp: "Ethiopian Coffee (A)", fdr: 4 },
     { opp: "CBE SA (H)", fdr: 2 },
     { opp: "Fasil Kenema (A)", fdr: 4 },
-    { opp: "Mechal (H)", fdr: 2 }
+    { opp: "Mechal (H)", fdr: 2 },
+    { opp: "Bahir Dar City (A)", fdr: 3 },
+    { opp: "Hawassa City (H)", fdr: 2 }
   ];
 
   lastGwEvents = [`📢 Gameweek ${gameweek} kickoff underway across stadiums!`];
