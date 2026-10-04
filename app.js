@@ -1,304 +1,577 @@
 // ==========================================
-// 1. TELEGRAM & USER INITIALIZATION
-// ==========================================
-let tgUser = null;
-if (window.Telegram && window.Telegram.WebApp) {
-  window.Telegram.WebApp.ready();
-  window.Telegram.WebApp.expand();
-  if (window.Telegram.WebApp.enableClosingConfirmation) {
-    window.Telegram.WebApp.enableClosingConfirmation();
-  }
-  tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
-}
-
-const managerName = tgUser ? `${tgUser.first_name} ${tgUser.last_name || ''}`.trim() : 'Nahom';
-document.getElementById('manager-name').innerText = managerName;
-
-// ==========================================
-// 2. STATE & STORAGE
-// ==========================================
-const STORAGE_KEY = 'efpl_gateway_v2';
-
-let appState = {
-  bank: 100.0,
-  slots: [
-    // Starting XI (Formation: 1-4-4-2)
-    { id: 1, pos: 'GKP', isBench: false, player: null },
-    { id: 2, pos: 'DEF', isBench: false, player: null },
-    { id: 3, pos: 'DEF', isBench: false, player: null },
-    { id: 4, pos: 'DEF', isBench: false, player: null },
-    { id: 5, pos: 'DEF', isBench: false, player: null },
-    { id: 6, pos: 'MID', isBench: false, player: null },
-    { id: 7, pos: 'MID', isBench: false, player: null },
-    { id: 8, pos: 'MID', isBench: false, player: null },
-    { id: 9, pos: 'MID', isBench: false, player: null },
-    { id: 10, pos: 'FWD', isBench: false, player: null },
-    { id: 11, pos: 'FWD', isBench: false, player: null },
-    // Bench Substitutes (4)
-    { id: 12, pos: 'GKP', isBench: true, player: null },
-    { id: 13, pos: 'DEF', isBench: true, player: null },
-    { id: 14, pos: 'MID', isBench: true, player: null },
-    { id: 15, pos: 'FWD', isBench: true, player: null }
-  ]
-};
-
-// ==========================================
 // 3. COMPLETE 16-TEAM PLAYER MARKET DATABASE
 // ==========================================
 const playerMarket = [
-  // 1. Saint George
+  // ------------------------------------------
+  // 1. SAINT GEORGE (Kidus Giorgis)
+  // ------------------------------------------
   { id: 101, name: "T. Yohannes", club: "Saint George", pos: "GKP", price: 5.0 },
-  { id: 102, name: "S. Mustefa", club: "Saint George", pos: "DEF", price: 5.5 },
-  { id: 103, name: "A. Atula", club: "Saint George", pos: "MID", price: 6.5 },
-  { id: 104, name: "T. Teshome", club: "Saint George", pos: "FWD", price: 7.5 },
-  
-  // 2. Ethiopian Coffee
+  { id: 102, name: "K. Kueth", club: "Saint George", pos: "GKP", price: 4.5 },
+  { id: 103, name: "B. Genetu", club: "Saint George", pos: "GKP", price: 4.5 },
+  { id: 104, name: "A. Nesru", club: "Saint George", pos: "DEF", price: 5.5 },
+  { id: 105, name: "B. Tarekegn", club: "Saint George", pos: "DEF", price: 5.0 },
+  { id: 106, name: "S. Mustefa", club: "Saint George", pos: "DEF", price: 5.5 },
+  { id: 107, name: "A. Getachew", club: "Saint George", pos: "DEF", price: 5.0 },
+  { id: 108, name: "T. Hailemichael", club: "Saint George", pos: "DEF", price: 5.0 },
+  { id: 109, name: "H. Yohanes", club: "Saint George", pos: "DEF", price: 4.8 },
+  { id: 110, name: "T. Niguse", club: "Saint George", pos: "DEF", price: 4.8 },
+  { id: 111, name: "P. Kentiba", club: "Saint George", pos: "DEF", price: 4.5 },
+  { id: 112, name: "A. Mubarek", club: "Saint George", pos: "DEF", price: 4.5 },
+  { id: 113, name: "T. Assefa", club: "Saint George", pos: "DEF", price: 4.5 },
+  { id: 114, name: "B. Bekele", club: "Saint George", pos: "DEF", price: 4.5 },
+  { id: 115, name: "B. Kifle", club: "Saint George", pos: "DEF", price: 4.5 },
+  { id: 116, name: "Y. Yemane", club: "Saint George", pos: "DEF", price: 4.5 },
+  { id: 117, name: "M. Pawlos", club: "Saint George", pos: "DEF", price: 4.5 },
+  { id: 118, name: "A. Atula", club: "Saint George", pos: "MID", price: 6.5 },
+  { id: 119, name: "B. Ashamo", club: "Saint George", pos: "MID", price: 6.0 },
+  { id: 120, name: "A. Yohannes", club: "Saint George", pos: "MID", price: 6.0 },
+  { id: 121, name: "H. Gulilat", club: "Saint George", pos: "MID", price: 5.5 },
+  { id: 122, name: "A. Hailu", club: "Saint George", pos: "MID", price: 5.5 },
+  { id: 123, name: "Y. Gosaye", club: "Saint George", pos: "MID", price: 5.0 },
+  { id: 124, name: "F. Abdela", club: "Saint George", pos: "MID", price: 5.0 },
+  { id: 125, name: "Y. Tesfaye", club: "Saint George", pos: "MID", price: 5.0 },
+  { id: 126, name: "B. Alemayehu", club: "Saint George", pos: "MID", price: 4.5 },
+  { id: 127, name: "F. Adamu", club: "Saint George", pos: "MID", price: 4.5 },
+  { id: 128, name: "Y. Setgen", club: "Saint George", pos: "MID", price: 4.5 },
+  { id: 129, name: "E. Selesh", club: "Saint George", pos: "MID", price: 4.5 },
+  { id: 130, name: "B. Endale", club: "Saint George", pos: "MID", price: 5.0 },
+  { id: 131, name: "A. Yalew", club: "Saint George", pos: "FWD", price: 8.5 },
+  { id: 132, name: "T. Teshome", club: "Saint George", pos: "FWD", price: 7.5 },
+  { id: 133, name: "F. Tilahun", club: "Saint George", pos: "FWD", price: 7.0 },
+  { id: 134, name: "B. Kuich", club: "Saint George", pos: "FWD", price: 7.0 },
+  { id: 135, name: "T. Kedir", club: "Saint George", pos: "FWD", price: 6.5 },
+  { id: 136, name: "A. Anter", club: "Saint George", pos: "FWD", price: 6.0 },
+  { id: 137, name: "T. Birhanu", club: "Saint George", pos: "FWD", price: 6.0 },
+  { id: 138, name: "A. Erbo", club: "Saint George", pos: "FWD", price: 5.5 },
+  { id: 139, name: "K. Aklilu", club: "Saint George", pos: "FWD", price: 5.5 },
+
+  // ------------------------------------------
+  // 2. ETHIOPIAN COFFEE SC
+  // ------------------------------------------
   { id: 201, name: "I. Danlad", club: "Ethiopian Coffee", pos: "GKP", price: 5.0 },
-  { id: 202, name: "R. James", club: "Ethiopian Coffee", pos: "DEF", price: 5.0 },
-  { id: 203, name: "Y. Tariku", club: "Ethiopian Coffee", pos: "MID", price: 6.5 },
-  { id: 204, name: "Z. Abate", club: "Ethiopian Coffee", pos: "FWD", price: 7.5 },
+  { id: 202, name: "T. Kibatu", club: "Ethiopian Coffee", pos: "GKP", price: 4.5 },
+  { id: 203, name: "M. Ayano", club: "Ethiopian Coffee", pos: "GKP", price: 4.0 },
+  { id: 204, name: "R. James", club: "Ethiopian Coffee", pos: "DEF", price: 5.0 },
+  { id: 205, name: "F. Ibrahim", club: "Ethiopian Coffee", pos: "DEF", price: 4.5 },
+  { id: 206, name: "W. Getu", club: "Ethiopian Coffee", pos: "DEF", price: 4.5 },
+  { id: 207, name: "N. Sisay", club: "Ethiopian Coffee", pos: "DEF", price: 4.5 },
+  { id: 208, name: "S. Muhammed", club: "Ethiopian Coffee", pos: "DEF", price: 4.0 },
+  { id: 209, name: "T. Tadesse", club: "Ethiopian Coffee", pos: "DEF", price: 4.0 },
+  { id: 210, name: "F. Tariku", club: "Ethiopian Coffee", pos: "DEF", price: 4.0 },
+  { id: 211, name: "B. Alemayehu", club: "Ethiopian Coffee", pos: "DEF", price: 4.0 },
+  { id: 212, name: "N. Frew", club: "Ethiopian Coffee", pos: "DEF", price: 4.0 },
+  { id: 213, name: "R. Miftah", club: "Ethiopian Coffee", pos: "DEF", price: 4.0 },
+  { id: 214, name: "Y. Tariku", club: "Ethiopian Coffee", pos: "MID", price: 6.5 },
+  { id: 215, name: "M. Tsegaye", club: "Ethiopian Coffee", pos: "MID", price: 6.5 },
+  { id: 216, name: "O. Jul", club: "Ethiopian Coffee", pos: "MID", price: 6.0 },
+  { id: 217, name: "M. Kiros", club: "Ethiopian Coffee", pos: "MID", price: 5.5 },
+  { id: 218, name: "D. Nwachukwu", club: "Ethiopian Coffee", pos: "MID", price: 6.0 },
+  { id: 219, name: "E. Shumbeza", club: "Ethiopian Coffee", pos: "MID", price: 5.0 },
+  { id: 220, name: "M. Bedaso", club: "Ethiopian Coffee", pos: "MID", price: 4.5 },
+  { id: 221, name: "K. Feleke", club: "Ethiopian Coffee", pos: "MID", price: 4.5 },
+  { id: 222, name: "Z. Abate", club: "Ethiopian Coffee", pos: "FWD", price: 7.5 },
+  { id: 223, name: "S. Adamu", club: "Ethiopian Coffee", pos: "FWD", price: 7.0 },
+  { id: 224, name: "A. Admasu", club: "Ethiopian Coffee", pos: "FWD", price: 6.5 },
+  { id: 225, name: "B. Getachew", club: "Ethiopian Coffee", pos: "FWD", price: 6.0 },
+  { id: 226, name: "T. Mbonyumwami", club: "Ethiopian Coffee", pos: "FWD", price: 6.5 },
+  { id: 227, name: "A. Samuel", club: "Ethiopian Coffee", pos: "FWD", price: 5.5 },
+  { id: 228, name: "H. Ashenafi", club: "Ethiopian Coffee", pos: "FWD", price: 5.5 },
+  { id: 229, name: "H. Sultan", club: "Ethiopian Coffee", pos: "FWD", price: 5.0 },
+  { id: 230, name: "Y. Sisay", club: "Ethiopian Coffee", pos: "FWD", price: 5.0 },
+  { id: 231, name: "K. Arebo", club: "Ethiopian Coffee", pos: "FWD", price: 5.0 },
+  { id: 232, name: "B. Berhanu", club: "Ethiopian Coffee", pos: "FWD", price: 5.0 },
 
-  // 3. Mechal SC
+  // ------------------------------------------
+  // 3. MECHAL SC (Defense Force)
+  // ------------------------------------------
   { id: 301, name: "D. Mamo", club: "Mechal", pos: "GKP", price: 5.0 },
-  { id: 302, name: "A. Tamene", club: "Mechal", pos: "DEF", price: 5.5 },
-  { id: 303, name: "G. Panom", club: "Mechal", pos: "MID", price: 7.0 },
-  { id: 304, name: "A. Nasir", club: "Mechal", pos: "FWD", price: 9.0 },
+  { id: 302, name: "F. Getahun", club: "Mechal", pos: "GKP", price: 4.5 },
+  { id: 303, name: "R. Nasser", club: "Mechal", pos: "DEF", price: 5.5 },
+  { id: 304, name: "K. Markneh", club: "Mechal", pos: "DEF", price: 5.5 },
+  { id: 305, name: "A. Tamene", club: "Mechal", pos: "DEF", price: 5.5 },
+  { id: 306, name: "A. Tesfaye", club: "Mechal", pos: "DEF", price: 5.0 },
+  { id: 307, name: "Y. Bayeh", club: "Mechal", pos: "DEF", price: 5.0 },
+  { id: 308, name: "D. Derese", club: "Mechal", pos: "DEF", price: 4.5 },
+  { id: 309, name: "M. Negash", club: "Mechal", pos: "DEF", price: 4.5 },
+  { id: 310, name: "E. Fikru", club: "Mechal", pos: "DEF", price: 4.5 },
+  { id: 311, name: "G. Panom", club: "Mechal", pos: "MID", price: 7.0 },
+  { id: 312, name: "G. Hagos", club: "Mechal", pos: "MID", price: 6.0 },
+  { id: 313, name: "A. Yigzaw", club: "Mechal", pos: "MID", price: 5.5 },
+  { id: 314, name: "B. Belay", club: "Mechal", pos: "MID", price: 6.5 },
+  { id: 315, name: "M. Teshome", club: "Mechal", pos: "MID", price: 5.5 },
+  { id: 316, name: "T. Wolde", club: "Mechal", pos: "MID", price: 5.0 },
+  { id: 317, name: "Y. Tesfaye", club: "Mechal", pos: "MID", price: 5.0 },
+  { id: 318, name: "A. Nasir", club: "Mechal", pos: "FWD", price: 9.0 },
+  { id: 319, name: "C. Gugesa", club: "Mechal", pos: "FWD", price: 7.5 },
+  { id: 320, name: "D. Tefera", club: "Mechal", pos: "FWD", price: 6.5 },
+  { id: 321, name: "O. Oukri", club: "Mechal", pos: "FWD", price: 7.0 },
+  { id: 322, name: "T. Debele", club: "Mechal", pos: "FWD", price: 6.0 },
+  { id: 323, name: "A. Demissie", club: "Mechal", pos: "FWD", price: 5.5 },
+  { id: 324, name: "H. Ayele", club: "Mechal", pos: "FWD", price: 5.5 },
 
-  // 4. Sidama Coffee
+  // ------------------------------------------
+  // 4. SIDAMA COFFEE
+  // ------------------------------------------
   { id: 401, name: "C. Lo Ndoye", club: "Sidama Coffee", pos: "GKP", price: 5.0 },
-  { id: 402, name: "Y. Baye", club: "Sidama Coffee", pos: "DEF", price: 5.0 },
-  { id: 403, name: "S. Dagnachew", club: "Sidama Coffee", pos: "MID", price: 7.0 },
-  { id: 404, name: "A. Yalew", club: "Sidama Coffee", pos: "FWD", price: 8.5 },
+  { id: 402, name: "E. Kalyowa", club: "Sidama Coffee", pos: "GKP", price: 4.5 },
+  { id: 403, name: "M. Muze", club: "Sidama Coffee", pos: "GKP", price: 4.0 },
+  { id: 404, name: "A. Marene", club: "Sidama Coffee", pos: "GKP", price: 4.0 },
+  { id: 405, name: "S. Ledamo", club: "Sidama Coffee", pos: "GKP", price: 4.0 },
+  { id: 406, name: "Y. Baye", club: "Sidama Coffee", pos: "DEF", price: 5.0 },
+  { id: 407, name: "D. Demu", club: "Sidama Coffee", pos: "DEF", price: 4.5 },
+  { id: 408, name: "A. Mussie", club: "Sidama Coffee", pos: "DEF", price: 4.5 },
+  { id: 409, name: "F. Mengistu", club: "Sidama Coffee", pos: "DEF", price: 4.5 },
+  { id: 410, name: "D. Alemu", club: "Sidama Coffee", pos: "DEF", price: 4.0 },
+  { id: 411, name: "F. Nguema", club: "Sidama Coffee", pos: "DEF", price: 4.5 },
+  { id: 412, name: "M. Kassa", club: "Sidama Coffee", pos: "DEF", price: 4.0 },
+  { id: 413, name: "F. Maja", club: "Sidama Coffee", pos: "DEF", price: 4.0 },
+  { id: 414, name: "M. Tumicha", club: "Sidama Coffee", pos: "DEF", price: 4.0 },
+  { id: 415, name: "Y. Matiwas", club: "Sidama Coffee", pos: "DEF", price: 4.0 },
+  { id: 416, name: "F. Chunesa", club: "Sidama Coffee", pos: "DEF", price: 4.0 },
+  { id: 417, name: "T. Tesefaye", club: "Sidama Coffee", pos: "DEF", price: 4.0 },
+  { id: 418, name: "K. Aucho", club: "Sidama Coffee", pos: "MID", price: 6.5 },
+  { id: 419, name: "S. Dagnachew", club: "Sidama Coffee", pos: "MID", price: 7.0 },
+  { id: 420, name: "A. Achiso", club: "Sidama Coffee", pos: "MID", price: 5.5 },
+  { id: 421, name: "F. Tewoldebirhan", club: "Sidama Coffee", pos: "MID", price: 5.0 },
+  { id: 422, name: "R. Nasir", club: "Sidama Coffee", pos: "MID", price: 5.0 },
+  { id: 423, name: "M. Asfaw", club: "Sidama Coffee", pos: "MID", price: 4.5 },
+  { id: 424, name: "S. Berasa", club: "Sidama Coffee", pos: "MID", price: 4.5 },
+  { id: 425, name: "E. Dejene", club: "Sidama Coffee", pos: "MID", price: 4.5 },
+  { id: 426, name: "M. Tafesse", club: "Sidama Coffee", pos: "FWD", price: 7.5 },
+  { id: 427, name: "T. Bejrond", club: "Sidama Coffee", pos: "FWD", price: 6.5 },
+  { id: 428, name: "B. Bekele", club: "Sidama Coffee", pos: "FWD", price: 6.0 },
+  { id: 429, name: "B. Nago", club: "Sidama Coffee", pos: "FWD", price: 6.0 },
+  { id: 430, name: "H. Tadesse", club: "Sidama Coffee", pos: "FWD", price: 5.5 },
+  { id: 431, name: "A. Mubarak", club: "Sidama Coffee", pos: "FWD", price: 5.5 },
+  { id: 432, name: "A. Asfaw", club: "Sidama Coffee", pos: "FWD", price: 5.0 },
+  { id: 433, name: "E. Rondie", club: "Sidama Coffee", pos: "FWD", price: 5.0 },
+  { id: 434, name: "Y. Kano", club: "Sidama Coffee", pos: "FWD", price: 5.0 },
+  { id: 435, name: "A. Eyasu", club: "Sidama Coffee", pos: "FWD", price: 5.0 },
+  { id: 436, name: "D. Demissie", club: "Sidama Coffee", pos: "FWD", price: 5.0 },
 
-  // 5. Hawassa City
+  // ------------------------------------------
+  // 5. HAWASSA CITY
+  // ------------------------------------------
   { id: 501, name: "S. Habtamu", club: "Hawassa City", pos: "GKP", price: 4.5 },
-  { id: 502, name: "S. Wodesa", club: "Hawassa City", pos: "DEF", price: 5.0 },
-  { id: 503, name: "A. Demissie", club: "Hawassa City", pos: "MID", price: 6.5 },
-  { id: 504, name: "G. Kebede", club: "Hawassa City", pos: "FWD", price: 7.5 },
+  { id: 502, name: "M. Ginbo", club: "Hawassa City", pos: "GKP", price: 4.0 },
+  { id: 503, name: "D. Tefera", club: "Hawassa City", pos: "GKP", price: 4.0 },
+  { id: 504, name: "A. Walelign", club: "Hawassa City", pos: "GKP", price: 4.0 },
+  { id: 505, name: "S. Wodesa", club: "Hawassa City", pos: "DEF", price: 5.0 },
+  { id: 506, name: "E. Kasahun", club: "Hawassa City", pos: "DEF", price: 4.5 },
+  { id: 507, name: "D. Zerfu", club: "Hawassa City", pos: "DEF", price: 4.5 },
+  { id: 508, name: "D. Abera", club: "Hawassa City", pos: "DEF", price: 4.5 },
+  { id: 509, name: "E. Semayat", club: "Hawassa City", pos: "DEF", price: 4.5 },
+  { id: 510, name: "M. Markos", club: "Hawassa City", pos: "DEF", price: 4.5 },
+  { id: 511, name: "H. Kassahun", club: "Hawassa City", pos: "DEF", price: 4.0 },
+  { id: 512, name: "W. Maereg", club: "Hawassa City", pos: "DEF", price: 4.0 },
+  { id: 513, name: "G. Bekele", club: "Hawassa City", pos: "DEF", price: 4.0 },
+  { id: 514, name: "B. Tadele", club: "Hawassa City", pos: "DEF", price: 4.0 },
+  { id: 515, name: "S. Gacho", club: "Hawassa City", pos: "DEF", price: 4.0 },
+  { id: 516, name: "Y. Degife", club: "Hawassa City", pos: "DEF", price: 4.0 },
+  { id: 517, name: "F. Desalegn", club: "Hawassa City", pos: "DEF", price: 4.0 },
+  { id: 518, name: "A. Demissie", club: "Hawassa City", pos: "MID", price: 6.5 },
+  { id: 519, name: "D. Tadessa", club: "Hawassa City", pos: "MID", price: 6.0 },
+  { id: 520, name: "M. Tomas", club: "Hawassa City", pos: "MID", price: 5.5 },
+  { id: 521, name: "W. Hailu", club: "Hawassa City", pos: "MID", price: 6.0 },
+  { id: 522, name: "A. Alemu", club: "Hawassa City", pos: "MID", price: 5.0 },
+  { id: 523, name: "T. Solomon", club: "Hawassa City", pos: "MID", price: 5.5 },
+  { id: 524, name: "Y. Biruck", club: "Hawassa City", pos: "MID", price: 5.0 },
+  { id: 525, name: "N. Shagamo", club: "Hawassa City", pos: "MID", price: 4.5 },
+  { id: 526, name: "A. Reshad", club: "Hawassa City", pos: "MID", price: 4.5 },
+  { id: 527, name: "S. Bekele", club: "Hawassa City", pos: "MID", price: 6.5 },
+  { id: 528, name: "B. Belay", club: "Hawassa City", pos: "FWD", price: 7.0 },
+  { id: 529, name: "T. Hefemo", club: "Hawassa City", pos: "FWD", price: 6.5 },
+  { id: 530, name: "E. Eshetu", club: "Hawassa City", pos: "FWD", price: 6.0 },
+  { id: 531, name: "G. Kebede", club: "Hawassa City", pos: "FWD", price: 7.5 },
+  { id: 532, name: "Z. Kedire", club: "Hawassa City", pos: "FWD", price: 5.5 },
+  { id: 533, name: "Y. Tsegaye", club: "Hawassa City", pos: "FWD", price: 5.5 },
+  { id: 534, name: "C. Awish", club: "Hawassa City", pos: "FWD", price: 5.5 },
+  { id: 535, name: "M. Endrias", club: "Hawassa City", pos: "FWD", price: 5.0 },
+  { id: 536, name: "A. Eliyas", club: "Hawassa City", pos: "FWD", price: 5.0 },
 
-  // 6. Fasil Kenema
+  // ------------------------------------------
+  // 6. FASIL KENEMA SC
+  // ------------------------------------------
   { id: 601, name: "M. Pouaty", club: "Fasil Kenema", pos: "GKP", price: 5.0 },
-  { id: 602, name: "M. Debebe", club: "Fasil Kenema", pos: "DEF", price: 5.0 },
-  { id: 603, name: "Y. Yohannis", club: "Fasil Kenema", pos: "MID", price: 6.5 },
-  { id: 604, name: "A. Gidey", club: "Fasil Kenema", pos: "FWD", price: 7.5 },
+  { id: 602, name: "A. Kasaye", club: "Fasil Kenema", pos: "GKP", price: 4.5 },
+  { id: 603, name: "Y. Derso", club: "Fasil Kenema", pos: "GKP", price: 4.0 },
+  { id: 604, name: "M. Ayeru", club: "Fasil Kenema", pos: "GKP", price: 4.0 },
+  { id: 605, name: "M. Debebe", club: "Fasil Kenema", pos: "DEF", price: 5.0 },
+  { id: 606, name: "G. Wasswa", club: "Fasil Kenema", pos: "DEF", price: 4.5 },
+  { id: 607, name: "A. Aman", club: "Fasil Kenema", pos: "DEF", price: 4.5 },
+  { id: 608, name: "D. Fitsum", club: "Fasil Kenema", pos: "DEF", price: 4.5 },
+  { id: 609, name: "K. Dagne", club: "Fasil Kenema", pos: "DEF", price: 4.0 },
+  { id: 610, name: "A. Tilahun", club: "Fasil Kenema", pos: "DEF", price: 4.0 },
+  { id: 611, name: "B. Amanuel", club: "Fasil Kenema", pos: "DEF", price: 4.0 },
+  { id: 612, name: "F. Kasa", club: "Fasil Kenema", pos: "DEF", price: 4.0 },
+  { id: 613, name: "Y. Fisseha", club: "Fasil Kenema", pos: "DEF", price: 4.0 },
+  { id: 614, name: "Y. Yohannis", club: "Fasil Kenema", pos: "MID", price: 6.5 },
+  { id: 615, name: "H. Tekeste", club: "Fasil Kenema", pos: "MID", price: 6.0 },
+  { id: 616, name: "A. Mudesir", club: "Fasil Kenema", pos: "MID", price: 5.5 },
+  { id: 617, name: "A. Yohannis", club: "Fasil Kenema", pos: "MID", price: 5.0 },
+  { id: 618, name: "A. Eyayu", club: "Fasil Kenema", pos: "MID", price: 5.0 },
+  { id: 619, name: "B. Gizaw", club: "Fasil Kenema", pos: "MID", price: 4.5 },
+  { id: 620, name: "B. Shemena", club: "Fasil Kenema", pos: "MID", price: 4.5 },
+  { id: 621, name: "Z. Solomon", club: "Fasil Kenema", pos: "MID", price: 4.5 },
+  { id: 622, name: "J. Mulu", club: "Fasil Kenema", pos: "MID", price: 4.5 },
+  { id: 623, name: "E. Hailu", club: "Fasil Kenema", pos: "MID", price: 4.5 },
+  { id: 624, name: "H. Nega", club: "Fasil Kenema", pos: "MID", price: 4.5 },
+  { id: 625, name: "W. Gebremichael", club: "Fasil Kenema", pos: "MID", price: 4.5 },
+  { id: 626, name: "A. Gidey", club: "Fasil Kenema", pos: "FWD", price: 7.5 },
+  { id: 627, name: "D. Awoke", club: "Fasil Kenema", pos: "FWD", price: 6.5 },
+  { id: 628, name: "K. Zelalem", club: "Fasil Kenema", pos: "FWD", price: 6.0 },
+  { id: 629, name: "N. Gebregiorgis", club: "Fasil Kenema", pos: "FWD", price: 6.0 },
+  { id: 630, name: "A. Murad", club: "Fasil Kenema", pos: "FWD", price: 5.5 },
+  { id: 631, name: "N. Masresha", club: "Fasil Kenema", pos: "FWD", price: 5.5 },
+  { id: 632, name: "R. Amoussou", club: "Fasil Kenema", pos: "FWD", price: 6.0 },
+  { id: 633, name: "T. Eyasu", club: "Fasil Kenema", pos: "FWD", price: 5.0 },
+  { id: 634, name: "J. Philip", club: "Fasil Kenema", pos: "FWD", price: 5.0 },
+  { id: 635, name: "Y. Birhanu", club: "Fasil Kenema", pos: "FWD", price: 5.0 },
 
-  // 7. Bahir Dar City
+  // ------------------------------------------
+  // 7. BAHIR DAR CITY
+  // ------------------------------------------
   { id: 701, name: "P. S. Ndiaye", club: "Bahir Dar City", pos: "GKP", price: 5.0 },
-  { id: 702, name: "M. Kassa", club: "Bahir Dar City", pos: "DEF", price: 5.0 },
-  { id: 703, name: "B. Tigabu", club: "Bahir Dar City", pos: "MID", price: 6.5 },
-  { id: 704, name: "A. Tefera", club: "Bahir Dar City", pos: "FWD", price: 7.0 },
+  { id: 702, name: "Y. Mequanint", club: "Bahir Dar City", pos: "GKP", price: 4.5 },
+  { id: 703, name: "N. Belsti", club: "Bahir Dar City", pos: "GKP", price: 4.0 },
+  { id: 704, name: "M. Kassa", club: "Bahir Dar City", pos: "DEF", price: 5.0 },
+  { id: 705, name: "W. Dereje", club: "Bahir Dar City", pos: "DEF", price: 4.5 },
+  { id: 706, name: "F. Fitalew", club: "Bahir Dar City", pos: "DEF", price: 4.5 },
+  { id: 707, name: "B. Doumbia", club: "Bahir Dar City", pos: "DEF", price: 4.5 },
+  { id: 708, name: "K. Yohanes", club: "Bahir Dar City", pos: "DEF", price: 4.0 },
+  { id: 709, name: "G. Anemut", club: "Bahir Dar City", pos: "DEF", price: 4.0 },
+  { id: 710, name: "Y. Yemata", club: "Bahir Dar City", pos: "DEF", price: 4.0 },
+  { id: 711, name: "B. Worku", club: "Bahir Dar City", pos: "DEF", price: 4.0 },
+  { id: 712, name: "K. Bayelign", club: "Bahir Dar City", pos: "DEF", price: 4.0 },
+  { id: 713, name: "G. Disasa", club: "Bahir Dar City", pos: "DEF", price: 4.0 },
+  { id: 714, name: "M. Agegnehu", club: "Bahir Dar City", pos: "DEF", price: 4.0 },
+  { id: 715, name: "T. Addis", club: "Bahir Dar City", pos: "DEF", price: 4.0 },
+  { id: 716, name: "B. Tigabu", club: "Bahir Dar City", pos: "MID", price: 6.5 },
+  { id: 717, name: "H. Yebeltal", club: "Bahir Dar City", pos: "MID", price: 6.0 },
+  { id: 718, name: "H. Lijalem", club: "Bahir Dar City", pos: "MID", price: 5.5 },
+  { id: 719, name: "B. Semu", club: "Bahir Dar City", pos: "MID", price: 5.0 },
+  { id: 720, name: "F. Alemu", club: "Bahir Dar City", pos: "MID", price: 5.0 },
+  { id: 721, name: "A. Getachew", club: "Bahir Dar City", pos: "MID", price: 4.5 },
+  { id: 722, name: "A. Tefera", club: "Bahir Dar City", pos: "FWD", price: 7.0 },
+  { id: 723, name: "W. Belete", club: "Bahir Dar City", pos: "FWD", price: 6.5 },
+  { id: 724, name: "Y. Dereje", club: "Bahir Dar City", pos: "FWD", price: 6.0 },
+  { id: 725, name: "S. Osei", club: "Bahir Dar City", pos: "FWD", price: 6.5 },
+  { id: 726, name: "K. Boateng", club: "Bahir Dar City", pos: "FWD", price: 6.0 },
+  { id: 727, name: "A. Sale", club: "Bahir Dar City", pos: "FWD", price: 5.5 },
+  { id: 728, name: "A. Abbas", club: "Bahir Dar City", pos: "FWD", price: 5.0 },
+  { id: 729, name: "F. Ahmed", club: "Bahir Dar City", pos: "FWD", price: 5.0 },
+  { id: 730, name: "D. Gebre", club: "Bahir Dar City", pos: "FWD", price: 5.0 },
 
-  // 8. CBE SA
+  // ------------------------------------------
+  // 8. COMMERCIAL BANK OF ETHIOPIA (CBE SA)
+  // ------------------------------------------
   { id: 801, name: "A. Desta", club: "CBE SA", pos: "GKP", price: 5.0 },
-  { id: 802, name: "C. Amankwah", club: "CBE SA", pos: "DEF", price: 5.5 },
-  { id: 803, name: "Z. Abebe", club: "CBE SA", pos: "MID", price: 6.5 },
-  { id: 804, name: "D. Yohannes", club: "CBE SA", pos: "FWD", price: 8.0 },
+  { id: 802, name: "G. Jobe", club: "CBE SA", pos: "GKP", price: 4.5 },
+  { id: 803, name: "G. Desta", club: "CBE SA", pos: "GKP", price: 4.0 },
+  { id: 804, name: "P. Chol", club: "CBE SA", pos: "GKP", price: 4.0 },
+  { id: 805, name: "C. Amankwah", club: "CBE SA", pos: "DEF", price: 5.5 },
+  { id: 806, name: "Y. Legesse", club: "CBE SA", pos: "DEF", price: 5.0 },
+  { id: 807, name: "E. Yohannes", club: "CBE SA", pos: "DEF", price: 5.0 },
+  { id: 808, name: "A. Diakham", club: "CBE SA", pos: "DEF", price: 4.5 },
+  { id: 809, name: "T. Tamirat", club: "CBE SA", pos: "DEF", price: 4.5 },
+  { id: 810, name: "M. Elias", club: "CBE SA", pos: "DEF", price: 4.5 },
+  { id: 811, name: "Y. Jemal", club: "CBE SA", pos: "DEF", price: 4.0 },
+  { id: 812, name: "A. Megersa", club: "CBE SA", pos: "DEF", price: 4.0 },
+  { id: 813, name: "A. Teklu", club: "CBE SA", pos: "DEF", price: 4.0 },
+  { id: 814, name: "O. Kumera", club: "CBE SA", pos: "DEF", price: 4.0 },
+  { id: 815, name: "Z. Abebe", club: "CBE SA", pos: "MID", price: 6.5 },
+  { id: 816, name: "A. Tsegaye", club: "CBE SA", pos: "MID", price: 6.5 },
+  { id: 817, name: "B. Kassahun", club: "CBE SA", pos: "MID", price: 6.0 },
+  { id: 818, name: "M. Washe", club: "CBE SA", pos: "MID", price: 5.5 },
+  { id: 819, name: "B. Katise", club: "CBE SA", pos: "MID", price: 5.5 },
+  { id: 820, name: "B. Bitsuamlak", club: "CBE SA", pos: "MID", price: 5.0 },
+  { id: 821, name: "F. Geberetsadik", club: "CBE SA", pos: "MID", price: 5.0 },
+  { id: 822, name: "S. Chuhu", club: "CBE SA", pos: "MID", price: 4.5 },
+  { id: 823, name: "Y. Kidane", club: "CBE SA", pos: "MID", price: 4.5 },
+  { id: 824, name: "A. Ahmed", club: "CBE SA", pos: "MID", price: 4.5 },
+  { id: 825, name: "K. Dawit", club: "CBE SA", pos: "MID", price: 4.5 },
+  { id: 826, name: "S. Dejene", club: "CBE SA", pos: "MID", price: 4.5 },
+  { id: 827, name: "D. Yohannes", club: "CBE SA", pos: "FWD", price: 8.0 },
+  { id: 828, name: "H. Shafi", club: "CBE SA", pos: "FWD", price: 7.5 },
+  { id: 829, name: "T. Birhanu", club: "CBE SA", pos: "FWD", price: 7.0 },
+  { id: 830, name: "F. Fereja", club: "CBE SA", pos: "FWD", price: 6.5 },
+  { id: 831, name: "N. Daniel", club: "CBE SA", pos: "FWD", price: 6.0 },
+  { id: 832, name: "S. Peter", club: "CBE SA", pos: "FWD", price: 6.0 },
+  { id: 833, name: "E. Legamo", club: "CBE SA", pos: "FWD", price: 5.5 },
+  { id: 834, name: "D. Solomon", club: "CBE SA", pos: "FWD", price: 5.5 },
+  { id: 835, name: "H. Dewamu", club: "CBE SA", pos: "FWD", price: 5.0 },
+  { id: 836, name: "T. Mekonnen", club: "CBE SA", pos: "FWD", price: 5.0 },
+  { id: 837, name: "H. Ermias", club: "CBE SA", pos: "FWD", price: 5.0 },
 
-  // 9. Ethiopian Insurance
+  // ------------------------------------------
+  // 9. ETHIOPIAN INSURANCE SC
+  // ------------------------------------------
   { id: 901, name: "A. Nuri", club: "Ethiopian Insurance", pos: "GKP", price: 5.0 },
-  { id: 902, name: "I. Abdul-Ganiyu", club: "Ethiopian Insurance", pos: "DEF", price: 5.0 },
-  { id: 903, name: "D. Damisse", club: "Ethiopian Insurance", pos: "MID", price: 6.0 },
-  { id: 904, name: "W. Gezahegn", club: "Ethiopian Insurance", pos: "FWD", price: 7.0 },
+  { id: 902, name: "F. Gebremichael", club: "Ethiopian Insurance", pos: "GKP", price: 4.5 },
+  { id: 903, name: "B. Adugna", club: "Ethiopian Insurance", pos: "GKP", price: 4.0 },
+  { id: 904, name: "G. Ezkiel", club: "Ethiopian Insurance", pos: "GKP", price: 4.0 },
+  { id: 905, name: "A. Kedir", club: "Ethiopian Insurance", pos: "GKP", price: 4.0 },
+  { id: 906, name: "I. Abdul-Ganiyu", club: "Ethiopian Insurance", pos: "DEF", price: 5.0 },
+  { id: 907, name: "W. Tut", club: "Ethiopian Insurance", pos: "DEF", price: 4.5 },
+  { id: 908, name: "N. Gebreselassie", club: "Ethiopian Insurance", pos: "DEF", price: 4.5 },
+  { id: 909, name: "M. Solomon", club: "Ethiopian Insurance", pos: "DEF", price: 4.5 },
+  { id: 910, name: "M. Adane", club: "Ethiopian Insurance", pos: "DEF", price: 4.5 },
+  { id: 911, name: "Y. Kassaye", club: "Ethiopian Insurance", pos: "DEF", price: 4.0 },
+  { id: 912, name: "R. Yesuf", club: "Ethiopian Insurance", pos: "DEF", price: 4.5 },
+  { id: 913, name: "A. Leul", club: "Ethiopian Insurance", pos: "DEF", price: 4.0 },
+  { id: 914, name: "Y. Mohamed", club: "Ethiopian Insurance", pos: "DEF", price: 4.0 },
+  { id: 915, name: "B. Kekaleb", club: "Ethiopian Insurance", pos: "DEF", price: 4.0 },
+  { id: 916, name: "D. Abay", club: "Ethiopian Insurance", pos: "DEF", price: 4.0 },
+  { id: 917, name: "T. Gashaw", club: "Ethiopian Insurance", pos: "DEF", price: 4.0 },
+  { id: 918, name: "A. Muluneh", club: "Ethiopian Insurance", pos: "DEF", price: 4.0 },
+  { id: 919, name: "R. Husien", club: "Ethiopian Insurance", pos: "DEF", price: 4.0 },
+  { id: 920, name: "W. Usman", club: "Ethiopian Insurance", pos: "DEF", price: 4.0 },
+  { id: 921, name: "Y. Segebo", club: "Ethiopian Insurance", pos: "DEF", price: 4.0 },
+  { id: 922, name: "D. Damisse", club: "Ethiopian Insurance", pos: "MID", price: 6.0 },
+  { id: 923, name: "B. Afutu", club: "Ethiopian Insurance", pos: "MID", price: 6.0 },
+  { id: 924, name: "M. Otolu", club: "Ethiopian Insurance", pos: "MID", price: 5.5 },
+  { id: 925, name: "D. Awlachew", club: "Ethiopian Insurance", pos: "MID", price: 5.0 },
+  { id: 926, name: "B. Belachew", club: "Ethiopian Insurance", pos: "MID", price: 5.0 },
+  { id: 927, name: "A. Mohammed", club: "Ethiopian Insurance", pos: "MID", price: 4.5 },
+  { id: 928, name: "K. Dawit", club: "Ethiopian Insurance", pos: "MID", price: 4.5 },
+  { id: 929, name: "W. Gezahegn", club: "Ethiopian Insurance", pos: "FWD", price: 7.0 },
+  { id: 930, name: "A. Nkurunziza", club: "Ethiopian Insurance", pos: "FWD", price: 6.5 },
+  { id: 931, name: "S. Saliso", club: "Ethiopian Insurance", pos: "FWD", price: 6.5 },
+  { id: 932, name: "B. Mulugeta", club: "Ethiopian Insurance", pos: "FWD", price: 6.0 },
+  { id: 933, name: "A. Kayiwa", club: "Ethiopian Insurance", pos: "FWD", price: 6.0 },
+  { id: 934, name: "A. Dereje", club: "Ethiopian Insurance", pos: "FWD", price: 5.5 },
+  { id: 935, name: "F. Roba", club: "Ethiopian Insurance", pos: "FWD", price: 5.0 },
 
-  // 10. Adama City
-  { id: 1001, name: "W. Gedamu", club: "Adama City", pos: "GKP", price: 4.5 },
-  { id: 1002, name: "F. Alemu", club: "Adama City", pos: "DEF", price: 5.0 },
-  { id: 1003, name: "B. Tadesse", club: "Adama City", pos: "MID", price: 6.0 },
-  { id: 1004, name: "K. Osei", club: "Adama City", pos: "FWD", price: 7.5 },
+  // ------------------------------------------
+  // 10. ADAMA CITY FC
+  // ------------------------------------------
+  { id: 1001, name: "A. Markos", club: "Adama City", pos: "GKP", price: 4.5 },
+  { id: 1002, name: "N. Tefera", club: "Adama City", pos: "GKP", price: 4.0 },
+  { id: 1003, name: "D. Teshome", club: "Adama City", pos: "GKP", price: 4.0 },
+  { id: 1004, name: "J. Adugna", club: "Adama City", pos: "GKP", price: 4.0 },
+  { id: 1005, name: "M. Awol", club: "Adama City", pos: "DEF", price: 4.5 },
+  { id: 1006, name: "M. Kasim", club: "Adama City", pos: "DEF", price: 5.0 },
+  { id: 1007, name: "S. Yohannes", club: "Adama City", pos: "DEF", price: 4.5 },
+  { id: 1008, name: "E. Mathias", club: "Adama City", pos: "DEF", price: 4.5 },
+  { id: 1009, name: "M. Birhane", club: "Adama City", pos: "DEF", price: 4.0 },
+  { id: 1010, name: "A. Mohammed", club: "Adama City", pos: "DEF", price: 4.0 },
+  { id: 1011, name: "H. Kasahun", club: "Adama City", pos: "DEF", price: 4.0 },
+  { id: 1012, name: "M. Safa", club: "Adama City", pos: "DEF", price: 4.0 },
+  { id: 1013, name: "M. Feydu", club: "Adama City", pos: "DEF", price: 4.0 },
+  { id: 1014, name: "W. Taye", club: "Adama City", pos: "DEF", price: 4.0 },
+  { id: 1015, name: "H. Sherifa", club: "Adama City", pos: "MID", price: 5.5 },
+  { id: 1016, name: "A. Sisay", club: "Adama City", pos: "MID", price: 5.0 },
+  { id: 1017, name: "E. Legese", club: "Adama City", pos: "MID", price: 5.0 },
+  { id: 1018, name: "S. Dari", club: "Adama City", pos: "MID", price: 5.0 },
+  { id: 1019, name: "B. Ayiten", club: "Adama City", pos: "MID", price: 4.5 },
+  { id: 1020, name: "B. Seife", club: "Adama City", pos: "MID", price: 4.5 },
+  { id: 1021, name: "G. Wado", club: "Adama City", pos: "MID", price: 4.5 },
+  { id: 1022, name: "S. Abule", club: "Adama City", pos: "MID", price: 4.5 },
+  { id: 1023, name: "Y. Eshetu", club: "Adama City", pos: "MID", price: 4.5 },
+  { id: 1024, name: "M. Shemsu", club: "Adama City", pos: "MID", price: 4.5 },
+  { id: 1025, name: "M. Birhane", club: "Adama City", pos: "MID", price: 4.5 },
+  { id: 1026, name: "A. Sani", club: "Adama City", pos: "FWD", price: 6.5 },
+  { id: 1027, name: "A. Shimelis", club: "Adama City", pos: "FWD", price: 6.0 },
+  { id: 1028, name: "N. Nuri", club: "Adama City", pos: "FWD", price: 5.5 },
+  { id: 1029, name: "M. Kporvi", club: "Adama City", pos: "FWD", price: 6.0 },
+  { id: 1030, name: "A. Hussien", club: "Adama City", pos: "FWD", price: 5.5 },
+  { id: 1031, name: "D. Hotessa", club: "Adama City", pos: "FWD", price: 6.5 },
+  { id: 1032, name: "A. Sefa", club: "Adama City", pos: "FWD", price: 5.0 },
+  { id: 1033, name: "S. Reshid", club: "Adama City", pos: "FWD", price: 5.0 },
 
-  // 11. Hadiya Hossana
-  { id: 1101, name: "M. Shanko", club: "Hadiya Hossana", pos: "GKP", price: 4.5 },
-  { id: 1102, name: "E. Tamiru", club: "Hadiya Hossana", pos: "DEF", price: 5.0 },
-  { id: 1103, name: "B. Assefa", club: "Hadiya Hossana", pos: "MID", price: 6.0 },
-  { id: 1104, name: "S. Oukri", club: "Hadiya Hossana", pos: "FWD", price: 7.0 },
+  // ------------------------------------------
+  // 11. HADIYA HOSSANA FC
+  // ------------------------------------------
+  { id: 1101, name: "A. Owusu", club: "Hadiya Hossana", pos: "GKP", price: 4.5 },
+  { id: 1102, name: "Y. Bekele", club: "Hadiya Hossana", pos: "GKP", price: 4.0 },
+  { id: 1103, name: "B. Zeleke", club: "Hadiya Hossana", pos: "GKP", price: 4.0 },
+  { id: 1104, name: "D. Nigussie", club: "Hadiya Hossana", pos: "DEF", price: 4.5 },
+  { id: 1105, name: "D. Wondimu", club: "Hadiya Hossana", pos: "DEF", price: 4.0 },
+  { id: 1106, name: "K. Coulibaly", club: "Hadiya Hossana", pos: "DEF", price: 4.5 },
+  { id: 1107, name: "D. Desalegn", club: "Hadiya Hossana", pos: "DEF", price: 4.0 },
+  { id: 1108, name: "N. Moges", club: "Hadiya Hossana", pos: "DEF", price: 4.0 },
+  { id: 1109, name: "H. Arfichu", club: "Hadiya Hossana", pos: "DEF", price: 4.0 },
+  { id: 1110, name: "K. Wubshet", club: "Hadiya Hossana", pos: "DEF", price: 4.0 },
+  { id: 1111, name: "A. Elias", club: "Hadiya Hossana", pos: "DEF", price: 4.0 },
+  { id: 1112, name: "M. Kebela", club: "Hadiya Hossana", pos: "MID", price: 5.5 },
+  { id: 1113, name: "E. Alemayehu", club: "Hadiya Hossana", pos: "MID", price: 5.0 },
+  { id: 1114, name: "M. Mishamo", club: "Hadiya Hossana", pos: "MID", price: 5.0 },
+  { id: 1115, name: "E. Abayneh", club: "Hadiya Hossana", pos: "MID", price: 4.5 },
+  { id: 1116, name: "T. Anley", club: "Hadiya Hossana", pos: "MID", price: 4.5 },
+  { id: 1117, name: "S. Getachew", club: "Hadiya Hossana", pos: "MID", price: 4.5 },
+  { id: 1118, name: "S. Temesgen", club: "Hadiya Hossana", pos: "MID", price: 4.5 },
+  { id: 1119, name: "A. Derbe", club: "Hadiya Hossana", pos: "MID", price: 4.5 },
+  { id: 1120, name: "T. Seboka", club: "Hadiya Hossana", pos: "MID", price: 4.5 },
+  { id: 1121, name: "M. Ayele", club: "Hadiya Hossana", pos: "MID", price: 4.5 },
+  { id: 1122, name: "E. Ahmed", club: "Hadiya Hossana", pos: "MID", price: 4.5 },
+  { id: 1123, name: "T. Gizaw", club: "Hadiya Hossana", pos: "FWD", price: 6.0 },
+  { id: 1124, name: "C. Teshita", club: "Hadiya Hossana", pos: "FWD", price: 5.5 },
+  { id: 1125, name: "T. Birhanu", club: "Hadiya Hossana", pos: "FWD", price: 6.0 },
+  { id: 1126, name: "B. Beyene", club: "Hadiya Hossana", pos: "FWD", price: 5.5 },
+  { id: 1127, name: "D. Wamisho", club: "Hadiya Hossana", pos: "FWD", price: 5.0 },
+  { id: 1128, name: "T. Tsedeke", club: "Hadiya Hossana", pos: "FWD", price: 5.0 },
+  { id: 1129, name: "J. Kemal", club: "Hadiya Hossana", pos: "FWD", price: 5.0 },
 
-  // 12. Dire Dawa City
-  { id: 1201, name: "T. Aschalew", club: "Dire Dawa City", pos: "GKP", price: 4.5 },
-  { id: 1202, name: "A. Mengistu", club: "Dire Dawa City", pos: "DEF", price: 4.5 },
-  { id: 1203, name: "E. Bekele", club: "Dire Dawa City", pos: "MID", price: 6.0 },
-  { id: 1204, name: "O. Okiki", club: "Dire Dawa City", pos: "FWD", price: 7.0 },
+  // ------------------------------------------
+  // 12. WELAYTA DICHA SC
+  // ------------------------------------------
+  { id: 1201, name: "K. Ndiaye", club: "Welayta Dicha", pos: "GKP", price: 4.5 },
+  { id: 1202, name: "A. Yishak", club: "Welayta Dicha", pos: "GKP", price: 4.0 },
+  { id: 1203, name: "A. Habte", club: "Welayta Dicha", pos: "GKP", price: 4.0 },
+  { id: 1204, name: "M. Bogale", club: "Welayta Dicha", pos: "DEF", price: 4.5 },
+  { id: 1205, name: "W. Kifle", club: "Welayta Dicha", pos: "DEF", price: 4.5 },
+  { id: 1206, name: "N. Nasero", club: "Welayta Dicha", pos: "DEF", price: 4.5 },
+  { id: 1207, name: "A. Abel", club: "Welayta Dicha", pos: "DEF", price: 4.0 },
+  { id: 1208, name: "B. Elias", club: "Welayta Dicha", pos: "DEF", price: 4.0 },
+  { id: 1209, name: "S. Solomon", club: "Welayta Dicha", pos: "DEF", price: 4.0 },
+  { id: 1210, name: "A. Amtataw", club: "Welayta Dicha", pos: "DEF", price: 4.0 },
+  { id: 1211, name: "K. Abebe", club: "Welayta Dicha", pos: "DEF", price: 4.0 },
+  { id: 1212, name: "B. Hizkel", club: "Welayta Dicha", pos: "DEF", price: 4.0 },
+  { id: 1213, name: "K. Kebede", club: "Welayta Dicha", pos: "DEF", price: 4.0 },
+  { id: 1214, name: "M. Tesfaye", club: "Welayta Dicha", pos: "DEF", price: 4.0 },
+  { id: 1215, name: "T. Tadesse", club: "Welayta Dicha", pos: "MID", price: 5.5 },
+  { id: 1216, name: "K. Assefa", club: "Welayta Dicha", pos: "MID", price: 5.5 },
+  { id: 1217, name: "M. Addisu", club: "Welayta Dicha", pos: "MID", price: 5.0 },
+  { id: 1218, name: "E. Tesfaye", club: "Welayta Dicha", pos: "MID", price: 5.0 },
+  { id: 1219, name: "K. Kirkos", club: "Welayta Dicha", pos: "MID", price: 4.5 },
+  { id: 1220, name: "M. Nikole", club: "Welayta Dicha", pos: "MID", price: 4.5 },
+  { id: 1221, name: "A. Okejepha", club: "Welayta Dicha", pos: "MID", price: 5.0 },
+  { id: 1222, name: "S. Ibrahim", club: "Welayta Dicha", pos: "MID", price: 5.0 },
+  { id: 1223, name: "C. Mengistu", club: "Welayta Dicha", pos: "MID", price: 4.5 },
+  { id: 1224, name: "M. Ufayisa", club: "Welayta Dicha", pos: "MID", price: 4.5 },
+  { id: 1225, name: "C. Ufayisa", club: "Welayta Dicha", pos: "MID", price: 4.5 },
+  { id: 1226, name: "Y. Darza", club: "Welayta Dicha", pos: "FWD", price: 6.5 },
+  { id: 1227, name: "M. Solomon", club: "Welayta Dicha", pos: "FWD", price: 6.0 },
+  { id: 1228, name: "Y. Elias", club: "Welayta Dicha", pos: "FWD", price: 5.5 },
+  { id: 1229, name: "T. Hilemariam", club: "Welayta Dicha", pos: "FWD", price: 5.5 },
+  { id: 1230, name: "A. Almayhu", club: "Welayta Dicha", pos: "FWD", price: 5.0 },
+  { id: 1231, name: "Y. Solomon", club: "Welayta Dicha", pos: "FWD", price: 5.0 },
+  { id: 1232, name: "A. Olisa", club: "Welayta Dicha", pos: "FWD", price: 5.0 },
+  { id: 1233, name: "M. Daniel", club: "Welayta Dicha", pos: "FWD", price: 5.0 },
 
-  // 13. Welayta Dicha
-  { id: 1301, name: "R. Ismael", club: "Welayta Dicha", pos: "GKP", price: 4.5 },
-  { id: 1302, name: "G. Chala", club: "Welayta Dicha", pos: "DEF", price: 5.0 },
-  { id: 1303, name: "A. Mohammed", club: "Welayta Dicha", pos: "MID", price: 6.0 },
-  { id: 1304, name: "B. Girma", club: "Welayta Dicha", pos: "FWD", price: 7.0 },
+  // ------------------------------------------
+  // 13. WELWALO ADIGRAT UNIVERSITY FC
+  // ------------------------------------------
+  { id: 1301, name: "J. Mutakubwa", club: "Welwalo Adigrat", pos: "GKP", price: 4.5 },
+  { id: 1302, name: "S. Bereket", club: "Welwalo Adigrat", pos: "GKP", price: 4.0 },
+  { id: 1303, name: "K. Mulugeta", club: "Welwalo Adigrat", pos: "GKP", price: 4.0 },
+  { id: 1304, name: "C. Damtew", club: "Welwalo Adigrat", pos: "DEF", price: 4.5 },
+  { id: 1305, name: "M. Ramathan", club: "Welwalo Adigrat", pos: "DEF", price: 4.0 },
+  { id: 1306, name: "B. Endale", club: "Welwalo Adigrat", pos: "DEF", price: 4.0 },
+  { id: 1307, name: "E. Zewdu", club: "Welwalo Adigrat", pos: "DEF", price: 4.0 },
+  { id: 1308, name: "T. Geleta", club: "Welwalo Adigrat", pos: "DEF", price: 4.0 },
+  { id: 1309, name: "H. Tilahun", club: "Welwalo Adigrat", pos: "DEF", price: 4.0 },
+  { id: 1310, name: "B. Habtamu", club: "Welwalo Adigrat", pos: "MID", price: 5.0 },
+  { id: 1311, name: "S. Mengistu", club: "Welwalo Adigrat", pos: "MID", price: 4.5 },
+  { id: 1312, name: "Y. Alemu", club: "Welwalo Adigrat", pos: "MID", price: 4.5 },
+  { id: 1313, name: "N. Getachew", club: "Welwalo Adigrat", pos: "MID", price: 4.5 },
+  { id: 1314, name: "F. Tadesse", club: "Welwalo Adigrat", pos: "MID", price: 4.5 },
+  { id: 1315, name: "F. Bayo", club: "Welwalo Adigrat", pos: "FWD", price: 6.5 },
+  { id: 1316, name: "A. Yohannes", club: "Welwalo Adigrat", pos: "FWD", price: 5.5 },
+  { id: 1317, name: "D. Fikadu", club: "Welwalo Adigrat", pos: "FWD", price: 5.5 },
+  { id: 1318, name: "H. Mulugeta", club: "Welwalo Adigrat", pos: "FWD", price: 5.0 },
 
-  // 14. Arba Minch City
-  { id: 1401, name: "E. Mulugeta", club: "Arba Minch City", pos: "GKP", price: 4.5 },
-  { id: 1402, name: "B. Zerihun", club: "Arba Minch City", pos: "DEF", price: 4.5 },
-  { id: 1403, name: "T. Wakjira", club: "Arba Minch City", pos: "MID", price: 5.5 },
-  { id: 1404, name: "Y. Getachew", club: "Arba Minch City", pos: "FWD", price: 6.5 },
+  // ------------------------------------------
+  // 14. NEGELE ARSI FC
+  // ------------------------------------------
+  { id: 1401, name: "A. Iddrisu", club: "Negele Arsi", pos: "GKP", price: 4.5 },
+  { id: 1402, name: "E. Teshome", club: "Negele Arsi", pos: "GKP", price: 4.0 },
+  { id: 1403, name: "A. Ketema", club: "Negele Arsi", pos: "GKP", price: 4.0 },
+  { id: 1404, name: "R. Selalo", club: "Negele Arsi", pos: "DEF", price: 4.5 },
+  { id: 1405, name: "D. Melese", club: "Negele Arsi", pos: "DEF", price: 4.0 },
+  { id: 1406, name: "P. Eboussi", club: "Negele Arsi", pos: "DEF", price: 4.5 },
+  { id: 1407, name: "T. Bekele", club: "Negele Arsi", pos: "DEF", price: 4.0 },
+  { id: 1408, name: "M. Fikre", club: "Negele Arsi", pos: "DEF", price: 4.0 },
+  { id: 1409, name: "F. Petros", club: "Negele Arsi", pos: "DEF", price: 4.0 },
+  { id: 1410, name: "A. Wuro", club: "Negele Arsi", pos: "DEF", price: 4.0 },
+  { id: 1411, name: "B. Tsegaye", club: "Negele Arsi", pos: "DEF", price: 4.0 },
+  { id: 1412, name: "B. Boka", club: "Negele Arsi", pos: "DEF", price: 4.0 },
+  { id: 1413, name: "F. Shibiru", club: "Negele Arsi", pos: "DEF", price: 4.0 },
+  { id: 1414, name: "A. Markos", club: "Negele Arsi", pos: "MID", price: 5.0 },
+  { id: 1415, name: "D. Tefera", club: "Negele Arsi", pos: "MID", price: 4.5 },
+  { id: 1416, name: "B. Wolde", club: "Negele Arsi", pos: "MID", price: 4.5 },
+  { id: 1417, name: "Z. Feleke", club: "Negele Arsi", pos: "MID", price: 4.5 },
+  { id: 1418, name: "F. Tewoldemariyam", club: "Negele Arsi", pos: "MID", price: 4.5 },
+  { id: 1419, name: "A. Kemal", club: "Negele Arsi", pos: "MID", price: 4.5 },
+  { id: 1420, name: "A. Fanta", club: "Negele Arsi", pos: "MID", price: 4.5 },
+  { id: 1421, name: "B. Bekure", club: "Negele Arsi", pos: "MID", price: 4.5 },
+  { id: 1422, name: "H. Kemal", club: "Negele Arsi", pos: "FWD", price: 6.0 },
+  { id: 1423, name: "D. Araya", club: "Negele Arsi", pos: "FWD", price: 5.5 },
+  { id: 1424, name: "K. Bezuneh", club: "Negele Arsi", pos: "FWD", price: 5.5 },
+  { id: 1425, name: "G. Dubale", club: "Negele Arsi", pos: "FWD", price: 5.0 },
+  { id: 1426, name: "K. Jima", club: "Negele Arsi", pos: "FWD", price: 5.0 },
+  { id: 1427, name: "M. Melaku", club: "Negele Arsi", pos: "FWD", price: 5.0 },
+  { id: 1428, name: "E. Befikadu", club: "Negele Arsi", pos: "FWD", price: 5.0 },
+  { id: 1429, name: "N. Solomon", club: "Negele Arsi", pos: "FWD", price: 5.0 },
+  { id: 1430, name: "D. Gemechu", club: "Negele Arsi", pos: "FWD", price: 5.0 },
+  { id: 1431, name: "T. Nura", club: "Negele Arsi", pos: "FWD", price: 5.0 },
 
-  // 15. Legetafo Legedadi
-  { id: 1501, name: "S. Negash", club: "Legetafo", pos: "GKP", price: 4.5 },
-  { id: 1502, name: "D. Hunde", club: "Legetafo", pos: "DEF", price: 4.5 },
-  { id: 1503, name: "M. Kemal", club: "Legetafo", pos: "MID", price: 5.5 },
-  { id: 1504, name: "K. Nasir", club: "Legetafo", pos: "FWD", price: 6.5 },
+  // ------------------------------------------
+  // 15. SHEGER KETEMA FC
+  // ------------------------------------------
+  { id: 1501, name: "B. Negash", club: "Sheger Ketema", pos: "GKP", price: 4.5 },
+  { id: 1502, name: "A. Belay", club: "Sheger Ketema", pos: "GKP", price: 4.0 },
+  { id: 1503, name: "M. Yegele", club: "Sheger Ketema", pos: "GKP", price: 4.0 },
+  { id: 1504, name: "G. Desalegn", club: "Sheger Ketema", pos: "DEF", price: 4.5 },
+  { id: 1505, name: "A. Ayele", club: "Sheger Ketema", pos: "DEF", price: 4.0 },
+  { id: 1506, name: "K. Beyene", club: "Sheger Ketema", pos: "DEF", price: 4.0 },
+  { id: 1507, name: "F. Alemayehu", club: "Sheger Ketema", pos: "DEF", price: 4.0 },
+  { id: 1508, name: "M. Hailu", club: "Sheger Ketema", pos: "DEF", price: 4.0 },
+  { id: 1509, name: "T. Sisay", club: "Sheger Ketema", pos: "DEF", price: 4.0 },
+  { id: 1510, name: "S. Mamo", club: "Sheger Ketema", pos: "DEF", price: 4.0 },
+  { id: 1511, name: "O. Mohammed", club: "Sheger Ketema", pos: "DEF", price: 4.0 },
+  { id: 1512, name: "H. Adugna", club: "Sheger Ketema", pos: "DEF", price: 4.0 },
+  { id: 1513, name: "N. Zeleke", club: "Sheger Ketema", pos: "MID", price: 5.0 },
+  { id: 1514, name: "Z. Keder", club: "Sheger Ketema", pos: "MID", price: 4.5 },
+  { id: 1515, name: "A. Abdo", club: "Sheger Ketema", pos: "MID", price: 4.5 },
+  { id: 1516, name: "M. Milkiyas", club: "Sheger Ketema", pos: "MID", price: 4.5 },
+  { id: 1517, name: "A. Hizkiel", club: "Sheger Ketema", pos: "MID", price: 4.5 },
+  { id: 1518, name: "A. Regasa", club: "Sheger Ketema", pos: "MID", price: 4.5 },
+  { id: 1519, name: "M. Gali", club: "Sheger Ketema", pos: "MID", price: 4.5 },
+  { id: 1520, name: "E. Miftah", club: "Sheger Ketema", pos: "MID", price: 4.5 },
+  { id: 1521, name: "B. Abrha", club: "Sheger Ketema", pos: "MID", price: 4.5 },
+  { id: 1522, name: "B. Fikre", club: "Sheger Ketema", pos: "FWD", price: 6.5 },
+  { id: 1523, name: "C. Lam", club: "Sheger Ketema", pos: "FWD", price: 5.5 },
+  { id: 1524, name: "B. Shura", club: "Sheger Ketema", pos: "FWD", price: 5.5 },
+  { id: 1525, name: "Y. Mekonen", club: "Sheger Ketema", pos: "FWD", price: 5.0 },
+  { id: 1526, name: "J. Miesa", club: "Sheger Ketema", pos: "FWD", price: 5.0 },
+  { id: 1527, name: "G. Mamo", club: "Sheger Ketema", pos: "FWD", price: 5.0 },
+  { id: 1528, name: "Y. Yitagesu", club: "Sheger Ketema", pos: "FWD", price: 5.0 },
+  { id: 1529, name: "M. Habetamu", club: "Sheger Ketema", pos: "FWD", price: 5.0 },
+  { id: 1530, name: "D. Kassaw", club: "Sheger Ketema", pos: "FWD", price: 5.0 },
+  { id: 1531, name: "Y. Tarekegn", club: "Sheger Ketema", pos: "FWD", price: 5.0 },
+  { id: 1532, name: "M. Nuredin", club: "Sheger Ketema", pos: "FWD", price: 5.0 },
 
-  // 16. Ethio Electric
-  { id: 1601, name: "B. Haile", club: "Ethio Electric", pos: "GKP", price: 4.5 },
-  { id: 1602, name: "N. Kassim", club: "Ethio Electric", pos: "DEF", price: 4.5 },
-  { id: 1603, name: "H. Kedir", club: "Ethio Electric", pos: "MID", price: 5.5 },
-  { id: 1604, name: "A. Wondimu", club: "Ethio Electric", pos: "FWD", price: 6.5 }
+  // ------------------------------------------
+  // 16. ETHIO ELECTRIC
+  // ------------------------------------------
+  { id: 1601, name: "N. Alionzi", club: "Ethio Electric", pos: "GKP", price: 4.5 },
+  { id: 1602, name: "Y. Morou", club: "Ethio Electric", pos: "GKP", price: 4.0 },
+  { id: 1603, name: "A. Tesfaye", club: "Ethio Electric", pos: "GKP", price: 4.0 },
+  { id: 1604, name: "K. Haile", club: "Ethio Electric", pos: "GKP", price: 4.0 },
+  { id: 1605, name: "B. Woldeyohannes", club: "Ethio Electric", pos: "DEF", price: 4.5 },
+  { id: 1606, name: "D. Kiyar", club: "Ethio Electric", pos: "DEF", price: 4.5 },
+  { id: 1607, name: "B. Asresehegn", club: "Ethio Electric", pos: "DEF", price: 4.0 },
+  { id: 1608, name: "A. Tiruneh", club: "Ethio Electric", pos: "DEF", price: 4.0 },
+  { id: 1609, name: "A. Aliu", club: "Ethio Electric", pos: "DEF", price: 4.0 },
+  { id: 1610, name: "G. Hailu", club: "Ethio Electric", pos: "DEF", price: 4.0 },
+  { id: 1611, name: "D. Nebret", club: "Ethio Electric", pos: "DEF", price: 4.0 },
+  { id: 1612, name: "H. Tameru", club: "Ethio Electric", pos: "DEF", price: 4.0 },
+  { id: 1613, name: "H. Shewalem", club: "Ethio Electric", pos: "MID", price: 5.5 },
+  { id: 1614, name: "B. Meleyo", club: "Ethio Electric", pos: "MID", price: 5.5 },
+  { id: 1615, name: "H. Gebrehiwot", club: "Ethio Electric", pos: "MID", price: 5.0 },
+  { id: 1616, name: "N. Dubale", club: "Ethio Electric", pos: "MID", price: 5.0 },
+  { id: 1617, name: "M. Reshid", club: "Ethio Electric", pos: "MID", price: 4.5 },
+  { id: 1618, name: "A. Bedru", club: "Ethio Electric", pos: "MID", price: 4.5 },
+  { id: 1619, name: "B. Medhin", club: "Ethio Electric", pos: "MID", price: 4.5 },
+  { id: 1620, name: "H. Jaleto", club: "Ethio Electric", pos: "MID", price: 4.5 },
+  { id: 1621, name: "N. Tesfaye", club: "Ethio Electric", pos: "MID", price: 4.5 },
+  { id: 1622, name: "E. Nebiyat", club: "Ethio Electric", pos: "MID", price: 4.5 },
+  { id: 1623, name: "A. Habtamu", club: "Ethio Electric", pos: "FWD", price: 6.5 },
+  { id: 1624, name: "E. Gebremariyam", club: "Ethio Electric", pos: "FWD", price: 6.0 },
+  { id: 1625, name: "A. Tesfaye", club: "Ethio Electric", pos: "FWD", price: 5.5 },
+  { id: 1626, name: "H. Husen", club: "Ethio Electric", pos: "FWD", price: 5.5 },
+  { id: 1627, name: "A. Hussen", club: "Ethio Electric", pos: "FWD", price: 5.0 },
+  { id: 1628, name: "A. Negash", club: "Ethio Electric", pos: "FWD", price: 5.0 },
+  { id: 1629, name: "B. Eylachew", club: "Ethio Electric", pos: "FWD", price: 5.0 }
 ];
-
-let activeSlotId = null;
-let currentPositionFilter = null;
-
-// ==========================================
-// 4. STORAGE & UI RENDERING
-// ==========================================
-function loadState() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    try {
-      appState = JSON.parse(saved);
-    } catch (e) {
-      console.error("Error loading saved state", e);
-    }
-  }
-  renderPitch();
-}
-
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-}
-
-function renderPitch() {
-  const rows = {
-    GKP: document.getElementById('row-GKP'),
-    DEF: document.getElementById('row-DEF'),
-    MID: document.getElementById('row-MID'),
-    FWD: document.getElementById('row-FWD'),
-    BENCH: document.getElementById('row-BENCH')
-  };
-
-  Object.values(rows).forEach(r => r.innerHTML = '');
-
-  let filledCount = 0;
-
-  appState.slots.forEach(s => {
-    const targetRow = s.isBench ? rows.BENCH : rows[s.pos];
-    const slotEl = document.createElement('div');
-    slotEl.className = `slot ${s.player ? 'filled' : ''}`;
-
-    if (s.player) {
-      filledCount++;
-      slotEl.innerHTML = `
-        <div class="slot-btn">👕</div>
-        <div class="slot-label">${s.player.name}</div>
-        <div class="slot-sub">ETB ${s.player.price}M</div>
-      `;
-      slotEl.onclick = () => removePlayer(s.id);
-    } else {
-      slotEl.innerHTML = `
-        <div class="slot-btn">+</div>
-        <div class="slot-label">${s.pos}</div>
-        <div class="slot-sub">${s.isBench ? 'Bench' : 'Select'}</div>
-      `;
-      slotEl.onclick = () => openModal(s.id, s.pos);
-    }
-
-    targetRow.appendChild(slotEl);
-  });
-
-  document.getElementById('squad-count').innerText = `${filledCount}/15`;
-  document.getElementById('bank-val').innerText = `ETB ${appState.bank.toFixed(1)}M`;
-}
-
-// ==========================================
-// 5. MODAL & PLAYER SELECTION LOGIC
-// ==========================================
-function openModal(slotId, position) {
-  activeSlotId = slotId;
-  currentPositionFilter = position;
-  document.getElementById('modal-title').innerText = `Select ${position}`;
-  document.getElementById('modal-search').value = '';
-  
-  renderModalList();
-  document.getElementById('selection-modal').style.display = 'flex';
-}
-
-function renderModalList() {
-  const listEl = document.getElementById('player-options-list');
-  listEl.innerHTML = '';
-
-  const searchQuery = document.getElementById('modal-search').value.toLowerCase();
-  const selectedPlayerIds = appState.slots.filter(s => s.player).map(s => s.player.id);
-
-  const available = playerMarket.filter(p => {
-    const matchPos = p.pos === currentPositionFilter;
-    const notSelected = !selectedPlayerIds.includes(p.id);
-    const matchSearch = p.name.toLowerCase().includes(searchQuery) || p.club.toLowerCase().includes(searchQuery);
-    return matchPos && notSelected && matchSearch;
-  });
-
-  if (available.length === 0) {
-    listEl.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding: 20px;">No matching players found.</p>';
-    return;
-  }
-
-  available.forEach(p => {
-    const item = document.createElement('div');
-    item.className = 'player-option';
-    item.innerHTML = `
-      <div>
-        <strong>${p.name}</strong> <span style="font-size:11px; color:var(--text-muted);">(${p.club})</span><br/>
-        <span style="font-size:11px; color:var(--accent-color);">ETB ${p.price}M</span>
-      </div>
-      <button class="btn-select" onclick="selectPlayer(${p.id})">Add</button>
-    `;
-    listEl.appendChild(item);
-  });
-}
-
-function filterModalPlayers() {
-  renderModalList();
-}
-
-function selectPlayer(playerId) {
-  const player = playerMarket.find(p => p.id === playerId);
-  if (!player) return;
-
-  // Check budget limit
-  if (appState.bank < player.price) {
-    alert("Insufficient budget remaining!");
-    return;
-  }
-
-  // Check Max 3 Players per Club rule
-  const clubCount = appState.slots.filter(s => s.player && s.player.club === player.club).length;
-  if (clubCount >= 3) {
-    alert(`You can only select a maximum of 3 players from ${player.club}!`);
-    return;
-  }
-
-  const slotIndex = appState.slots.findIndex(s => s.id === activeSlotId);
-  if (slotIndex !== -1) {
-    appState.bank -= player.price;
-    appState.slots[slotIndex].player = player;
-    saveState();
-    renderPitch();
-    closeModal();
-  }
-}
-
-function removePlayer(slotId) {
-  const slotIndex = appState.slots.findIndex(s => s.id === slotId);
-  if (slotIndex !== -1 && appState.slots[slotIndex].player) {
-    appState.bank += appState.slots[slotIndex].player.price;
-    appState.slots[slotIndex].player = null;
-    saveState();
-    renderPitch();
-  }
-}
-
-function closeModal() {
-  document.getElementById('selection-modal').style.display = 'none';
-  activeSlotId = null;
-  currentPositionFilter = null;
-}
-
-// Initialize App on load
-loadState();
