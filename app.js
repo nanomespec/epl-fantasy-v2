@@ -1,157 +1,188 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EPL & Local Fantasy League</title>
-    <style>
-        :root {
-            --primary: #0ff0fc;
-            --bg-dark: #121214;
-            --surface: #1e1e24;
-            --text-main: #ffffff;
-            --text-muted: #a1a1aa;
+/**
+ * EPL & Local Fantasy League - Main Application Logic
+ * Built from scratch to ensure clean code, zero errors, and full modularity.
+ */
+
+// ==========================================
+// 1. CONFIGURATION & STATE
+// ==========================================
+const CONFIG = {
+    MAX_SQUAD_SIZE: 15,
+    MAX_BUDGET: 100.0,
+    STORAGE_KEY: "epl_fantasy_squad_v2"
+};
+
+let appState = {
+    budget: CONFIG.MAX_BUDGET,
+    players: [], // User's selected squad
+    filter: "ALL"
+};
+
+// ==========================================
+// 2. PLAYER DATABASE (Sample & Extensible)
+// ==========================================
+const PLAYERS_DATABASE = [
+    // Goalkeepers (GKP)
+    { id: 1, name: "I. Danlad", club: "Ethiopian Coffee", pos: "GKP", price: 5.0 },
+    { id: 2, name: "T. Kibatu", club: "Ethiopian Coffee", pos: "GKP", price: 4.5 },
+    
+    // Defenders (DEF)
+    { id: 3, name: "R. James", club: "Ethiopian Coffee", pos: "DEF", price: 5.0 },
+    { id: 4, name: "A. Mengistu", club: "Saint George", pos: "DEF", price: 5.5 },
+    { id: 5, name: "D. Bekele", club: "Saint George", pos: "DEF", price: 4.5 },
+
+    // Midfielders (MID)
+    { id: 6, name: "E. Selesh", club: "Saint George", pos: "MID", price: 4.5 },
+    { id: 7, name: "B. Endale", club: "Saint George", pos: "MID", price: 5.0 },
+    { id: 8, name: "S. Girma", club: "Ethiopian Coffee", pos: "MID", price: 6.5 },
+
+    // Forwards (FWD)
+    { id: 9, name: "A. Yalew", club: "Saint George", pos: "FWD", price: 8.5 },
+    { id: 10, name: "T. Teshome", club: "Saint George", pos: "FWD", price: 7.5 },
+    { id: 11, name: "M. Nasser", club: "Ethiopian Coffee", pos: "FWD", price: 8.0 }
+];
+
+// ==========================================
+// 3. CORE SQUAD LOGIC
+// ==========================================
+function initApp() {
+    loadFromLocalStorage();
+    renderApp();
+    setupEventListeners();
+}
+
+function addPlayer(playerId) {
+    const player = PLAYERS_DATABASE.find(p => p.id === playerId);
+    if (!player) return { success: false, message: "Player not found." };
+
+    if (appState.players.length >= CONFIG.MAX_SQUAD_SIZE) {
+        return { success: false, message: "Squad is full (Max 15 players)." };
+    }
+
+    if (appState.budget - player.price < 0) {
+        return { success: false, message: "Not enough budget!" };
+    }
+
+    if (appState.players.some(p => p.id === playerId)) {
+        return { success: false, message: "Player is already in your squad." };
+    }
+
+    appState.players.push(player);
+    appState.budget = +(appState.budget - player.price).toFixed(1);
+    
+    saveToLocalStorage();
+    renderApp();
+    return { success: true, message: `${player.name} added successfully.` };
+}
+
+function removePlayer(playerId) {
+    const index = appState.players.findIndex(p => p.id === playerId);
+    if (index === -1) return { success: false, message: "Player not in squad." };
+
+    const removed = appState.players.splice(index, 1)[0];
+    appState.budget = +(appState.budget + removed.price).toFixed(1);
+
+    saveToLocalStorage();
+    renderApp();
+    return { success: true, message: `${removed.name} removed.` };
+}
+
+// ==========================================
+// 4. STORAGE HELPERS
+// ==========================================
+function saveToLocalStorage() {
+    try {
+        localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify({
+            budget: appState.budget,
+            players: appState.players
+        }));
+    } catch (e) {
+        console.error("Failed to save local state:", e);
+    }
+}
+
+function loadFromLocalStorage() {
+    try {
+        const saved = localStorage.getItem(CONFIG.STORAGE_KEY);
+        if (saved) {
+            const data = JSON.parse(saved);
+            appState.budget = data.budget;
+            appState.players = data.players;
         }
+    } catch (e) {
+        console.error("Failed to load local state:", e);
+    }
+}
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
-        }
+// ==========================================
+// 5. UI RENDERING & DOM HOOKS
+// ==========================================
+function renderApp() {
+    // Update budget and squad count counters if elements exist in HTML
+    updateElementText("budget-counter", `£${appState.budget}m`);
+    updateElementText("squad-count", `${appState.players.length}/15`);
+    
+    renderPlayerList();
+    renderUserSquad();
+}
 
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--surface);
-            padding: 15px 25px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
+function updateElementText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+}
 
-        .stats-container {
-            display: flex;
-            gap: 20px;
-            font-weight: bold;
-        }
+function renderPlayerList() {
+    const container = document.getElementById("player-list");
+    if (!container) return;
 
-        .dashboard {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
+    const filtered = appState.filter === "ALL" 
+        ? PLAYERS_DATABASE 
+        : PLAYERS_DATABASE.filter(p => p.pos === appState.filter);
 
-        @media (max-width: 768px) {
-            .dashboard {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .panel {
-            background: var(--surface);
-            padding: 20px;
-            border-radius: 10px;
-            min-height: 400px;
-        }
-
-        h2 {
-            margin-top: 0;
-            font-size: 1.25rem;
-            border-bottom: 2px solid #2d2d38;
-            padding-bottom: 10px;
-        }
-
-        .filters {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 15px;
-        }
-
-        .filter-btn {
-            background: #2d2d38;
-            border: none;
-            color: var(--text-main);
-            padding: 6px 12px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .filter-btn:hover {
-            background: #3f3f4e;
-        }
-
-        .player-card, .squad-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #252530;
-            padding: 10px 15px;
-            border-radius: 6px;
-            margin-bottom: 10px;
-        }
-
-        .player-card span, .squad-item span {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-        }
-
-        button {
-            background: var(--primary);
-            border: none;
-            color: #000;
-            padding: 6px 12px;
-            font-weight: bold;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            opacity: 0.9;
-        }
-    </style>
-</head>
-<body>
-
-    <!-- Header Stats -->
-    <header>
-        <h1>Fantasy League</h1>
-        <div class="stats-container">
-            <div>Budget: <span id="budget-counter">£100.0m</span></div>
-            <div>Squad: <span id="squad-count">0/15</span></div>
-        </div>
-    </header>
-
-    <!-- Main Workspace -->
-    <div class="dashboard">
-        
-        <!-- Left Column: Player Market / Selection -->
-        <div class="panel">
-            <h2>Player Market</h2>
-            <div class="filters">
-                <button class="filter-btn" data-pos="ALL">All</button>
-                <button class="filter-btn" data-pos="GKP">GKP</button>
-                <button class="filter-btn" data-pos="DEF">DEF</button>
-                <button class="filter-btn" data-pos="MID">MID</button>
-                <button class="filter-btn" data-pos="FWD">FWD</button>
+    container.innerHTML = filtered.map(p => `
+        <div class="player-card" data-id="${p.id}">
+            <div class="info">
+                <strong>${p.name}</strong>
+                <span>${p.club} • ${p.pos} • £${p.price}m</span>
             </div>
-            <div id="player-list">
-                <!-- Dynamically rendered via app.js -->
-            </div>
+            <button onclick="handleAddClick(${p.id})">Add</button>
         </div>
+    `).join("");
+}
 
-        <!-- Right Column: User Squad -->
-        <div class="panel">
-            <h2>Your Squad</h2>
-            <div id="user-squad-list">
-                <!-- Dynamically rendered via app.js -->
-            </div>
+function renderUserSquad() {
+    const container = document.getElementById("user-squad-list");
+    if (!container) return;
+
+    container.innerHTML = appState.players.map(p => `
+        <div class="squad-item" data-id="${p.id}">
+            <span>${p.name} (${p.pos}) - £${p.price}m</span>
+            <button onclick="handleRemoveClick(${p.id})">Remove</button>
         </div>
+    `).join("");
+}
 
-    </div>
+// ==========================================
+/* 6. EVENT HANDLERS */
+// ==========================================
+function handleAddClick(id) {
+    const res = addPlayer(id);
+    if (!res.success) alert(res.message);
+}
 
-    <!-- Link your main logic script -->
-    <script src="app.js"></script>
-</body>
-</html>
+function handleRemoveClick(id) {
+    removePlayer(id);
+}
+
+function setupEventListeners() {
+    // Optional: Filter buttons hookup if present in HTML
+    document.querySelectorAll(".filter-btn").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            appState.filter = e.target.dataset.pos;
+            renderPlayerList();
+        });
+    });
+}
+
+// Initialize on DOM load
+document.addEventListener("DOMContentLoaded", initApp);
