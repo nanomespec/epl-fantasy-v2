@@ -43,60 +43,104 @@ let appState = {
 };
 
 // ==========================================
-// 3. COMPLETE PLAYER MARKET DATABASE
+// 3. COMPLETE 16-TEAM PLAYER MARKET DATABASE
 // ==========================================
 const playerMarket = [
-  // Saint George
+  // 1. Saint George
   { id: 101, name: "T. Yohannes", club: "Saint George", pos: "GKP", price: 5.0 },
   { id: 102, name: "S. Mustefa", club: "Saint George", pos: "DEF", price: 5.5 },
   { id: 103, name: "A. Atula", club: "Saint George", pos: "MID", price: 6.5 },
   { id: 104, name: "T. Teshome", club: "Saint George", pos: "FWD", price: 7.5 },
   
-  // Ethiopian Coffee
+  // 2. Ethiopian Coffee
   { id: 201, name: "I. Danlad", club: "Ethiopian Coffee", pos: "GKP", price: 5.0 },
   { id: 202, name: "R. James", club: "Ethiopian Coffee", pos: "DEF", price: 5.0 },
   { id: 203, name: "Y. Tariku", club: "Ethiopian Coffee", pos: "MID", price: 6.5 },
   { id: 204, name: "Z. Abate", club: "Ethiopian Coffee", pos: "FWD", price: 7.5 },
 
-  // Mechal SC
+  // 3. Mechal SC
   { id: 301, name: "D. Mamo", club: "Mechal", pos: "GKP", price: 5.0 },
   { id: 302, name: "A. Tamene", club: "Mechal", pos: "DEF", price: 5.5 },
   { id: 303, name: "G. Panom", club: "Mechal", pos: "MID", price: 7.0 },
   { id: 304, name: "A. Nasir", club: "Mechal", pos: "FWD", price: 9.0 },
 
-  // Sidama Coffee
+  // 4. Sidama Coffee
   { id: 401, name: "C. Lo Ndoye", club: "Sidama Coffee", pos: "GKP", price: 5.0 },
   { id: 402, name: "Y. Baye", club: "Sidama Coffee", pos: "DEF", price: 5.0 },
   { id: 403, name: "S. Dagnachew", club: "Sidama Coffee", pos: "MID", price: 7.0 },
   { id: 404, name: "A. Yalew", club: "Sidama Coffee", pos: "FWD", price: 8.5 },
 
-  // Hawassa City
+  // 5. Hawassa City
   { id: 501, name: "S. Habtamu", club: "Hawassa City", pos: "GKP", price: 4.5 },
   { id: 502, name: "S. Wodesa", club: "Hawassa City", pos: "DEF", price: 5.0 },
   { id: 503, name: "A. Demissie", club: "Hawassa City", pos: "MID", price: 6.5 },
   { id: 504, name: "G. Kebede", club: "Hawassa City", pos: "FWD", price: 7.5 },
 
-  // Fasil Kenema
+  // 6. Fasil Kenema
   { id: 601, name: "M. Pouaty", club: "Fasil Kenema", pos: "GKP", price: 5.0 },
   { id: 602, name: "M. Debebe", club: "Fasil Kenema", pos: "DEF", price: 5.0 },
   { id: 603, name: "Y. Yohannis", club: "Fasil Kenema", pos: "MID", price: 6.5 },
   { id: 604, name: "A. Gidey", club: "Fasil Kenema", pos: "FWD", price: 7.5 },
 
-  // Bahir Dar City
+  // 7. Bahir Dar City
   { id: 701, name: "P. S. Ndiaye", club: "Bahir Dar City", pos: "GKP", price: 5.0 },
   { id: 702, name: "M. Kassa", club: "Bahir Dar City", pos: "DEF", price: 5.0 },
   { id: 703, name: "B. Tigabu", club: "Bahir Dar City", pos: "MID", price: 6.5 },
   { id: 704, name: "A. Tefera", club: "Bahir Dar City", pos: "FWD", price: 7.0 },
 
-  // Additional Club Depth Players
+  // 8. CBE SA
   { id: 801, name: "A. Desta", club: "CBE SA", pos: "GKP", price: 5.0 },
   { id: 802, name: "C. Amankwah", club: "CBE SA", pos: "DEF", price: 5.5 },
   { id: 803, name: "Z. Abebe", club: "CBE SA", pos: "MID", price: 6.5 },
   { id: 804, name: "D. Yohannes", club: "CBE SA", pos: "FWD", price: 8.0 },
+
+  // 9. Ethiopian Insurance
   { id: 901, name: "A. Nuri", club: "Ethiopian Insurance", pos: "GKP", price: 5.0 },
   { id: 902, name: "I. Abdul-Ganiyu", club: "Ethiopian Insurance", pos: "DEF", price: 5.0 },
   { id: 903, name: "D. Damisse", club: "Ethiopian Insurance", pos: "MID", price: 6.0 },
-  { id: 904, name: "W. Gezahegn", club: "Ethiopian Insurance", pos: "FWD", price: 7.0 }
+  { id: 904, name: "W. Gezahegn", club: "Ethiopian Insurance", pos: "FWD", price: 7.0 },
+
+  // 10. Adama City
+  { id: 1001, name: "W. Gedamu", club: "Adama City", pos: "GKP", price: 4.5 },
+  { id: 1002, name: "F. Alemu", club: "Adama City", pos: "DEF", price: 5.0 },
+  { id: 1003, name: "B. Tadesse", club: "Adama City", pos: "MID", price: 6.0 },
+  { id: 1004, name: "K. Osei", club: "Adama City", pos: "FWD", price: 7.5 },
+
+  // 11. Hadiya Hossana
+  { id: 1101, name: "M. Shanko", club: "Hadiya Hossana", pos: "GKP", price: 4.5 },
+  { id: 1102, name: "E. Tamiru", club: "Hadiya Hossana", pos: "DEF", price: 5.0 },
+  { id: 1103, name: "B. Assefa", club: "Hadiya Hossana", pos: "MID", price: 6.0 },
+  { id: 1104, name: "S. Oukri", club: "Hadiya Hossana", pos: "FWD", price: 7.0 },
+
+  // 12. Dire Dawa City
+  { id: 1201, name: "T. Aschalew", club: "Dire Dawa City", pos: "GKP", price: 4.5 },
+  { id: 1202, name: "A. Mengistu", club: "Dire Dawa City", pos: "DEF", price: 4.5 },
+  { id: 1203, name: "E. Bekele", club: "Dire Dawa City", pos: "MID", price: 6.0 },
+  { id: 1204, name: "O. Okiki", club: "Dire Dawa City", pos: "FWD", price: 7.0 },
+
+  // 13. Welayta Dicha
+  { id: 1301, name: "R. Ismael", club: "Welayta Dicha", pos: "GKP", price: 4.5 },
+  { id: 1302, name: "G. Chala", club: "Welayta Dicha", pos: "DEF", price: 5.0 },
+  { id: 1303, name: "A. Mohammed", club: "Welayta Dicha", pos: "MID", price: 6.0 },
+  { id: 1304, name: "B. Girma", club: "Welayta Dicha", pos: "FWD", price: 7.0 },
+
+  // 14. Arba Minch City
+  { id: 1401, name: "E. Mulugeta", club: "Arba Minch City", pos: "GKP", price: 4.5 },
+  { id: 1402, name: "B. Zerihun", club: "Arba Minch City", pos: "DEF", price: 4.5 },
+  { id: 1403, name: "T. Wakjira", club: "Arba Minch City", pos: "MID", price: 5.5 },
+  { id: 1404, name: "Y. Getachew", club: "Arba Minch City", pos: "FWD", price: 6.5 },
+
+  // 15. Legetafo Legedadi
+  { id: 1501, name: "S. Negash", club: "Legetafo", pos: "GKP", price: 4.5 },
+  { id: 1502, name: "D. Hunde", club: "Legetafo", pos: "DEF", price: 4.5 },
+  { id: 1503, name: "M. Kemal", club: "Legetafo", pos: "MID", price: 5.5 },
+  { id: 1504, name: "K. Nasir", club: "Legetafo", pos: "FWD", price: 6.5 },
+
+  // 16. Ethio Electric
+  { id: 1601, name: "B. Haile", club: "Ethio Electric", pos: "GKP", price: 4.5 },
+  { id: 1602, name: "N. Kassim", club: "Ethio Electric", pos: "DEF", price: 4.5 },
+  { id: 1603, name: "H. Kedir", club: "Ethio Electric", pos: "MID", price: 5.5 },
+  { id: 1604, name: "A. Wondimu", club: "Ethio Electric", pos: "FWD", price: 6.5 }
 ];
 
 let activeSlotId = null;
