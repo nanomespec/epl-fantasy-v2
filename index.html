@@ -1,1 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>EFPL Fantasy Gateway</title>
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg-main: #0b132b;
+      --card-bg: #1c2541;
+      --pitch-bg: #15803d;
+      --pitch-line: rgba(255, 255, 255, 0.25);
+      --accent: #10b981;
+      --text-light: #ffffff;
+      --text-dim: #94a3b8;
+    }
 
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-light);
+      padding: 12px;
+    }
+
+    /* Top Status Bar */
+    .status-bar {
+      background: var(--card-bg);
+      padding: 12px 16px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .stat-title {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .stat-val {
+      font-size: 16px;
+      font-weight: bold;
+      color: var(--accent);
+    }
+
+    /* Pitch Container */
+    .pitch {
+      background: linear-gradient(180deg, #166534 0%, var(--pitch-bg) 100%);
+      border: 2px solid var(--pitch-line);
+      border-radius: 12px;
+      padding: 16px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-height: 400px;
+      position: relative;
+    }
+
+    .pitch-row {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+
+    /* Bench Section */
+    .bench-container {
+      margin-top: 12px;
+      background: var(--card-bg);
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .bench-title {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .bench-row {
+      display: flex;
+      justify-content: space-around;
+    }
+
+    /* Slot Component (+ / Player Card) */
+    .slot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 65px;
+      cursor: pointer;
+    }
+
+    .slot-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background-color: rgba(0, 0, 0, 0.4);
+      border: 2px dashed rgba(255, 255, 255, 0.5);
+      color: var(--text-light);
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .slot.filled .slot-btn {
+      background-color: var(--card-bg);
+      border: 2px solid var(--accent);
+      font-size: 18px;
+    }
+
+    .slot-label {
+      font-size: 10px;
+      font-weight: 600;
+      margin-top: 4px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-align: center;
+      width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .slot-sub {
+      font-size: 9px;
+      color: var(--text-dim);
+    }
+
+    /* Selection Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: flex-end;
+      z-index: 100;
+    }
+
+    .modal-content {
+      background: var(--card-bg);
+      width: 100%;
+      max-height: 70vh;
+      border-top-left-radius: 16px;
+      border-top-right-radius: 16px;
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 8px;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .player-option {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid #334155;
+    }
+
+    .btn-select {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Status Bar -->
+  <div class="status-bar">
+    <div class="stat">
+      <span class="stat-title">Squad Selected</span>
+      <span class="stat-val" id="squad-count">0/15</span>
+    </div>
+    <div class="stat">
+      <span class="stat-title">Remaining Bank</span>
+      <span class="stat-val" id="bank-val">ETB 100.0M</span>
+    </div>
+  </div>
+
+  <!-- Starting XI Pitch Area -->
+  <div class="pitch">
+    <!-- Goalkeeper Row (1) -->
+    <div class="pitch-row" id="row-GKP"></div>
+    <!-- Defender Row (4) -->
+    <div class="pitch-row" id="row-DEF"></div>
+    <!-- Midfielder Row (4) -->
+    <div class="pitch-row" id="row-MID"></div>
+    <!-- Forward Row (2) -->
+    <div class="pitch-row" id="row-FWD"></div>
+  </div>
+
+  <!-- Bench Area (4) -->
+  <div class="bench-container">
+    <div class="bench-title">Substitutes</div>
+    <div class="bench-row" id="row-BENCH"></div>
+  </div>
+
+  <!-- Player Selection Modal -->
+  <div class="modal-overlay" id="selection-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">Select Player</h3>
+        <button class="close-btn" onclick="closeModal()">✕</button>
+      </div>
+      <div id="player-options-list"></div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Telegram WebApp SDK
+    if (window.Telegram && window.Telegram.WebApp) {
+      window.Telegram.WebApp.ready();
+      window.Telegram.WebApp.expand();
+    }
+
+    // Default 15 Slots Schema
+    const slots = [
+      // Starting XI (1-4-4-2 Formation)
+      { id: 1, pos: 'GKP', isBench: false, player: null },
+      { id: 2, pos: 'DEF', isBench: false, player: null },
+      { id: 3, pos: 'DEF', isBench: false, player: null },
+      { id: 4, pos: 'DEF', isBench: false, player: null },
+      { id: 5, pos: 'DEF', isBench: false, player: null },
+      { id: 6, pos: 'MID', isBench: false, player: null },
+      { id: 7, pos: 'MID', isBench: false, player: null },
+      { id: 8, pos: 'MID', isBench: false, player: null },
+      { id: 9, pos: 'MID', isBench: false, player: null },
+      { id: 10, pos: 'FWD', isBench: false, player: null },
+      { id: 11, pos: 'FWD', isBench: false, player: null },
+      // Bench
+      { id: 12, pos: 'GKP', isBench: true, player: null },
+      { id: 13, pos: 'DEF', isBench: true, player: null },
+      { id: 14, pos: 'MID', isBench: true, player: null },
+      { id: 15, pos: 'FWD', isBench: true, player: null }
+    ];
+
+    // Mock EFPL Player Database
+    const database = [
+      { id: 101, name: "B. Alemu", club: "St. George", pos: "GKP", price: 5.5 },
+      { id: 102, name: "S. Hamid", club: "St. George", pos: "DEF", price: 6.0 },
+      { id: 103, name: "G. Gugsa", club: "Fasil Kenema", pos: "MID", price: 7.5 },
+      { id: 104, name: "A. Gebremichael", club: "Ethiopia Bunna", pos: "FWD", price: 8.5 },
+      { id: 105, name: "F. Mohammed", club: "Bahir Dar", pos: "MID", price: 6.5 },
+      { id: 106, name: "M. Debebe", club: "Defense Force", pos: "DEF", price: 5.0 },
+      { id: 107, name: "C. Menkir", club: "Hawassa City", pos: "GKP", price: 4.5 },
+      { id: 108, name: "A. Hussien", club: "Adama City", pos: "FWD", price: 5.5 }
+    ];
+
+    let activeSlotId = null;
+    let currentBank = 100.0;
+
+    function renderSlots() {
+      const rows = {
+        GKP: document.getElementById('row-GKP'),
+        DEF: document.getElementById('row-DEF'),
+        MID: document.getElementById('row-MID'),
+        FWD: document.getElementById('row-FWD'),
+        BENCH: document.getElementById('row-BENCH')
+      };
+
+      // Clear current elements
+      Object.values(rows).forEach(row => row.innerHTML = '');
+
+      let filledCount = 0;
+
+      slots.forEach(s => {
+        const targetRow = s.isBench ? rows.BENCH : rows[s.pos];
+        const slotEl = document.createElement('div');
+        slotEl.className = `slot ${s.player ? 'filled' : ''}`;
+        
+        if (s.player) {
+          filledCount++;
+          slotEl.innerHTML = `
+            <div class="slot-btn">👕</div>
+            <div class="slot-label">${s.player.name}</div>
+            <div class="slot-sub">ETB ${s.player.price}M</div>
+          `;
+          slotEl.onclick = () => removePlayer(s.id);
+        } else {
+          slotEl.innerHTML = `
+            <div class="slot-btn">+</div>
+            <div class="slot-label">${s.pos}</div>
+            <div class="slot-sub">${s.isBench ? 'Bench' : 'Select'}</div>
+          `;
+          slotEl.onclick = () => openSelectionModal(s.id, s.pos);
+        }
+
+        targetRow.appendChild(slotEl);
+      });
+
+      document.getElementById('squad-count').innerText = `${filledCount}/15`;
+      document.getElementById('bank-val').innerText = `ETB ${currentBank.toFixed(1)}M`;
+    }
+
+    function openSelectionModal(slotId, position) {
+      activeSlotId = slotId;
+      document.getElementById('modal-title').innerText = `Select ${position}`;
+      const listEl = document.getElementById('player-options-list');
+      listEl.innerHTML = '';
+
+      // Get already selected player IDs
+      const selectedIds = slots.filter(s => s.player).map(s => s.player.id);
+
+      // Filter available players by position and unselected status
+      const available = database.filter(p => p.pos === position && !selectedIds.includes(p.id));
+
+      if (available.length === 0) {
+        listEl.innerHTML = '<p style="color:var(--text-dim); text-align:center; padding: 20px;">No available players for this position.</p>';
+      } else {
+        available.forEach(p => {
+          const item = document.createElement('div');
+          item.className = 'player-option';
+          item.innerHTML = `
+            <div>
+              <strong>${p.name}</strong> (${p.club})<br/>
+              <span style="font-size:12px; color:var(--text-dim);">Price: ETB ${p.price}M</span>
+            </div>
+            <button class="btn-select" onclick="selectPlayer(${p.id})">Add</button>
+          `;
+          listEl.appendChild(item);
+        });
+      }
+
+      document.getElementById('selection-modal').style.display = 'flex';
+    }
+
+    function selectPlayer(playerId) {
+      const player = database.find(p => p.id === playerId);
+      if (!player) return;
+
+      if (currentBank < player.price) {
+        alert("Not enough budget remaining!");
+        return;
+      }
+
+      const slotIndex = slots.findIndex(s => s.id === activeSlotId);
+      if (slotIndex !== -1) {
+        slots[slotIndex].player = player;
+        currentBank -= player.price;
+        renderSlots();
+        closeModal();
+      }
+    }
+
+    function removePlayer(slotId) {
+      const slotIndex = slots.findIndex(s => s.id === slotId);
+      if (slotIndex !== -1 && slots[slotIndex].player) {
+        currentBank += slots[slotIndex].player.price;
+        slots[slotIndex].player = null;
+        renderSlots();
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('selection-modal').style.display = 'none';
+      activeSlotId = null;
+    }
+
+    // Initial Render
+    renderSlots();
+  </script>
+</body>
+</html>
