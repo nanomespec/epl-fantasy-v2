@@ -17,20 +17,20 @@ const managerId = tgUser?.id || 'local_user';
 // ==========================================
 // 2. STATE & STORAGE
 // ==========================================
-const STORAGE_KEY = 'efpl_official_v9';
+const STORAGE_KEY = 'efpl_official_v10';
 
-// Expanded Club Kit / Crest Color Schemes (Ethiopian Premier League Clubs)
+// Club Kit & Crest Colors (Ethiopian Premier League)
 const clubColors = {
-  "Saint George": { primary: "#FFD700", secondary: "#000080", accent: "#FFFFFF" }, // Yellow & Blue
-  "Ethiopian Coffee": { primary: "#FF6600", secondary: "#008000", accent: "#FFFFFF" }, // Orange & Green
-  "CBE SA": { primary: "#0047AB", secondary: "#FFFFFF", accent: "#FFD700" }, // Blue & White
-  "Fasil Kenema": { primary: "#CC0000", secondary: "#FFCC00", accent: "#FFFFFF" }, // Red & Yellow
-  "Mechal": { primary: "#006400", secondary: "#FFD700", accent: "#FFFFFF" }, // Green & Yellow
-  "Bahir Dar City": { primary: "#FF4500", secondary: "#000080", accent: "#FFFFFF" }, // Orange & Blue
-  "Hawassa City": { primary: "#008080", secondary: "#FFFFFF", accent: "#FFD700" }, // Teal & White
-  "Adama City": { primary: "#800080", secondary: "#FFD700", accent: "#FFFFFF" }, // Purple & Yellow
-  "Sidama Coffee": { primary: "#008000", secondary: "#FFD700", accent: "#FFFFFF" }, // Green & Yellow
-  "Wolayta Dicha": { primary: "#0000FF", secondary: "#FFFFFF", accent: "#FF0000" }  // Blue & Red
+  "Saint George": { primary: "#FFD700", secondary: "#000080", accent: "#FFFFFF" },
+  "Ethiopian Coffee": { primary: "#FF6600", secondary: "#008000", accent: "#FFFFFF" },
+  "CBE SA": { primary: "#0047AB", secondary: "#FFFFFF", accent: "#FFD700" },
+  "Fasil Kenema": { primary: "#CC0000", secondary: "#FFCC00", accent: "#FFFFFF" },
+  "Mechal": { primary: "#006400", secondary: "#FFD700", accent: "#FFFFFF" },
+  "Bahir Dar City": { primary: "#FF4500", secondary: "#000080", accent: "#FFFFFF" },
+  "Hawassa City": { primary: "#008080", secondary: "#FFFFFF", accent: "#FFD700" },
+  "Adama City": { primary: "#800080", secondary: "#FFD700", accent: "#FFFFFF" },
+  "Sidama Coffee": { primary: "#008000", secondary: "#FFD700", accent: "#FFFFFF" },
+  "Wolayta Dicha": { primary: "#0000FF", secondary: "#FFFFFF", accent: "#FF0000" }
 };
 
 let playerMarket = [
@@ -83,17 +83,17 @@ let chipConfirmModal = null;
 let gwHistory = [];
 let lastGwEvents = [];
 
-// Squad Constraints
+// FPL Squad Constraints
 const SQUAD_LIMITS = { GKP: 2, DEF: 5, MID: 5, FWD: 3 };
 const MAX_PLAYERS_PER_CLUB = 3;
 const TOTAL_SQUAD_SIZE = 15;
 
-// Transfer Rules State
-let freeTransfers = 1;
+// FPL Transfer State
+let freeTransfers = 1; // Can bank up to 5 FTs
 let transfersMade = 0;
 let transferCostPenalty = 0;
 
-// Leagues State (Classic & H2H)
+// Leagues State
 let userLeagues = [
   { 
     id: 'global', 
@@ -104,30 +104,44 @@ let userLeagues = [
   }
 ];
 let activeLeagueId = 'global';
-let leagueViewMode = 'classic'; // 'classic' or 'h2h'
+let leagueViewMode = 'classic';
 
 // ==========================================
-// AUTO-PICK STARTERS (REAL FPL MODE)
+// 3. FPL PRICE & VALUE CALCULATIONS
+// ==========================================
+// Real FPL Selling Price Rule:
+// Profit is halved (rounded down to nearest £0.1m). Loss is deducted 1:1.
+function getSellingPrice(player) {
+  const purchasePrice = player.purchasePrice ?? player.price;
+  const currentPrice = player.price;
+  if (currentPrice > purchasePrice) {
+    const profit = currentPrice - purchasePrice;
+    const profitKeep = Math.floor((profit + 0.00001) * 10 / 2) / 10;
+    return parseFloat((purchasePrice + profitKeep).toFixed(1));
+  }
+  return currentPrice;
+}
+
+// ==========================================
+// 4. AUTO-PICK STARTERS & BENCH ASSIGNMENT
 // ==========================================
 function autoAssignStarters() {
   if (!mySquad || mySquad.length === 0) return;
 
-  // Reset starter status
-  mySquad.forEach(p => { p.isStarter = false; });
+  mySquad.forEach(p => { p.isStarter = false; p.benchOrder = 0; });
 
-  // Sort candidates by position and price/form descending
   const gks = mySquad.filter(p => p.pos === 'GKP').sort((a, b) => b.price - a.price || b.form - a.form);
   const defs = mySquad.filter(p => p.pos === 'DEF').sort((a, b) => b.price - a.price || b.form - a.form);
   const mids = mySquad.filter(p => p.pos === 'MID').sort((a, b) => b.price - a.price || b.form - a.form);
   const fwds = mySquad.filter(p => p.pos === 'FWD').sort((a, b) => b.price - a.price || b.form - a.form);
 
-  // FPL Mandatory minimum starters: 1 GKP, 3 DEF, 2 MID, 1 FWD
+  // Mandatory starters: 1 GKP, 3 DEF, 2 MID, 1 FWD
   if (gks.length > 0) gks[0].isStarter = true;
   for (let i = 0; i < Math.min(3, defs.length); i++) defs[i].isStarter = true;
   for (let i = 0; i < Math.min(2, mids.length); i++) mids[i].isStarter = true;
   if (fwds.length > 0) fwds[0].isStarter = true;
 
-  // Fill remaining 4 outfield starter spots with highest-value available players
+  // Fill remaining 4 outfield starter spots
   const unpickedOutfield = [
     ...defs.filter(p => !p.isStarter),
     ...mids.filter(p => !p.isStarter),
@@ -146,7 +160,12 @@ function autoAssignStarters() {
     else if (p.pos === 'FWD' && currentFwds < 3) { p.isStarter = true; added++; }
   }
 
-  // Set Captain & Vice-Captain to top starters
+  // Assign Bench Orders (Bench GKP = 0, Outfield Bench = 1, 2, 3)
+  const benchOutfield = mySquad.filter(p => !p.isStarter && p.pos !== 'GKP')
+    .sort((a, b) => b.price - a.price);
+  benchOutfield.forEach((p, idx) => { p.benchOrder = idx + 1; });
+
+  // Set Captain & Vice-Captain
   const starters = mySquad.filter(p => p.isStarter).sort((a, b) => b.price - a.price);
   if (starters.length > 0) {
     mySquad.forEach(p => { p.isCaptain = false; p.isViceCaptain = false; });
@@ -218,10 +237,12 @@ function resetSquad() {
     ...p,
     purchasePrice: p.price,
     isStarter: false,
+    benchOrder: 0,
     isCaptain: false,
     isViceCaptain: false,
     gwPoints: 0,
-    stats: { goals: 0, assists: 0, cleanSheet: 0, yellow: 0 }
+    minutes: 0,
+    stats: { goals: 0, assists: 0, cleanSheet: 0, goalsConceded: 0, yellow: 0 }
   }));
 
   autoAssignStarters();
@@ -251,7 +272,7 @@ function resetSquad() {
 }
 
 // ==========================================
-// 3. TAB NAVIGATION
+// 5. NAVIGATION & RENDER
 // ==========================================
 function switchTab(tabName) {
   ['pitch', 'transfers', 'leagues', 'points'].forEach(t => {
@@ -286,7 +307,7 @@ function renderAll() {
 }
 
 // ==========================================
-// 4. CHIPS & MODALS
+// 6. CHIPS & MODALS
 // ==========================================
 function promptChip(chipName) {
   if (chipsUsed[chipName]) return showNotification(`You used ${chipName.toUpperCase()} already!`);
@@ -306,7 +327,7 @@ function confirmChipPlay() {
 function cancelChipPlay() { chipConfirmModal = null; renderPitch(); }
 
 function showNotification(msg) {
-  if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showAlert) {
+  if (window.Telegram?.WebApp?.showAlert) {
     window.Telegram.WebApp.showAlert(msg);
   } else {
     alert(msg);
@@ -314,7 +335,7 @@ function showNotification(msg) {
 }
 
 // ==========================================
-// 5. PITCH & FORMATION
+// 7. PITCH, BENCH ORDERING & FORMATION VALIDATION
 // ==========================================
 function isValidFormation(starters) {
   if (starters.length !== 11) return false;
@@ -325,11 +346,31 @@ function isValidFormation(starters) {
   return gk === 1 && def >= 3 && def <= 5 && mid >= 2 && mid <= 5 && fwd >= 1 && fwd <= 3;
 }
 
+function shiftBenchOrder(id, direction) {
+  const p = mySquad.find(x => x.id === id);
+  if (!p || p.isStarter || p.pos === 'GKP') return;
+
+  const outfieldBench = mySquad.filter(x => !x.isStarter && x.pos !== 'GKP')
+    .sort((a, b) => a.benchOrder - b.benchOrder);
+
+  const currIdx = outfieldBench.findIndex(x => x.id === id);
+  const targetIdx = currIdx + direction;
+
+  if (targetIdx >= 0 && targetIdx < outfieldBench.length) {
+    const swapPlayer = outfieldBench[targetIdx];
+    const tempOrder = p.benchOrder;
+    p.benchOrder = swapPlayer.benchOrder;
+    swapPlayer.benchOrder = tempOrder;
+    saveData();
+    renderPitch();
+  }
+}
+
 function handleAutoPickUI() {
   autoAssignStarters();
   saveData();
   renderPitch();
-  showNotification("⚡ Starting XI auto-selected with your top players!");
+  showNotification("⚡ Starting XI auto-selected with strict FPL formation!");
 }
 
 function renderPitch() {
@@ -337,7 +378,10 @@ function renderPitch() {
   if (!container) return;
 
   const starters = mySquad.filter(p => p.isStarter);
-  const bench = mySquad.filter(p => !p.isStarter);
+  const benchGkp = mySquad.find(p => !p.isStarter && p.pos === 'GKP');
+  const benchOutfield = mySquad.filter(p => !p.isStarter && p.pos !== 'GKP')
+    .sort((a, b) => a.benchOrder - b.benchOrder);
+
   const chipLabels = { wc: 'Wildcard', tc: 'Triple Captain', bb: 'Bench Boost', fh: 'Free Hit' };
 
   container.innerHTML = `
@@ -353,10 +397,10 @@ function renderPitch() {
       <button onclick="handleAutoPickUI()" class="w-full bg-fpl-purple text-fpl-green text-xs font-bold py-1.5 rounded shadow-sm hover:opacity-90">
         ⚡ Auto-Pick Best Starting XI
       </button>
-      ${activeChip ? `<div class="mt-2 text-center text-xs font-bold text-fpl-purple bg-fpl-green py-1 rounded">⚡ Active: ${chipLabels[activeChip]}</div>` : ''}
+      ${activeChip ? `<div class="mt-2 text-center text-xs font-bold text-fpl-purple bg-fpl-green py-1 rounded">⚡ Active Chip: ${chipLabels[activeChip]}</div>` : ''}
     </div>
 
-    ${pendingSubId ? `<div class="bg-fpl-purple text-fpl-green text-xs p-2 text-center font-bold mb-3 rounded-lg shadow">🔄 Select a player to substitute</div>` : ''}
+    ${pendingSubId ? `<div class="bg-fpl-purple text-fpl-green text-xs p-2 text-center font-bold mb-3 rounded-lg shadow">🔄 Select player to swap with</div>` : ''}
     
     <!-- Pitch Graphic -->
     <div class="football-pitch rounded-t-2xl p-3 flex flex-col justify-around min-h-[340px] mb-1">
@@ -366,13 +410,30 @@ function renderPitch() {
       <div class="flex justify-center gap-1.5">${starters.filter(p => p.pos === 'FWD').map(cardHtml).join('')}</div>
     </div>
 
-    <!-- Bench Container -->
+    <!-- Bench Container with FPL Sub Priorities -->
     <div class="bg-white rounded-b-2xl p-3 shadow-md border border-gray-200">
       <div class="text-[10px] text-fpl-purple font-black uppercase mb-2 flex justify-between px-1">
-        <span>Substitutes (Bench)</span>
+        <span>Substitutes (Auto-Sub Priority)</span>
         ${activeChip === 'bb' ? '<span class="text-green-600 font-bold">Bench Boost Active ⚡</span>' : ''}
       </div>
-      <div class="flex justify-center gap-1.5">${bench.map(cardHtml).join('')}</div>
+      <div class="grid grid-cols-4 gap-1 text-center">
+        <!-- GK Sub -->
+        <div class="flex flex-col items-center">
+          <span class="text-[8px] font-bold text-gray-400 mb-1">GK</span>
+          ${benchGkp ? cardHtml(benchGkp) : ''}
+        </div>
+        <!-- Outfield Subs (Priority 1, 2, 3) -->
+        ${benchOutfield.map((p, idx) => `
+          <div class="flex flex-col items-center">
+            <div class="flex items-center gap-1 mb-1">
+              <button onclick="shiftBenchOrder(${p.id}, -1)" class="text-[8px] px-1 bg-gray-200 rounded font-black hover:bg-gray-300">‹</button>
+              <span class="text-[8px] font-bold text-fpl-purple">Sub ${idx + 1}</span>
+              <button onclick="shiftBenchOrder(${p.id}, 1)" class="text-[8px] px-1 bg-gray-200 rounded font-black hover:bg-gray-300">›</button>
+            </div>
+            ${cardHtml(p)}
+          </div>
+        `).join('')}
+      </div>
     </div>
     
     ${renderModal()}
@@ -422,11 +483,10 @@ function executeSwap(id1, id2) {
 
   if (!p1 || !p2) { pendingSubId = null; renderPitch(); return; }
 
-  // Goalkeeper swap constraint
   if (p1.pos === 'GKP' || p2.pos === 'GKP') {
     if (p1.pos !== p2.pos) {
       pendingSubId = null;
-      showNotification("Goalkeepers can only be substituted for another Goalkeeper!");
+      showNotification("Goalkeepers can only swap with another Goalkeeper!");
       renderPitch();
       return;
     }
@@ -439,8 +499,12 @@ function executeSwap(id1, id2) {
   if (!isValidFormation(mySquad.filter(p => p.isStarter))) {
     p2.isStarter = p1.isStarter;
     p1.isStarter = status1;
-    showNotification("Invalid formation! Must have 1 GKP, 3-5 DEF, 2-5 MID, 1-3 FWD.");
+    showNotification("Invalid FPL formation! Must have 1 GKP, 3-5 DEF, 2-5 MID, 1-3 FWD.");
   }
+
+  // Normalize bench orders for outfield subs
+  const outfieldBench = mySquad.filter(x => !x.isStarter && x.pos !== 'GKP');
+  outfieldBench.forEach((p, idx) => { p.benchOrder = idx + 1; });
 
   pendingSubId = null;
   saveData();
@@ -450,7 +514,7 @@ function executeSwap(id1, id2) {
 function renderModal() {
   if (!activeModalId) return '';
   const p = mySquad.find(x => x.id === activeModalId);
-  const stats = p.stats || { goals: 0, assists: 0, cleanSheet: 0, yellow: 0 };
+  const stats = p.stats || { goals: 0, assists: 0, cleanSheet: 0, goalsConceded: 0, yellow: 0 };
   
   let statusText = '<span class="text-green-600 font-bold">🟢 Available (100% Chance)</span>';
   if (p.status === 'i') statusText = '<span class="text-red-600 font-bold">❌ Injured (0% Chance)</span>';
@@ -462,8 +526,7 @@ function renderModal() {
   else if (p.fdr === 3) fdrBg = 'bg-gray-400 text-white';
 
   const purchasePrice = p.purchasePrice || p.price;
-  const profit = p.price - purchasePrice;
-  const sellVal = profit > 0 ? parseFloat((purchasePrice + profit / 2).toFixed(1)) : p.price;
+  const sellVal = getSellingPrice(p);
 
   return `
     <div class="fixed inset-0 bg-fpl-dark/80 flex items-end justify-center z-50">
@@ -483,19 +546,19 @@ function renderModal() {
             <span class="px-2 py-0.5 rounded font-black ${fdrBg}">${p.nextOpp} (FDR ${p.fdr})</span>
           </div>
           <div class="flex justify-between items-center border-b pb-2">
-            <span class="font-bold text-gray-500 uppercase text-[9px]">Value & Sell Return</span>
-            <span class="font-black text-fpl-dark">Buy: £${purchasePrice}m | Sell: <span class="text-red-600">£${sellVal}m</span></span>
+            <span class="font-bold text-gray-500 uppercase text-[9px]">FPL Valuation</span>
+            <span class="font-black text-fpl-dark">Bought: £${purchasePrice}m | Current: £${p.price}m | Sell: <span class="text-green-600">£${sellVal}m</span></span>
           </div>
           <div class="flex justify-around text-center pt-1">
             <div><div class="font-bold text-gray-400 text-[9px] uppercase">Goals</div><div class="font-black text-fpl-purple">${stats.goals}</div></div>
             <div><div class="font-bold text-gray-400 text-[9px] uppercase">Assists</div><div class="font-black text-fpl-purple">${stats.assists}</div></div>
             <div><div class="font-bold text-gray-400 text-[9px] uppercase">Clean Sheet</div><div class="font-black text-fpl-purple">${stats.cleanSheet}</div></div>
-            <div><div class="font-bold text-gray-400 text-[9px] uppercase">Cards</div><div class="font-black text-red-500">${stats.yellow}🟨</div></div>
+            <div><div class="font-bold text-gray-400 text-[9px] uppercase">Conceded</div><div class="font-black text-red-500">${stats.goalsConceded || 0}</div></div>
           </div>
         </div>
 
-        <button onclick="pendingSubId=${p.id}; activeModalId=null; renderPitch();" class="w-full bg-gray-100 text-fpl-purple py-3 rounded-lg text-sm font-bold mb-3 shadow-sm border border-gray-200">🔄 Substitute Player</button>
-        <button onclick="setCap(${p.id}, true)" class="w-full bg-fpl-purple text-white py-3 rounded-lg text-sm font-bold mb-3 shadow-sm">👑 Make Captain (2x/3x)</button>
+        <button onclick="pendingSubId=${p.id}; activeModalId=null; renderPitch();" class="w-full bg-gray-100 text-fpl-purple py-3 rounded-lg text-sm font-bold mb-3 shadow-sm border border-gray-200">🔄 Swap / Substitute</button>
+        <button onclick="setCap(${p.id}, true)" class="w-full bg-fpl-purple text-white py-3 rounded-lg text-sm font-bold mb-3 shadow-sm">👑 Make Captain (2x)</button>
         <button onclick="setCap(${p.id}, false)" class="w-full bg-white border-2 border-fpl-purple text-fpl-purple py-3 rounded-lg text-sm font-bold shadow-sm">⭐ Make Vice-Captain</button>
       </div>
     </div>
@@ -507,11 +570,11 @@ function renderChipConfirmModal() {
   return `
     <div class="fixed inset-0 bg-fpl-dark/80 flex items-center justify-center p-4 z-50">
       <div class="bg-white rounded-xl p-5 w-72 text-center shadow-2xl">
-        <div class="text-xs text-gray-500 font-bold uppercase mb-1">Confirm Chip</div>
+        <div class="text-xs text-gray-500 font-bold uppercase mb-1">Confirm FPL Chip</div>
         <div class="font-black text-fpl-purple text-xl mb-2">Play ${chipConfirmModal.toUpperCase()}?</div>
-        <p class="text-xs text-gray-600 mb-5">This action will lock the chip in for the upcoming Gameweek.</p>
+        <p class="text-xs text-gray-600 mb-5">This chip will apply to Gameweek ${gameweek}.</p>
         <button onclick="confirmChipPlay()" class="w-full bg-fpl-green text-fpl-purple py-3 rounded-lg text-sm font-black mb-2">Confirm</button>
-        <button onclick="cancelChipPlay()" class="w-full bg-gray-100 text-gray-600 py-3 rounded-lg text-sm font-bold">Cancel</button>
+        <button onclick="cancelChipPlay()" class="w-full bg-gray-100 text-gray-600 py-2.5 rounded-lg text-sm font-bold">Cancel</button>
       </div>
     </div>
   `;
@@ -528,7 +591,7 @@ function setCap(id, isC) {
 }
 
 // ==========================================
-// 6. MARKET / TRANSFERS & STRICT RULES
+// 8. MARKET & REAL FPL TRANSFER SYSTEM
 // ==========================================
 function renderMarket() {
   const container = document.getElementById('tab-transfers');
@@ -540,20 +603,20 @@ function renderMarket() {
         <span class="font-black">Player Market</span>
         <div class="flex gap-2 text-xs">
           <span class="bg-fpl-green text-fpl-purple px-2 py-0.5 rounded font-bold">Bank: £${bankBalance}M</span>
-          <span class="bg-white/20 text-white px-2 py-0.5 rounded font-bold">FT: ${freeTransfers}</span>
+          <span class="bg-white/20 text-white px-2 py-0.5 rounded font-bold">FT: ${freeTransfers}/5</span>
         </div>
       </div>
       
-      ${transferCostPenalty > 0 ? `<div class="bg-red-50 text-red-600 text-xs px-4 py-2 font-bold border-b border-red-100 flex justify-between items-center"><span>⚠️ Transfer Penalty Hit:</span><span>-${transferCostPenalty} pts</span></div>` : ''}
+      ${transferCostPenalty > 0 ? `<div class="bg-red-50 text-red-600 text-xs px-4 py-2 font-bold border-b border-red-100 flex justify-between items-center"><span>⚠️ Transfer Hits Deducted:</span><span>-${transferCostPenalty} pts</span></div>` : ''}
 
       <div class="p-2 bg-gray-50 text-xs text-gray-500 font-bold border-b flex justify-between px-4">
-        <span class="w-2/3">Player & Next Fixture</span>
+        <span class="w-2/3">Player & Fixture</span>
         <span class="w-1/3 text-right">Price / Action</span>
       </div>
 
       <div class="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
         ${playerMarket.map(p => {
-          const owned = mySquad.some(s => s.id === p.id);
+          const owned = mySquad.find(s => s.id === p.id);
           let badge = '';
           if (p.status === 'i') badge = '<span class="text-[9px] bg-red-100 text-red-600 font-bold px-1 rounded ml-1">INJ</span>';
           if (p.status === 's') badge = '<span class="text-[9px] bg-amber-100 text-amber-700 font-bold px-1 rounded ml-1">SUS</span>';
@@ -561,6 +624,8 @@ function renderMarket() {
           let fdrColor = 'bg-green-100 text-green-700';
           if (p.fdr >= 4) fdrColor = 'bg-red-100 text-red-700';
           else if (p.fdr === 3) fdrColor = 'bg-gray-200 text-gray-700';
+
+          const sellVal = owned ? getSellingPrice(owned) : p.price;
 
           return `
             <div class="p-3 flex justify-between items-center bg-white hover:bg-gray-50">
@@ -573,10 +638,10 @@ function renderMarket() {
                 </div>
               </div>
               <div class="flex flex-col items-end">
-                <span class="font-black text-fpl-purple mb-1">£${p.price}m</span>
+                <span class="font-black text-fpl-purple mb-0.5">£${p.price}m</span>${owned ? `<span class="text-[9px] text-gray-400 font-bold mb-1">Sell: £${sellVal}m</span>` : ''}
                 <button onclick="${owned ? `sellPlayer(${p.id})` : `buyPlayer(${p.id})`}" 
                   class="px-4 py-1 rounded text-xs font-bold shadow-sm ${owned ? 'bg-white border border-red-500 text-red-500' : 'bg-fpl-green text-fpl-purple'}">
-                  ${owned ? 'Remove' : 'Add'}
+                  ${owned ? 'Sell' : 'Buy'}
                 </button>
               </div>
             </div>
@@ -592,18 +657,18 @@ function canAddPlayer(player) {
     return { success: false, message: `${player.name} is already in your squad.` };
   }
   if (mySquad.length >= TOTAL_SQUAD_SIZE) {
-    return { success: false, message: "Your squad is full (15 players). Please click 'Remove' on a player in your team first to free up budget and space!" };
+    return { success: false, message: "Squad is full (15 players). Sell a player first!" };
   }
   if (bankBalance < player.price && activeChip !== 'wc' && activeChip !== 'fh') {
-    return { success: false, message: `Insufficient budget remaining. You need £${player.price}m but only have £${bankBalance}m.` };
+    return { success: false, message: `Insufficient budget. Need £${player.price}m (Bank: £${bankBalance}m).` };
   }
   const currentPosCount = mySquad.filter(p => p.pos === player.pos).length;
   if (currentPosCount >= SQUAD_LIMITS[player.pos]) {
-    return { success: false, message: `Position limit reached for ${player.pos}s (Max: ${SQUAD_LIMITS[player.pos]}).` };
+    return { success: false, message: `Max position limit reached for ${player.pos}s.` };
   }
   const currentClubCount = mySquad.filter(p => p.club === player.club).length;
   if (currentClubCount >= MAX_PLAYERS_PER_CLUB) {
-    return { success: false, message: `Club limit reached for ${player.club} (Max: ${MAX_PLAYERS_PER_CLUB} players).` };
+    return { success: false, message: `Max 3 players allowed from ${player.club}.` };
   }
   return { success: true };
 }
@@ -631,10 +696,12 @@ function buyPlayer(id) {
     ...p, 
     purchasePrice: p.price,
     isStarter: false, 
+    benchOrder: 0,
     isCaptain: false, 
     isViceCaptain: false, 
-    gwPoints: 0, 
-    stats: { goals: 0, assists: 0, cleanSheet: 0, yellow: 0 } 
+    gwPoints: 0,
+    minutes: 0,
+    stats: { goals: 0, assists: 0, cleanSheet: 0, goalsConceded: 0, yellow: 0 } 
   });
 
   if (activeChip !== 'wc' && activeChip !== 'fh') {
@@ -644,11 +711,11 @@ function buyPlayer(id) {
   autoAssignStarters();
   saveData();
   renderAll();
-  showNotification(`Added ${p.name} (£${p.price}m) to your squad!`);
+  showNotification(`Bought ${p.name} for £${p.price}m.`);
 }
 
 function sellPlayer(id) {
-  if (mySquad.length <= 11) return showNotification("Must keep at least 11 players!");
+  if (mySquad.length <= 11) return showNotification("Must maintain at least 11 players!");
   
   const p = mySquad.find(x => x.id === id);
   if (!p) return;
@@ -663,22 +730,19 @@ function sellPlayer(id) {
     transfersMade++;
   }
 
+  const sellValue = getSellingPrice(p);
   mySquad = mySquad.filter(x => x.id !== id);
-
-  const purchasePrice = p.purchasePrice || p.price;
-  const profit = p.price - purchasePrice;
-  const sellValue = profit > 0 ? parseFloat((purchasePrice + profit / 2).toFixed(1)) : p.price;
 
   bankBalance = parseFloat((bankBalance + sellValue).toFixed(1));
   
   autoAssignStarters();
   saveData();
   renderAll();
-  showNotification(`Removed ${p.name}. £${sellValue}m returned to your bank.`);
+  showNotification(`Sold ${p.name}. £${sellValue}m returned to bank.`);
 }
 
 // ==========================================
-// 7. MINI-LEAGUES (CLASSIC & H2H)
+// 9. MINI-LEAGUES
 // ==========================================
 function renderLeagues() {
   const container = document.getElementById('tab-leagues');
@@ -690,7 +754,6 @@ function renderLeagues() {
 
   container.innerHTML = `
     <div class="space-y-4">
-      <!-- League Switcher & Actions -->
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-3 flex gap-2 overflow-x-auto">
         ${userLeagues.map(l => `
           <button onclick="switchLeague('${l.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${l.id === activeLeagueId ? 'bg-fpl-purple text-fpl-green shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}">
@@ -699,12 +762,11 @@ function renderLeagues() {
         `).join('')}
       </div>
 
-      <!-- Active League Header & Standings Toggle -->
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
         <div class="flex justify-between items-center mb-3 border-b pb-2">
           <div>
             <h2 class="font-black text-fpl-purple text-base">${activeLeague.name}</h2>
-            <div class="text-[10px] text-gray-400 font-mono">Join Code: <span class="bg-gray-100 px-1 py-0.5 rounded text-fpl-dark font-bold">${activeLeague.code}</span></div>
+            <div class="text-[10px] text-gray-400 font-mono">Code: <span class="bg-gray-100 px-1 py-0.5 rounded text-fpl-dark font-bold">${activeLeague.code}</span></div>
           </div>
           <div class="flex gap-2">
             <button onclick="openCreateLeagueModal()" class="bg-fpl-green text-fpl-purple px-3 py-1.5 rounded-lg text-xs font-black shadow-sm">+ Create</button>
@@ -712,10 +774,9 @@ function renderLeagues() {
           </div>
         </div>
 
-        <!-- Standings Mode Toggle -->
         <div class="flex bg-gray-100 p-1 rounded-lg mb-3">
-          <button onclick="setLeagueViewMode('classic')" class="flex-1 py-1 text-xs font-bold rounded ${leagueViewMode === 'classic' ? 'bg-fpl-purple text-fpl-green shadow' : 'text-gray-600'}">Classic Standings</button>
-          <button onclick="setLeagueViewMode('h2h')" class="flex-1 py-1 text-xs font-bold rounded ${leagueViewMode === 'h2h' ? 'bg-fpl-purple text-fpl-green shadow' : 'text-gray-600'}">Head-to-Head (H2H)</button>
+          <button onclick="setLeagueViewMode('classic')" class="flex-1 py-1 text-xs font-bold rounded ${leagueViewMode === 'classic' ? 'bg-fpl-purple text-fpl-green shadow' : 'text-gray-600'}">Classic</button>
+          <button onclick="setLeagueViewMode('h2h')" class="flex-1 py-1 text-xs font-bold rounded ${leagueViewMode === 'h2h' ? 'bg-fpl-purple text-fpl-green shadow' : 'text-gray-600'}">Head-to-Head</button>
         </div>
 
         ${leagueViewMode === 'classic' ? `
@@ -775,15 +836,8 @@ function renderLeagues() {
   `;
 }
 
-function setLeagueViewMode(mode) {
-  leagueViewMode = mode;
-  renderLeagues();
-}
-
-function switchLeague(id) {
-  activeLeagueId = id;
-  renderLeagues();
-}
+function setLeagueViewMode(mode) { leagueViewMode = mode; renderLeagues(); }
+function switchLeague(id) { activeLeagueId = id; renderLeagues(); }
 
 let leagueModalType = null;
 function openCreateLeagueModal() { leagueModalType = 'create'; renderLeagues(); }
@@ -797,9 +851,7 @@ function handleCreateLeague(e) {
   const code = Math.random().toString(36).substring(2, 8).toUpperCase();
   const newLeague = {
     id: 'league_' + Date.now(),
-    name: name,
-    code: code,
-    type: 'classic',
+    name, code, type: 'classic',
     members: [{ name: managerName, team: 'Gulit FC', points: totalPoints, p: gameweek - 1, w: 0, d: 0, l: 0, h2hPts: 0 }]
   };
   userLeagues.push(newLeague);
@@ -813,14 +865,14 @@ function handleJoinLeague(e) {
   e.preventDefault();
   const code = document.getElementById('join-league-code').value.trim().toUpperCase();
   const league = userLeagues.find(l => l.code === code);
-  if (!league) return showNotification("Invalid league code!");
-  if (league.members.some(m => m.name === managerName)) return showNotification("You are already in this league!");
+  if (!league) return showNotification("Invalid code!");
+  if (league.members.some(m => m.name === managerName)) return showNotification("Already joined!");
   
   league.members.push({ name: managerName, team: 'Gulit FC', points: totalPoints, p: gameweek - 1, w: 0, d: 0, l: 0, h2hPts: 0 });
   activeLeagueId = league.id;
   closeLeagueModal();
   saveData();
-  showNotification(`Successfully joined ${league.name}!`);
+  showNotification(`Joined ${league.name}!`);
 }
 
 function renderLeagueModals() {
@@ -832,16 +884,16 @@ function renderLeagueModals() {
           <div class="font-black text-fpl-purple text-lg mb-3">Create Private League</div>
           <form onsubmit="handleCreateLeague(event)">
             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">League Name</label>
-            <input type="text" id="new-league-name" required placeholder="e.g. Addis Ballers" class="w-full border rounded-lg p-2 text-sm mb-4 focus:outline-none focus:border-fpl-purple">
-            <button type="submit" class="w-full bg-fpl-green text-fpl-purple py-2.5 rounded-lg text-sm font-black mb-2 shadow">Create League</button>
+            <input type="text" id="new-league-name" required placeholder="e.g. Addis Ballers" class="w-full border rounded-lg p-2 text-sm mb-4">
+            <button type="submit" class="w-full bg-fpl-green text-fpl-purple py-2.5 rounded-lg text-sm font-black mb-2 shadow">Create</button>
             <button type="button" onclick="closeLeagueModal()" class="w-full bg-gray-100 text-gray-600 py-2 rounded-lg text-xs font-bold">Cancel</button>
           </form>
         ` : `
           <div class="font-black text-fpl-purple text-lg mb-3">Join Private League</div>
           <form onsubmit="handleJoinLeague(event)">
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Enter 6-Char Code</label>
-            <input type="text" id="join-league-code" required placeholder="e.g. AB72X9" class="w-full border rounded-lg p-2 text-sm uppercase mb-4 focus:outline-none focus:border-fpl-purple tracking-widest font-mono">
-            <button type="submit" class="w-full bg-fpl-purple text-fpl-green py-2.5 rounded-lg text-sm font-black mb-2 shadow">Join League</button>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">6-Digit Code</label>
+            <input type="text" id="join-league-code" required placeholder="e.g. AB72X9" class="w-full border rounded-lg p-2 text-sm uppercase mb-4 tracking-widest font-mono">
+            <button type="submit" class="w-full bg-fpl-purple text-fpl-green py-2.5 rounded-lg text-sm font-black mb-2 shadow">Join</button>
             <button type="button" onclick="closeLeagueModal()" class="w-full bg-gray-100 text-gray-600 py-2 rounded-lg text-xs font-bold">Cancel</button>
           </form>
         `}
@@ -851,7 +903,7 @@ function renderLeagueModals() {
 }
 
 // ==========================================
-// 8. POINTS & LIVE MATCH TICKER TAB
+// 10. POINTS & MATCH TICKER
 // ==========================================
 function renderPoints() {
   const container = document.getElementById('tab-points');
@@ -861,7 +913,7 @@ function renderPoints() {
     <div class="space-y-4">
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="bg-fpl-purple text-white p-4 text-center">
-          <div class="text-xs font-bold text-gray-300 uppercase tracking-widest mb-1">Overall Points</div>
+          <div class="text-xs font-bold text-gray-300 uppercase tracking-widest mb-1">Total Points</div>
           <div class="text-4xl font-black text-fpl-green">${totalPoints}</div>
         </div>
         
@@ -880,15 +932,12 @@ function renderPoints() {
         </div>
       </div>
 
-      <!-- Live Match Ticker Feed -->
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-        <h3 class="font-bold text-sm text-fpl-purple uppercase mb-3 border-b pb-2">⚡ Latest Gameweek Match Ticker</h3>
-        ${lastGwEvents.length === 0 ? '<div class="text-xs text-gray-400 text-center py-3">Simulate a Gameweek to view live match events.</div>' : `
+        <h3 class="font-bold text-sm text-fpl-purple uppercase mb-3 border-b pb-2">⚡ Live Match Ticker</h3>
+        ${lastGwEvents.length === 0 ? '<div class="text-xs text-gray-400 text-center py-3">Simulate GW to see events.</div>' : `
           <div class="space-y-2 max-h-48 overflow-y-auto text-xs">
             ${lastGwEvents.map(ev => `
-              <div class="p-2 rounded bg-gray-50 border border-gray-100 flex items-center justify-between">
-                <span class="text-gray-700">${ev}</span>
-              </div>
+              <div class="p-2 rounded bg-gray-50 border border-gray-100 flex items-center justify-between text-gray-700">${ev}</div>
             `).join('')}
           </div>
         `}
@@ -898,7 +947,7 @@ function renderPoints() {
 }
 
 // ==========================================
-// 9. SIMULATION LOGIC (WITH MATCH TICKER & H2H)
+// 11. GAMEWEEK SIMULATION & STRICT FPL AUTO-SUBS
 // ==========================================
 function simulateGameweek() {
   const fixturePool = [
@@ -911,74 +960,151 @@ function simulateGameweek() {
     { opp: "Hawassa City (H)", fdr: 2 }
   ];
 
-  lastGwEvents = [`📢 Gameweek ${gameweek} kickoff underway across stadiums!`];
+  lastGwEvents = [`📢 Gameweek ${gameweek} kickoff across the league!`];
 
+  // 1. Simulate Player Performance & Minutes Played
   mySquad.forEach(p => {
     let goals = 0;
     let assists = 0;
     let cleanSheet = 0;
+    let goalsConceded = 0;
     let yellow = 0;
-    let pts = 0;
+    let minutes = 0;
 
+    // Roll player availability/minutes
     if (p.status === 'i' || p.status === 's') {
+      minutes = 0;
+    } else {
+      const minRoll = Math.random();
+      if (minRoll > 0.15) minutes = 90; // 85% plays full match
+      else if (minRoll > 0.05) minutes = Math.floor(Math.random() * 59) + 1; // Sub appearance (<60 min)
+      else minutes = 0; // Unused sub / 0 mins
+    }
+
+    p.minutes = minutes;
+
+    if (minutes > 0) {
+      // Roll Match Goals Conceded for Team
+      goalsConceded = Math.floor(Math.random() * 3);
+
+      if (p.pos === 'FWD') {
+        if (Math.random() > 0.45) goals = Math.random() > 0.8 ? 2 : 1;
+        if (Math.random() > 0.6) assists = 1;
+      } else if (p.pos === 'MID') {
+        if (Math.random() > 0.55) goals = Math.random() > 0.85 ? 2 : 1;
+        if (Math.random() > 0.5) assists = 1;
+        if (minutes >= 60 && goalsConceded === 0) cleanSheet = 1;
+      } else if (p.pos === 'DEF' || p.pos === 'GKP') {
+        if (minutes >= 60 && goalsConceded === 0) cleanSheet = 1;
+        if (Math.random() > 0.85) goals = 1;
+        if (Math.random() > 0.75) assists = 1;
+      }
+
+      if (Math.random() > 0.8) yellow = 1;
+
+      // Event Ticker
+      if (goals > 0) lastGwEvents.push(`⚽ GOAL! ${p.name} (${p.club}) scores ${goals > 1 ? 'a brace' : ''}!`);
+      if (assists > 0) lastGwEvents.push(`🎯 ASSIST! ${p.name} (${p.club}) delivers a goal pass.`);
+      if (yellow > 0) lastGwEvents.push(`🟨 YELLOW CARD for ${p.name} (${p.club}).`);
+
+      // FPL Point Calculations
+      let pts = 0;
+      // Appearance points
+      pts += (minutes >= 60 ? 2 : 1);
+
+      // Clean sheet points (only if played >= 60 mins)
+      if (cleanSheet === 1) {
+        if (p.pos === 'GKP' || p.pos === 'DEF') pts += 4;
+        else if (p.pos === 'MID') pts += 1;
+      }
+
+      // Goals Conceded Penalty (-1 per 2 goals conceded for DEF/GKP if >= 60 mins)
+      if ((p.pos === 'GKP' || p.pos === 'DEF') && minutes >= 60) {
+        pts -= Math.floor(goalsConceded / 2);
+      }
+
+      // Goals Scored
+      if (p.pos === 'GKP' || p.pos === 'DEF') pts += (goals * 6);
+      else if (p.pos === 'MID') pts += (goals * 5);
+      else if (p.pos === 'FWD') pts += (goals * 4);
+
+      // Assists & Cards
+      pts += (assists * 3);
+      pts -= (yellow * 1);
+
+      p.gwPoints = Math.max(0, pts);
+      p.stats = { goals, assists, cleanSheet, goalsConceded, yellow };
+    } else {
       p.gwPoints = 0;
-      p.stats = { goals: 0, assists: 0, cleanSheet: 0, yellow: 0 };
-      return;
+      p.stats = { goals: 0, assists: 0, cleanSheet: 0, goalsConceded: 0, yellow: 0 };
     }
 
-    let roll = Math.random();
-    if (p.pos === 'FWD') {
-      if (roll > 0.4) goals = Math.random() > 0.8 ? 2 : 1;
-      if (Math.random() > 0.6) assists = 1;
-    } else if (p.pos === 'MID') {
-      if (roll > 0.5) goals = Math.random() > 0.9 ? 2 : 1;
-      if (Math.random() > 0.5) assists = 1;
-    } else if (p.pos === 'DEF' || p.pos === 'GKP') {
-      if (Math.random() > 0.4) cleanSheet = 1;
-      if (Math.random() > 0.85) goals = 1;
-      if (Math.random() > 0.7) assists = 1;
-    }
-    if (Math.random() > 0.8) yellow = 1;
-
-    if (goals > 0) lastGwEvents.push(`⚽ GOAL! ${p.name} (${p.club}) scores ${goals > 1 ? 'a brace' : ''}!`);
-    if (assists > 0) lastGwEvents.push(`🎯 ASSIST! ${p.name} (${p.club}) sets up a teammate.`);
-    if (yellow > 0) lastGwEvents.push(`🟨 YELLOW CARD for ${p.name} (${p.club}).`);
-
-    pts = 2;
-    if (p.pos === 'GKP' || p.pos === 'DEF') {
-      pts += (goals * 6) + (cleanSheet * 4);
-    } else if (p.pos === 'MID') {
-      pts += (goals * 5) + (cleanSheet * 1);
-    } else if (p.pos === 'FWD') {
-      pts += (goals * 4);
-    }
-    pts += (assists * 3);
-    pts -= (yellow * 1);
-
-    p.gwPoints = Math.max(0, pts);
-    p.stats = { goals, assists, cleanSheet, yellow };
     p.form = parseFloat(((p.form * 2 + p.gwPoints) / 3).toFixed(1));
   });
 
+  // 2. Official FPL Auto-Substitutions Process
   if (activeChip !== 'bb') {
-    let starters = mySquad.filter(p => p.isStarter);
-    let bench = mySquad.filter(p => !p.isStarter);
-    bench.forEach(sub => {
-      if (sub.gwPoints === 0) return;
-      let starterOut = starters.find(s => s.gwPoints === 0 && (s.pos === sub.pos || s.pos !== 'GKP'));
-      if (starterOut) {
-        starterOut.isStarter = false;
-        sub.isStarter = true;
-        starters = mySquad.filter(p => p.isStarter);
+    // A. Goalkeeper Auto-Sub
+    const starterGkp = mySquad.find(p => p.isStarter && p.pos === 'GKP');
+    const benchGkp = mySquad.find(p => !p.isStarter && p.pos === 'GKP');
+
+    if (starterGkp && starterGkp.minutes === 0 && benchGkp && benchGkp.minutes > 0) {
+      starterGkp.isStarter = false;
+      benchGkp.isStarter = true;
+      lastGwEvents.push(`🔄 AUTO-SUB: ${benchGkp.name} (${benchGkp.gwPoints} pts) replaced GKP ${starterGkp.name} (0 mins).`);
+    }
+
+    // B. Outfield Auto-Subs (Strict Bench Priority 1 -> 2 -> 3 + Formation Check)
+    const missingStarters = mySquad.filter(p => p.isStarter && p.pos !== 'GKP' && p.minutes === 0);
+    const benchCandidates = mySquad.filter(p => !p.isStarter && p.pos !== 'GKP')
+      .sort((a, b) => a.benchOrder - b.benchOrder);
+
+    for (let missing of missingStarters) {
+      for (let benchP of benchCandidates) {
+        if (!benchP.isStarter && benchP.minutes > 0) {
+          // Check formation validity if we swap
+          missing.isStarter = false;
+          benchP.isStarter = true;
+
+          const testStarters = mySquad.filter(p => p.isStarter);
+          if (isValidFormation(testStarters)) {
+            lastGwEvents.push(`🔄 AUTO-SUB: ${benchP.name} (Sub ${benchP.benchOrder}) replaced ${missing.name} (0 mins).`);
+            break; // Successfully substituted
+          } else {
+            // Revert swap if formation becomes invalid (e.g. fewer than 3 defenders)
+            missing.isStarter = true;
+            benchP.isStarter = false;
+          }
+        }
       }
-    });
+    }
   }
 
+  // 3. Captain / Vice-Captain Fallback Logic
+  let capPlayer = mySquad.find(p => p.isCaptain);
+  let vicePlayer = mySquad.find(p => p.isViceCaptain);
+
+  let capMultiplier = (activeChip === 'tc' ? 3 : 2);
+
+  let activeCap = null;
+  if (capPlayer && capPlayer.minutes > 0 && capPlayer.isStarter) {
+    activeCap = capPlayer;
+  } else if (vicePlayer && vicePlayer.minutes > 0 && vicePlayer.isStarter) {
+    activeCap = vicePlayer;
+    lastGwEvents.push(`👑 VICE-CAPTAIN MULTIPLIER: ${vicePlayer.name} awarded ${capMultiplier}x points (Captain ${capPlayer?.name || 'N/A'} played 0 mins).`);
+  } else {
+    lastGwEvents.push(`⚠️ Neither Captain nor Vice-Captain played minutes.`);
+  }
+
+  // 4. Total Gameweek Score Calculation
   let gwTotal = 0;
   mySquad.forEach(p => {
     let mult = 1;
-    if (p.isCaptain) mult = (activeChip === 'tc' ? 3 : 2);
-    if (p.isStarter || activeChip === 'bb') gwTotal += p.gwPoints * mult;
+    if (activeCap && p.id === activeCap.id) mult = capMultiplier;
+    
+    if (p.isStarter || activeChip === 'bb') {
+      gwTotal += (p.gwPoints * mult);
+    }
   });
 
   gwTotal -= transferCostPenalty;
@@ -986,6 +1112,7 @@ function simulateGameweek() {
   totalPoints += gwTotal;
   gwHistory.push({ gameweek, points: gwTotal });
 
+  // Update Mini-Leagues Score & H2H Results
   userLeagues.forEach(l => {
     l.members.forEach(m => {
       m.p = (m.p || 0) + 1;
@@ -1005,10 +1132,12 @@ function simulateGameweek() {
 
   gameweek++;
 
-  freeTransfers = Math.min(2, freeTransfers + 1);
+  // FPL Rule: Accumulate free transfers up to a max of 5
+  freeTransfers = Math.min(5, freeTransfers + 1);
   transfersMade = 0;
   transferCostPenalty = 0;
 
+  // Market updates
   playerMarket.forEach(p => {
     let rand = Math.random();
     if (rand < 0.05) p.status = 'i';
@@ -1036,6 +1165,7 @@ function simulateGameweek() {
     }
   });
 
+  // Revert Free Hit if played
   if (activeChip === 'fh' && preFreeHitSquad) {
     mySquad = preFreeHitSquad;
     preFreeHitSquad = null;
@@ -1047,7 +1177,7 @@ function simulateGameweek() {
   activeChip = null;
   saveData();
   renderAll();
-  showNotification(`Gameweek ${gameweek - 1} finished! Check the Live Match Ticker for events.`);
+  showNotification(`Gameweek ${gameweek - 1} finished! Check your team score and match ticker.`);
 }
 
 function updateHeader() {
@@ -1057,5 +1187,5 @@ function updateHeader() {
   document.getElementById('gw-number').innerText = gameweek;
 }
 
-// Initialize on DOM load
+// Initialize application on load
 document.addEventListener('DOMContentLoaded', loadData);
