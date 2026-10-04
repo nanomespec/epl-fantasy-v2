@@ -2,7 +2,7 @@
    EPL FANTASY COMPLETE STYLESHEET
    ========================================== */
 
-/* Realistic Pitch Grass & Markings */
+/* Pitch Background & Grass Pattern */
 .pitch-bg {
   background: 
     linear-gradient(to bottom, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.35)),
@@ -18,7 +18,7 @@
   box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
 }
 
-/* Crisp SVG Pitch Markings Overlay */
+/* Vector SVG Pitch Lines Overlay */
 .pitch-lines {
   position: absolute;
   inset: 0;
@@ -26,7 +26,7 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect x='3%25' y='3%25' width='94%25' height='94%25' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='2'/%3E%3Cline x1='3%25' y1='50%25' x2='97%25' y2='50%25' stroke='rgba(255,255,255,0.3)' stroke-width='2'/%3E%3Ccircle cx='50%25' cy='50%25' r='12%25' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='2'/%3E%3Ccircle cx='50%25' cy='50%25' r='2' fill='rgba(255,255,255,0.5)'/%3E%3Crect x='25%25' y='3%25' width='50%25' height='16%25' fill='none' stroke='rgba(255,255,255,0.25)' stroke-width='2'/%3E%3Crect x='35%25' y='3%25' width='30%25' height='7%25' fill='none' stroke='rgba(255,255,255,0.25)' stroke-width='2'/%3E%3Crect x='25%25' y='81%25' width='50%25' height='16%25' fill='none' stroke='rgba(255,255,255,0.25)' stroke-width='2'/%3E%3Crect x='35%25' y='90%25' width='30%25' height='7%25' fill='none' stroke='rgba(255,255,255,0.25)' stroke-width='2'/%3E%3C/svg%3E");
 }
 
-/* Card Visual Improvements */
+/* Dynamic Card Shadow Effects */
 .player-card-shadow {
   filter: drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.4));
   transition: transform 0.15s ease-in-out, filter 0.15s ease-in-out;
@@ -46,4 +46,13 @@
 .player-stats-badge {
   background: #00ff85;
   color: #37003c;
+}
+
+/* Nav Button Active Glow */
+.nav-btn.active {
+  color: #00ff85 !important;
+}
+
+.nav-btn.active span:first-child {
+  transform: scale(1.15);
 }
