@@ -17,7 +17,7 @@ const managerId = tgUser?.id || 'local_user';
 // ==========================================
 // 2. STATE & STORAGE
 // ==========================================
-const STORAGE_KEY = 'efpl_official_v5';
+const STORAGE_KEY = 'efpl_official_v6';
 
 // Club Kit / Crest Color Schemes (Inspired by Ethiopian Football Federation Clubs)
 const clubColors = {
@@ -58,6 +58,11 @@ let pendingSubId = null;
 let chipConfirmModal = null;
 let gwHistory = [];
 
+// Transfer Rules State
+let freeTransfers = 1;
+let transfersMade = 0;
+let transferCostPenalty = 0;
+
 const defaultStarters = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
 
 function loadData() {
@@ -73,6 +78,9 @@ function loadData() {
       chipsUsed = data.chipsUsed || chipsUsed;
       activeChip = data.activeChip || null;
       gwHistory = data.gwHistory || [];
+      freeTransfers = data.freeTransfers ?? 1;
+      transfersMade = data.transfersMade ?? 0;
+      transferCostPenalty = data.transferCostPenalty ?? 0;
       renderAll();
       return;
     }
@@ -85,7 +93,8 @@ function loadData() {
 function saveData() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ 
-      mySquad, preFreeHitSquad, bankBalance, totalPoints, gameweek, chipsUsed, activeChip, gwHistory 
+      mySquad, preFreeHitSquad, bankBalance, totalPoints, gameweek, chipsUsed, activeChip, gwHistory,
+      freeTransfers, transfersMade, transferCostPenalty
     }));
   } catch (e) {
     console.warn("Could not save to localStorage", e);
@@ -107,6 +116,9 @@ function resetSquad() {
   activeChip = null;
   preFreeHitSquad = null;
   gwHistory = [];
+  freeTransfers = 1;
+  transfersMade = 0;
+  transferCostPenalty = 0;
   saveData();
   renderAll();
 }
@@ -338,9 +350,14 @@ function renderMarket() {
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       <div class="bg-fpl-purple text-white p-3 flex justify-between items-center">
         <span class="font-black">Player Market</span>
-        <span class="bg-fpl-green text-fpl-purple px-2 py-0.5 rounded text-xs font-bold">Bank: £${bankBalance}M</span>
+        <div class="flex gap-2 text-xs">
+          <span class="bg-fpl-green text-fpl-purple px-2 py-0.5 rounded font-bold">Bank: £${bankBalance}M</span>
+          <span class="bg-white/20 text-white px-2 py-0.5 rounded font-bold">FT: ${freeTransfers}</span>
+        </div>
       </div>
       
+      ${transferCostPenalty > 0 ? `<div class="bg-red-50 text-red-600 text-xs px-4 py-2 font-bold border-b border-red-100 flex justify-between items-center"><span>⚠️ Transfer Penalty Hit:</span><span>-${transferCostPenalty} pts</span></div>` : ''}
+
       <div class="p-2 bg-gray-50 text-xs text-gray-500 font-bold border-b flex justify-between px-4">
         <span class="w-2/3">Player</span>
         <span class="w-1/3 text-right">Price / Action</span>
@@ -378,8 +395,20 @@ function buyPlayer(id) {
   if (mySquad.length >= 15) return showNotification("Squad full (15/15)!");
   if (bankBalance < p.price && activeChip !== 'wc' && activeChip !== 'fh') return showNotification("Not enough budget!");
 
+  if (activeChip !== 'wc' && activeChip !== 'fh') {
+    if (freeTransfers > 0) {
+      freeTransfers--;
+    } else {
+      transferCostPenalty += 4;
+      showNotification("⚠️ Extra transfer used! -4 point hit applied.");
+    }
+    transfersMade++;
+  }
+
   mySquad.push({ ...p, isStarter: mySquad.filter(s => s.isStarter).length < 11, isCaptain: false, isViceCaptain: false, gwPoints: 0 });
-  if (bankBalance >= p.price && activeChip !== 'wc' && activeChip !== 'fh') bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
+  if (bankBalance >= p.price && activeChip !== 'wc' && activeChip !== 'fh') {
+    bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
+  }
   
   saveData();
   renderAll();
@@ -387,9 +416,21 @@ function buyPlayer(id) {
 
 function sellPlayer(id) {
   if (mySquad.length <= 11) return showNotification("Must keep at least 11 players!");
+  
+  if (activeChip !== 'wc' && activeChip !== 'fh') {
+    if (freeTransfers > 0) {
+      freeTransfers--;
+    } else {
+      transferCostPenalty += 4;
+      showNotification("⚠️ Extra transfer used! -4 point hit applied.");
+    }
+    transfersMade++;
+  }
+
   const p = mySquad.find(x => x.id === id);
   mySquad = mySquad.filter(x => x.id !== id);
   bankBalance = parseFloat((bankBalance + p.price).toFixed(1));
+  
   saveData();
   renderAll();
 }
@@ -482,9 +523,17 @@ function simulateGameweek() {
     if (p.isStarter || activeChip === 'bb') gwTotal += p.gwPoints * mult;
   });
 
+  // Deduct any transfer hit penalties (-4, -8, etc.)
+  gwTotal -= transferCostPenalty;
+
   totalPoints += gwTotal;
   gwHistory.push({ gameweek, points: gwTotal });
   gameweek++;
+
+  // Reset transfer counts for next GW (accumulate up to 2 free transfers)
+  freeTransfers = Math.min(2, freeTransfers + 1);
+  transfersMade = 0;
+  transferCostPenalty = 0;
 
   if (activeChip === 'fh' && preFreeHitSquad) {
     mySquad = preFreeHitSquad;
