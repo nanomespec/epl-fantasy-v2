@@ -17,7 +17,16 @@ const managerId = tgUser?.id || 'local_user';
 // ==========================================
 // 2. STATE & STORAGE
 // ==========================================
-const STORAGE_KEY = 'efpl_official_v4';
+const STORAGE_KEY = 'efpl_official_v5';
+
+// Club Kit / Crest Color Schemes (Inspired by Ethiopian Football Federation Clubs)
+const clubColors = {
+  "Saint George": { primary: "#FFD700", secondary: "#000080", accent: "#FFFFFF" }, // Yellow & Blue
+  "Ethiopian Coffee": { primary: "#FF6600", secondary: "#008000", accent: "#FFFFFF" }, // Orange & Green
+  "CBE SA": { primary: "#0047AB", secondary: "#FFFFFF", accent: "#FFD700" }, // Blue & White
+  "Fasil Kenema": { primary: "#CC0000", secondary: "#FFCC00", accent: "#FFFFFF" }, // Red & Yellow
+  "Mechal": { primary: "#006400", secondary: "#FFD700", accent: "#FFFFFF" } // Green & Yellow
+};
 
 const playerMarket = [
   { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, form: 5.2 },
@@ -226,11 +235,16 @@ function cardHtml(p) {
   let isCap = p.isCaptain ? '<div class="absolute -top-2 -right-1 bg-black text-fpl-green text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-fpl-green shadow">C</div>' : '';
   let isVice = p.isViceCaptain ? '<div class="absolute -top-2 -right-1 bg-white text-black text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-black shadow">V</div>' : '';
 
+  // Get authentic club color styling
+  const colors = clubColors[p.club] || { primary: "#37003c", secondary: "#00ff85", accent: "#ffffff" };
+
   return `
     <div onclick="handleCardClick(${p.id})" class="player-card pos-${p.pos} relative text-center w-[74px] p-1.5 cursor-pointer group select-none">
       ${isCap} ${isVice}
-      <!-- Jersey Graphic Icon -->
-      <div class="mx-auto w-8 h-8 bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%2300ff85%22><path d=%22M15.53 2.47a1.25 1.25 0 00-1.77 0L12 4.24l-1.76-1.77a1.25 1.25 0 00-1.77 0l-3.5 3.5v14.5a1 1 0 001 1h12a1 1 0 001-1V5.97l-3.44-3.5z%22/></svg>')] bg-no-repeat bg-center bg-contain mb-1 drop-shadow group-hover:scale-105 transition-transform"></div>
+      <!-- Authentic Club Kit Graphic Crest -->
+      <div class="mx-auto w-8 h-8 rounded-full flex items-center justify-center shadow-md mb-1 relative overflow-hidden border border-white/30 group-hover:scale-105 transition-transform" style="background: linear-gradient(135deg, ${colors.primary}, ${colors.secondary});">
+        <span class="text-[9px] font-black drop-shadow tracking-tighter" style="color: ${colors.accent};">${p.club.split(' ').map(w => w[0]).join('')}</span>
+      </div>
       <!-- Player Name -->
       <div class="text-white text-[9px] font-bold truncate px-0.5">${p.name.split(' ').pop()}</div>
       <!-- Price & Points Pill -->
