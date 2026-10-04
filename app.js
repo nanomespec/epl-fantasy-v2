@@ -107,7 +107,8 @@ function resetSquad() {
     isStarter: defaultStarters.includes(p.id),
     isCaptain: p.id === 12,
     isViceCaptain: p.id === 13,
-    gwPoints: 0
+    gwPoints: 0,
+    stats: { goals: 0, assists: 0, cleanSheet: 0, yellow: 0 }
   }));
   bankBalance = 1.0;
   totalPoints = 0;
@@ -247,19 +248,15 @@ function cardHtml(p) {
   let isCap = p.isCaptain ? '<div class="absolute -top-2 -right-1 bg-black text-fpl-green text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-fpl-green shadow">C</div>' : '';
   let isVice = p.isViceCaptain ? '<div class="absolute -top-2 -right-1 bg-white text-black text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-black shadow">V</div>' : '';
 
-  // Get authentic club color styling
   const colors = clubColors[p.club] || { primary: "#37003c", secondary: "#00ff85", accent: "#ffffff" };
 
   return `
     <div onclick="handleCardClick(${p.id})" class="player-card pos-${p.pos} relative text-center w-[74px] p-1.5 cursor-pointer group select-none">
       ${isCap} ${isVice}
-      <!-- Authentic Club Kit Graphic Crest -->
       <div class="mx-auto w-8 h-8 rounded-full flex items-center justify-center shadow-md mb-1 relative overflow-hidden border border-white/30 group-hover:scale-105 transition-transform" style="background: linear-gradient(135deg, ${colors.primary}, ${colors.secondary});">
         <span class="text-[9px] font-black drop-shadow tracking-tighter" style="color: ${colors.accent};">${p.club.split(' ').map(w => w[0]).join('')}</span>
       </div>
-      <!-- Player Name -->
       <div class="text-white text-[9px] font-bold truncate px-0.5">${p.name.split(' ').pop()}</div>
-      <!-- Price & Points Pill -->
       <div class="flex justify-between items-center bg-black/40 rounded px-1 mt-1 text-[8px]">
         <span class="text-gray-300 font-medium">£${p.price}m</span>
         <span class="text-fpl-green font-bold">${p.gwPoints ?? 0} pts</span>
@@ -299,13 +296,24 @@ function executeSwap(id1, id2) {
 function renderModal() {
   if (!activeModalId) return '';
   const p = mySquad.find(x => x.id === activeModalId);
+  const stats = p.stats || { goals: 0, assists: 0, cleanSheet: 0, yellow: 0 };
+  
   return `
     <div class="fixed inset-0 bg-fpl-dark/80 flex items-end justify-center z-50">
       <div class="bg-white w-full rounded-t-2xl p-5 shadow-2xl animate-[slideUp_0.2s_ease-out]">
-        <div class="flex justify-between items-center mb-4 border-b pb-2">
+        <div class="flex justify-between items-center mb-2 border-b pb-2">
           <div class="font-black text-lg text-fpl-purple">${p.name} <span class="text-xs font-normal text-gray-500">(${p.club})</span></div>
           <button onclick="activeModalId=null; renderPitch();" class="text-gray-400 font-bold text-xl">&times;</button>
         </div>
+        
+        <!-- Granular Match Breakdown Card -->
+        <div class="bg-gray-50 border rounded-lg p-2.5 mb-3 text-xs flex justify-around text-center">
+          <div><div class="font-bold text-gray-400 text-[9px] uppercase">Goals</div><div class="font-black text-fpl-purple">${stats.goals}</div></div>
+          <div><div class="font-bold text-gray-400 text-[9px] uppercase">Assists</div><div class="font-black text-fpl-purple">${stats.assists}</div></div>
+          <div><div class="font-bold text-gray-400 text-[9px] uppercase">Clean Sheet</div><div class="font-black text-fpl-purple">${stats.cleanSheet}</div></div>
+          <div><div class="font-bold text-gray-400 text-[9px] uppercase">Cards</div><div class="font-black text-red-500">${stats.yellow}🟨</div></div>
+        </div>
+
         <button onclick="pendingSubId=${p.id}; activeModalId=null; renderPitch();" class="w-full bg-gray-100 text-fpl-purple py-3 rounded-lg text-sm font-bold mb-3 shadow-sm border border-gray-200">🔄 Substitute Player</button>
         <button onclick="setCap(${p.id}, true)" class="w-full bg-fpl-purple text-white py-3 rounded-lg text-sm font-bold mb-3 shadow-sm">👑 Make Captain (2x/3x)</button>
         <button onclick="setCap(${p.id}, false)" class="w-full bg-white border-2 border-fpl-purple text-fpl-purple py-3 rounded-lg text-sm font-bold shadow-sm">⭐ Make Vice-Captain</button>
@@ -405,7 +413,7 @@ function buyPlayer(id) {
     transfersMade++;
   }
 
-  mySquad.push({ ...p, isStarter: mySquad.filter(s => s.isStarter).length < 11, isCaptain: false, isViceCaptain: false, gwPoints: 0 });
+  mySquad.push({ ...p, isStarter: mySquad.filter(s => s.isStarter).length < 11, isCaptain: false, isViceCaptain: false, gwPoints: 0, stats: { goals: 0, assists: 0, cleanSheet: 0, yellow: 0 } });
   if (bankBalance >= p.price && activeChip !== 'wc' && activeChip !== 'fh') {
     bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
   }
@@ -497,10 +505,45 @@ function renderPoints() {
 }
 
 // ==========================================
-// 8. SIMULATION LOGIC
+// 8. SIMULATION LOGIC (GRANULAR STATS)
 // ==========================================
 function simulateGameweek() {
-  mySquad.forEach(p => { p.gwPoints = Math.random() > 0.3 ? 2 + Math.floor(Math.random() * 6) : 0; });
+  mySquad.forEach(p => {
+    let goals = 0;
+    let assists = 0;
+    let cleanSheet = 0;
+    let yellow = 0;
+
+    let roll = Math.random();
+    // Position-weighted match event simulation
+    if (p.pos === 'FWD') {
+      if (roll > 0.4) goals = Math.random() > 0.8 ? 2 : 1;
+      if (Math.random() > 0.6) assists = 1;
+    } else if (p.pos === 'MID') {
+      if (roll > 0.5) goals = Math.random() > 0.9 ? 2 : 1;
+      if (Math.random() > 0.5) assists = 1;
+    } else if (p.pos === 'DEF' || p.pos === 'GKP') {
+      if (Math.random() > 0.4) cleanSheet = 1;
+      if (Math.random() > 0.85) goals = 1;
+      if (Math.random() > 0.7) assists = 1;
+    }
+    if (Math.random() > 0.8) yellow = 1;
+
+    // Calculate FPL official point formulas
+    let pts = 2; // Appearance points
+    if (p.pos === 'GKP' || p.pos === 'DEF') {
+      pts += (goals * 6) + (cleanSheet * 4);
+    } else if (p.pos === 'MID') {
+      pts += (goals * 5) + (cleanSheet * 1);
+    } else if (p.pos === 'FWD') {
+      pts += (goals * 4);
+    }
+    pts += (assists * 3);
+    pts -= (yellow * 1);
+
+    p.gwPoints = Math.max(0, pts);
+    p.stats = { goals, assists, cleanSheet, yellow };
+  });
 
   if (activeChip !== 'bb') {
     let starters = mySquad.filter(p => p.isStarter);
@@ -523,7 +566,7 @@ function simulateGameweek() {
     if (p.isStarter || activeChip === 'bb') gwTotal += p.gwPoints * mult;
   });
 
-  // Deduct any transfer hit penalties (-4, -8, etc.)
+  // Deduct transfer hit penalties
   gwTotal -= transferCostPenalty;
 
   totalPoints += gwTotal;
