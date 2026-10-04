@@ -1,12 +1,12 @@
 /**
- * Ethiopian Premier League Fantasy - Authentic FPL Engine v4.0
+ * Ethiopian Premier League Fantasy - App Engine v1.0
  */
 
 const CONFIG = {
     MAX_BUDGET: 100.0,
     POS_LIMITS: { GKP: 2, DEF: 5, MID: 5, FWD: 3 },
     MAX_PER_CLUB: 3,
-    STORAGE_KEY: "epl_fantasy_ethiopian_v4"
+    STORAGE_KEY: "epl_fantasy_ethiopian_app_v1"
 };
 
 let appState = {
@@ -18,7 +18,7 @@ let appState = {
     viceCaptainId: null
 };
 
-// Comprehensive Ethiopian Premier League Player Database
+// Ethiopian Premier League Player Database
 const PLAYERS_DATABASE = [
     // Saint George SC
     { id: 1, name: "Lealem Birhanu", club: "Saint George", pos: "GKP", price: 5.0 },
@@ -29,7 +29,7 @@ const PLAYERS_DATABASE = [
     { id: 6, name: "Ismail Ouro-Agoro", club: "Saint George", pos: "FWD", price: 9.0 },
     { id: 7, name: "Ame Mohammed", club: "Saint George", pos: "FWD", price: 7.5 },
 
-    // Ethiopian Coffee SC (Kollad / Bunna)
+    // Ethiopian Coffee SC
     { id: 8, name: "Wondwossen Ashenafi", club: "Ethiopian Coffee", pos: "GKP", price: 4.5 },
     { id: 9, name: "Ramadan Yusef", club: "Ethiopian Coffee", pos: "DEF", price: 5.5 },
     { id: 10, name: "Asrat Tonjo", club: "Ethiopian Coffee", pos: "DEF", price: 5.0 },
@@ -65,10 +65,12 @@ const PLAYERS_DATABASE = [
 
 let currentFilter = "ALL";
 
-// Squad Logic & Validation
+// ==========================================
+// SQUAD ENGINE & RULES
+// ==========================================
 function addPlayerToSquad(player) {
     if (appState.squad.length >= 15) return { success: false, message: "Squad is full (15/15)." };
-    if (appState.budget - player.price < 0) return { success: false, message: "Not enough budget left (£100.0m limit)." };
+    if (appState.budget - player.price < 0) return { success: false, message: "Not enough budget left." };
     
     const posCount = appState.squad.filter(p => p.pos === player.pos).length;
     if (posCount >= CONFIG.POS_LIMITS[player.pos]) return { success: false, message: `Max limit reached for ${player.pos}.` };
@@ -80,7 +82,7 @@ function addPlayerToSquad(player) {
     appState.budget = +(appState.budget - player.price).toFixed(1);
     updateLineups();
     saveAndRender();
-    return { success: true, message: `${player.name} added.` };
+    return { success: true, message: `${player.name} added to squad.` };
 }
 
 function removePlayerFromSquad(playerId) {
@@ -106,63 +108,60 @@ function updateLineups() {
     }
 }
 
-// Storage & UI Rendering
+// ==========================================
+// UI RENDERING & DOM HOOKS
+// ==========================================
 function saveAndRender() {
     localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(appState));
     renderUI();
 }
 
 function renderUI() {
-    const budgetEl = document.getElementById("budget-display") || document.getElementById("budget-counter");
+    const budgetEl = document.getElementById("budget-display");
     const squadCountEl = document.getElementById("squad-count");
     
     if (budgetEl) budgetEl.textContent = `£${appState.budget}m`;
     if (squadCountEl) squadCountEl.textContent = `${appState.squad.length}/15`;
-    
-    renderPitch();
+
+    renderPitchRows();
     renderMarket();
 }
 
-function renderPitch() {
-    const container = document.getElementById("pitch-container") || document.getElementById("pitch-view");
-    if (!container) return;
+function renderPitchRows() {
+    const rowGkp = document.getElementById("row-gkp");
+    const rowDef = document.getElementById("row-def");
+    const rowMid = document.getElementById("row-mid");
+    const rowFwd = document.getElementById("row-fwd");
+    const rowBench = document.getElementById("row-bench");
+
+    if (!rowGkp) return;
 
     const starters = appState.squad.filter(p => appState.startingXI.includes(p.id));
     const bench = appState.squad.filter(p => appState.bench.includes(p.id));
 
-    const gk = starters.filter(p => p.pos === 'GKP');
-    const def = starters.filter(p => p.pos === 'DEF');
-    const mid = starters.filter(p => p.pos === 'MID');
-    const fwd = starters.filter(p => p.pos === 'FWD');
-
-    container.innerHTML = `
-        <div class="fpl-pitch">
-            <div class="pitch-row">${gk.map(renderPlayerNode).join('')}</div>
-            <div class="pitch-row">${def.map(renderPlayerNode).join('')}</div>
-            <div class="pitch-row">${mid.map(renderPlayerNode).join('')}</div>
-            <div class="pitch-row">${fwd.map(renderPlayerNode).join('')}</div>
-        </div>
-        <div class="bench-section" style="margin-top: 15px;">
-            <h4 style="margin-bottom: 8px;">Substitutes Bench</h4>
-            <div class="bench-row" style="display: flex; gap: 10px; justify-content: center;">${bench.map(renderPlayerNode).join('')}</div>
-        </div>
-    `;
+    rowGkp.innerHTML = starters.filter(p => p.pos === 'GKP').map(renderPlayerNode).join('');
+    rowDef.innerHTML = starters.filter(p => p.pos === 'DEF').map(renderPlayerNode).join('');
+    rowMid.innerHTML = starters.filter(p => p.pos === 'MID').map(renderPlayerNode).join('');
+    rowFwd.innerHTML = starters.filter(p => p.pos === 'FWD').map(renderPlayerNode).join('');
+    rowBench.innerHTML = bench.map(renderPlayerNode).join('');
 }
 
 function renderPlayerNode(player) {
     const isCap = appState.captainId === player.id;
     return `
-        <div class="player-node" onclick="handlePlayerClick(${player.id})" style="background: #fff; color: #000; padding: 6px; border-radius: 6px; text-align: center; width: 85px; cursor: pointer; position: relative;">
-            <div style="background: #00ff87; color: #37003c; font-weight: bold; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 4px auto; font-size: 10px;">${player.pos}</div>
-            <div style="font-size: 10px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${player.name}</div>
-            <div style="font-size: 9px; color: #666;">£${player.price}m</div>
-            ${isCap ? '<span style="position: absolute; top: -4px; right: -4px; background: #e90052; color: #fff; font-size: 8px; padding: 1px 4px; border-radius: 50%;">C</span>' : ''}
+        <div class="player-node" onclick="handlePlayerClick(${player.id})">
+            <div class="player-pos-badge">${player.pos}</div>
+            <div class="player-info">
+                <span class="p-name">${player.name}</span>
+                <span class="p-price">£${player.price}m</span>
+            </div>
+            ${isCap ? '<span class="badge" style="position:absolute; top:-4px; right:-4px; background:var(--fpl-pink); color:#fff; font-size:8px; padding:1px 4px; border-radius:50%;">C</span>' : ''}
         </div>
     `;
 }
 
 function renderMarket() {
-    const container = document.getElementById("player-list") || document.getElementById("market-list");
+    const container = document.getElementById("market-list");
     if (!container) return;
 
     const filtered = currentFilter === "ALL" 
@@ -172,13 +171,13 @@ function renderMarket() {
     container.innerHTML = filtered.map(p => {
         const owned = appState.squad.some(s => s.id === p.id);
         return `
-            <div class="player-card" style="display: flex; justify-content: space-between; align-items: center; background: #252530; padding: 10px; border-radius: 6px; margin-bottom: 8px;">
-                <div>
-                    <strong>${p.name}</strong><br>
-                    <span style="font-size: 11px; color: #a1a1aa;">${p.club} • ${p.pos} • £${p.price}m</span>
+            <div class="market-card">
+                <div class="market-card-info">
+                    <strong>${p.name}</strong>
+                    <span>${p.club} • ${p.pos} • £${p.price}m</span>
                 </div>
-                <button ${owned ? 'disabled style="opacity:0.5"' : ''} onclick="handleMarketAdd(${p.id})">
-                    ${owned ? 'Owned' : 'Add'}
+                <button ${owned ? 'disabled' : ''} onclick="handleMarketAdd(${p.id})">
+                    ${owned ? 'In Squad' : 'Add'}
                 </button>
             </div>
         `;
@@ -203,6 +202,9 @@ function handlePlayerClick(id) {
     }
 }
 
+// ==========================================
+// INITIALIZATION & TABS
+// ==========================================
 document.addEventListener("DOMContentLoaded", () => {
     const saved = localStorage.getItem(CONFIG.STORAGE_KEY);
     if (saved) {
@@ -210,8 +212,23 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     renderUI();
 
+    // Tab switching logic
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+            
+            e.target.classList.add("active");
+            const tabName = e.target.dataset.tab;
+            document.getElementById(`${tabName}-tab`).classList.add("active");
+        });
+    });
+
+    // Market filters
     document.querySelectorAll(".filter-btn").forEach(btn => {
         btn.addEventListener("click", (e) => {
+            document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+            e.target.classList.add("active");
             currentFilter = e.target.dataset.pos;
             renderMarket();
         });
