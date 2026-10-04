@@ -109,8 +109,6 @@ let leagueViewMode = 'classic';
 // ==========================================
 // 3. FPL PRICE & VALUE CALCULATIONS
 // ==========================================
-// Real FPL Selling Price Rule:
-// Profit is halved (rounded down to nearest £0.1m). Loss is deducted 1:1.
 function getSellingPrice(player) {
   const purchasePrice = player.purchasePrice ?? player.price;
   const currentPrice = player.price;
@@ -296,6 +294,18 @@ function switchTab(tabName) {
   }
   
   renderAll();
+}
+
+function updateHeader() {
+  const managerElem = document.getElementById('header-manager-name');
+  const gwElem = document.getElementById('header-gw');
+  const ptsElem = document.getElementById('header-pts');
+  const bankElem = document.getElementById('header-bank');
+
+  if (managerElem) managerElem.textContent = managerName;
+  if (gwElem) gwElem.textContent = `GW ${gameweek}`;
+  if (ptsElem) ptsElem.textContent = `${totalPoints} pts`;
+  if (bankElem) bankElem.textContent = `£${bankBalance}m`;
 }
 
 function renderAll() {
@@ -492,14 +502,19 @@ function executeSwap(id1, id2) {
     }
   }
 
-  const status1 = p1.isStarter;
-  p1.isStarter = p2.isStarter;
-  p2.isStarter = status1;
+  const origP1Starter = p1.isStarter;
+  const origP2Starter = p2.isStarter;
+
+  p1.isStarter = origP2Starter;
+  p2.isStarter = origP1Starter;
 
   if (!isValidFormation(mySquad.filter(p => p.isStarter))) {
-    p2.isStarter = p1.isStarter;
-    p1.isStarter = status1;
+    p1.isStarter = origP1Starter;
+    p2.isStarter = origP2Starter;
     showNotification("Invalid FPL formation! Must have 1 GKP, 3-5 DEF, 2-5 MID, 1-3 FWD.");
+    pendingSubId = null;
+    renderPitch();
+    return;
   }
 
   // Normalize bench orders for outfield subs
@@ -659,7 +674,7 @@ function canAddPlayer(player) {
   if (mySquad.length >= TOTAL_SQUAD_SIZE) {
     return { success: false, message: "Squad is full (15 players). Sell a player first!" };
   }
-  if (bankBalance < player.price && activeChip !== 'wc' && activeChip !== 'fh') {
+  if (bankBalance < player.price) {
     return { success: false, message: `Insufficient budget. Need £${player.price}m (Bank: £${bankBalance}m).` };
   }
   const currentPosCount = mySquad.filter(p => p.pos === player.pos).length;
@@ -704,9 +719,7 @@ function buyPlayer(id) {
     stats: { goals: 0, assists: 0, cleanSheet: 0, goalsConceded: 0, yellow: 0 } 
   });
 
-  if (activeChip !== 'wc' && activeChip !== 'fh') {
-    bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
-  }
+  bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
   
   autoAssignStarters();
   saveData();
@@ -1062,16 +1075,14 @@ function simulateGameweek() {
     for (let missing of missingStarters) {
       for (let benchP of benchCandidates) {
         if (!benchP.isStarter && benchP.minutes > 0) {
-          // Check formation validity if we swap
           missing.isStarter = false;
           benchP.isStarter = true;
 
           const testStarters = mySquad.filter(p => p.isStarter);
           if (isValidFormation(testStarters)) {
             lastGwEvents.push(`🔄 AUTO-SUB: ${benchP.name} (Sub ${benchP.benchOrder}) replaced ${missing.name} (0 mins).`);
-            break; // Successfully substituted
+            break;
           } else {
-            // Revert swap if formation becomes invalid (e.g. fewer than 3 defenders)
             missing.isStarter = true;
             benchP.isStarter = false;
           }
@@ -1132,12 +1143,12 @@ function simulateGameweek() {
 
   gameweek++;
 
-  // FPL Rule: Accumulate free transfers up to a max of 5
+  // Accumulate free transfers up to a max of 5
   freeTransfers = Math.min(5, freeTransfers + 1);
   transfersMade = 0;
   transferCostPenalty = 0;
 
-  // Market updates
+  // Market updates for upcoming GW
   playerMarket.forEach(p => {
     let rand = Math.random();
     if (rand < 0.05) p.status = 'i';
@@ -1156,37 +1167,23 @@ function simulateGameweek() {
     p.fdr = nextFixture.fdr;
   });
 
-  mySquad.forEach(sMember => {
-    const marketMatch = playerMarket.find(m => m.id === sMember.id);
-    if (marketMatch) {
-      sMember.price = marketMatch.price;
-      sMember.nextOpp = marketMatch.nextOpp;
-      sMember.fdr = marketMatch.fdr;
-    }
-  });
-
-  // Revert Free Hit if played
+  // 5. Free Hit Restoration & Active Chip Clearing
   if (activeChip === 'fh' && preFreeHitSquad) {
-    mySquad = preFreeHitSquad;
+    mySquad = JSON.parse(JSON.stringify(preFreeHitSquad));
     preFreeHitSquad = null;
-    chipsUsed.fh = true;
-  } else if (activeChip) {
-    chipsUsed[activeChip] = true;
+    lastGwEvents.push("🔄 Free Hit active: Squad restored to pre-Free Hit selection.");
   }
 
-  activeChip = null;
+  if (activeChip) {
+    chipsUsed[activeChip] = true;
+    activeChip = null;
+  }
+
   saveData();
   renderAll();
-  showNotification(`Gameweek ${gameweek - 1} finished! Check your team score and match ticker.`);
+  showNotification(`Gameweek ${gameweek - 1} simulated! GW Total: ${gwTotal} pts`);
 }
 
-function updateHeader() {
-  document.getElementById('bank-balance').innerText = `${bankBalance}M`;
-  document.getElementById('squad-count').innerText = `${mySquad.length}/15`;
-  document.getElementById('total-points').innerText = totalPoints;
-  document.getElementById('gw-number').innerText = gameweek;
-}
-
-// Initialize application on load
+// Automatically load data on DOM readiness
 document.addEventListener('DOMContentLoaded', loadData);
 
