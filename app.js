@@ -17,7 +17,7 @@ const managerId = tgUser?.id || 'local_user';
 // ==========================================
 // 2. STATE & STORAGE
 // ==========================================
-const STORAGE_KEY = 'efpl_official_v3';
+const STORAGE_KEY = 'efpl_official_v4';
 
 const playerMarket = [
   { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, form: 5.2 },
@@ -200,19 +200,21 @@ function renderPitch() {
 
     ${pendingSubId ? `<div class="bg-fpl-purple text-fpl-green text-xs p-2 text-center font-bold mb-3 rounded-lg shadow">🔄 Select a player to substitute</div>` : ''}
     
-    <div class="fpl-pitch rounded-t-xl p-2 flex flex-col justify-around min-h-[320px] shadow-sm">
-      <div class="flex justify-center gap-1">${starters.filter(p => p.pos === 'GKP').map(cardHtml).join('')}</div>
-      <div class="flex justify-center gap-1">${starters.filter(p => p.pos === 'DEF').map(cardHtml).join('')}</div>
-      <div class="flex justify-center gap-1">${starters.filter(p => p.pos === 'MID').map(cardHtml).join('')}</div>
-      <div class="flex justify-center gap-1">${starters.filter(p => p.pos === 'FWD').map(cardHtml).join('')}</div>
+    <!-- Realistic Pitch Graphic -->
+    <div class="football-pitch rounded-t-2xl p-3 flex flex-col justify-around min-h-[340px] mb-1">
+      <div class="flex justify-center gap-1.5">${starters.filter(p => p.pos === 'GKP').map(cardHtml).join('')}</div>
+      <div class="flex justify-center gap-1.5">${starters.filter(p => p.pos === 'DEF').map(cardHtml).join('')}</div>
+      <div class="flex justify-center gap-1.5">${starters.filter(p => p.pos === 'MID').map(cardHtml).join('')}</div>
+      <div class="flex justify-center gap-1.5">${starters.filter(p => p.pos === 'FWD').map(cardHtml).join('')}</div>
     </div>
 
-    <div class="bg-white border-x-4 border-b-4 border-[#ffffff] rounded-b-xl p-2 shadow-md">
-      <div class="text-[10px] text-fpl-purple font-black uppercase mb-2 flex justify-between px-2">
-        <span>Bench</span>
-        ${activeChip === 'bb' ? '<span class="text-green-600">Boost Active</span>' : ''}
+    <!-- Bench Container -->
+    <div class="bg-white rounded-b-2xl p-3 shadow-md border border-gray-200">
+      <div class="text-[10px] text-fpl-purple font-black uppercase mb-2 flex justify-between px-1">
+        <span>Substitutes (Bench)</span>
+        ${activeChip === 'bb' ? '<span class="text-green-600 font-bold">Bench Boost Active ⚡</span>' : ''}
       </div>
-      <div class="flex justify-center gap-1">${bench.map(cardHtml).join('')}</div>
+      <div class="flex justify-center gap-1.5">${bench.map(cardHtml).join('')}</div>
     </div>
     
     ${renderModal()}
@@ -221,15 +223,21 @@ function renderPitch() {
 }
 
 function cardHtml(p) {
-  let isCap = p.isCaptain ? '<div class="absolute -top-2 -right-1 bg-black text-white text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center">C</div>' : '';
-  let isVice = p.isViceCaptain ? '<div class="absolute -top-2 -right-1 bg-white border border-black text-black text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center">V</div>' : '';
+  let isCap = p.isCaptain ? '<div class="absolute -top-2 -right-1 bg-black text-fpl-green text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-fpl-green shadow">C</div>' : '';
+  let isVice = p.isViceCaptain ? '<div class="absolute -top-2 -right-1 bg-white text-black text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-black shadow">V</div>' : '';
 
   return `
-    <div onclick="handleCardClick(${p.id})" class="relative text-center w-[72px] cursor-pointer group">
+    <div onclick="handleCardClick(${p.id})" class="player-card pos-${p.pos} relative text-center w-[74px] p-1.5 cursor-pointer group select-none">
       ${isCap} ${isVice}
-      <div class="mx-auto w-10 h-10 bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23ffffff%22><path d=%22M15.53 2.47a1.25 1.25 0 00-1.77 0L12 4.24l-1.76-1.77a1.25 1.25 0 00-1.77 0l-3.5 3.5v14.5a1 1 0 001 1h12a1 1 0 001-1V5.97l-3.44-3.5z%22/></svg>')] bg-no-repeat bg-center bg-contain mb-1 drop-shadow-md group-hover:scale-110 transition-transform"></div>
-      <div class="bg-fpl-dark text-white text-[9px] font-bold rounded-t-[3px] truncate px-1 py-0.5">${p.name.split(' ').pop()}</div>
-      <div class="bg-white text-fpl-dark text-[9px] font-bold rounded-b-[3px] shadow-sm">${p.price}</div>
+      <!-- Jersey Graphic Icon -->
+      <div class="mx-auto w-8 h-8 bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%2300ff85%22><path d=%22M15.53 2.47a1.25 1.25 0 00-1.77 0L12 4.24l-1.76-1.77a1.25 1.25 0 00-1.77 0l-3.5 3.5v14.5a1 1 0 001 1h12a1 1 0 001-1V5.97l-3.44-3.5z%22/></svg>')] bg-no-repeat bg-center bg-contain mb-1 drop-shadow group-hover:scale-105 transition-transform"></div>
+      <!-- Player Name -->
+      <div class="text-white text-[9px] font-bold truncate px-0.5">${p.name.split(' ').pop()}</div>
+      <!-- Price & Points Pill -->
+      <div class="flex justify-between items-center bg-black/40 rounded px-1 mt-1 text-[8px]">
+        <span class="text-gray-300 font-medium">£${p.price}m</span>
+        <span class="text-fpl-green font-bold">${p.gwPoints ?? 0} pts</span>
+      </div>
     </div>
   `;
 }
@@ -269,11 +277,11 @@ function renderModal() {
     <div class="fixed inset-0 bg-fpl-dark/80 flex items-end justify-center z-50">
       <div class="bg-white w-full rounded-t-2xl p-5 shadow-2xl animate-[slideUp_0.2s_ease-out]">
         <div class="flex justify-between items-center mb-4 border-b pb-2">
-          <div class="font-black text-lg text-fpl-purple">${p.name}</div>
+          <div class="font-black text-lg text-fpl-purple">${p.name} <span class="text-xs font-normal text-gray-500">(${p.club})</span></div>
           <button onclick="activeModalId=null; renderPitch();" class="text-gray-400 font-bold text-xl">&times;</button>
         </div>
-        <button onclick="pendingSubId=${p.id}; activeModalId=null; renderPitch();" class="w-full bg-gray-100 text-fpl-purple py-3 rounded-lg text-sm font-bold mb-3 shadow-sm border border-gray-200">🔄 Substitute</button>
-        <button onclick="setCap(${p.id}, true)" class="w-full bg-fpl-purple text-white py-3 rounded-lg text-sm font-bold mb-3 shadow-sm">👑 Make Captain</button>
+        <button onclick="pendingSubId=${p.id}; activeModalId=null; renderPitch();" class="w-full bg-gray-100 text-fpl-purple py-3 rounded-lg text-sm font-bold mb-3 shadow-sm border border-gray-200">🔄 Substitute Player</button>
+        <button onclick="setCap(${p.id}, true)" class="w-full bg-fpl-purple text-white py-3 rounded-lg text-sm font-bold mb-3 shadow-sm">👑 Make Captain (2x/3x)</button>
         <button onclick="setCap(${p.id}, false)" class="w-full bg-white border-2 border-fpl-purple text-fpl-purple py-3 rounded-lg text-sm font-bold shadow-sm">⭐ Make Vice-Captain</button>
       </div>
     </div>
@@ -315,8 +323,8 @@ function renderMarket() {
   container.innerHTML = `
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       <div class="bg-fpl-purple text-white p-3 flex justify-between items-center">
-        <span class="font-black">Player Selection</span>
-        <span class="bg-fpl-green text-fpl-purple px-2 py-0.5 rounded text-xs font-bold">${bankBalance}M</span>
+        <span class="font-black">Player Market</span>
+        <span class="bg-fpl-green text-fpl-purple px-2 py-0.5 rounded text-xs font-bold">Bank: £${bankBalance}M</span>
       </div>
       
       <div class="p-2 bg-gray-50 text-xs text-gray-500 font-bold border-b flex justify-between px-4">
@@ -330,10 +338,10 @@ function renderMarket() {
           return `
             <div class="p-3 flex justify-between items-center bg-white hover:bg-gray-50">
               <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-[10px] font-bold text-gray-500">${p.pos}</div>
+                <div class="w-8 h-8 bg-gray-100 border border-gray-200 rounded-full flex items-center justify-center text-[10px] font-bold text-gray-600">${p.pos}</div>
                 <div>
                   <div class="font-bold text-sm text-fpl-dark">${p.name}</div>
-                  <div class="text-[10px] text-gray-500">${p.club}</div>
+                  <div class="text-[10px] text-gray-500">${p.club} • Form: ${p.form}</div>
                 </div>
               </div>
               <div class="flex flex-col items-end">
@@ -485,5 +493,5 @@ function updateHeader() {
   document.getElementById('gw-number').innerText = gameweek;
 }
 
-// Initialize
+// Initialize on DOM load
 document.addEventListener('DOMContentLoaded', loadData);
