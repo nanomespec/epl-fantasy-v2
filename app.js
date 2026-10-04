@@ -17,7 +17,7 @@ const managerId = tgUser?.id || 'local_user';
 // ==========================================
 // 2. STATE & STORAGE
 // ==========================================
-const STORAGE_KEY = 'efpl_official_v10';
+const STORAGE_KEY = 'efpl_official_v11';
 
 // Club Kit & Crest Colors (Ethiopian Premier League)
 const clubColors = {
@@ -89,7 +89,7 @@ const MAX_PLAYERS_PER_CLUB = 3;
 const TOTAL_SQUAD_SIZE = 15;
 
 // FPL Transfer State
-let freeTransfers = 1; // Can bank up to 5 FTs
+let freeTransfers = 1;
 let transfersMade = 0;
 let transferCostPenalty = 0;
 
@@ -121,7 +121,7 @@ function getSellingPrice(player) {
 }
 
 // ==========================================
-// 4. AUTO-PICK STARTERS & BENCH ASSIGNMENT
+// 4. AUTO-PICK 11 STARTERS & BENCH ASSIGNMENT
 // ==========================================
 function autoAssignStarters() {
   if (!mySquad || mySquad.length === 0) return;
@@ -133,37 +133,38 @@ function autoAssignStarters() {
   const mids = mySquad.filter(p => p.pos === 'MID').sort((a, b) => b.price - a.price || b.form - a.form);
   const fwds = mySquad.filter(p => p.pos === 'FWD').sort((a, b) => b.price - a.price || b.form - a.form);
 
-  // Mandatory starters: 1 GKP, 3 DEF, 2 MID, 1 FWD
+  // 1. Mandatory base starters (1 GKP, 3 DEF, 2 MID, 1 FWD = 7 players)
   if (gks.length > 0) gks[0].isStarter = true;
   for (let i = 0; i < Math.min(3, defs.length); i++) defs[i].isStarter = true;
   for (let i = 0; i < Math.min(2, mids.length); i++) mids[i].isStarter = true;
   if (fwds.length > 0) fwds[0].isStarter = true;
 
-  // Fill remaining 4 outfield starter spots
-  const unpickedOutfield = [
-    ...defs.filter(p => !p.isStarter),
-    ...mids.filter(p => !p.isStarter),
-    ...fwds.filter(p => !p.isStarter)
-  ].sort((a, b) => b.price - a.price || b.form - a.form);
+  // 2. Fill remaining 4 outfield starter spots up to 11 total starters
+  const unpickedOutfield = mySquad
+    .filter(p => !p.isStarter && p.pos !== 'GKP')
+    .sort((a, b) => b.price - a.price || b.form - a.form);
 
-  let added = 0;
   for (let p of unpickedOutfield) {
-    if (added >= 4) break;
+    const currentStarters = mySquad.filter(x => x.isStarter).length;
+    if (currentStarters >= 11) break;
+
     const currentDefs = mySquad.filter(x => x.isStarter && x.pos === 'DEF').length;
     const currentMids = mySquad.filter(x => x.isStarter && x.pos === 'MID').length;
     const currentFwds = mySquad.filter(x => x.isStarter && x.pos === 'FWD').length;
 
-    if (p.pos === 'DEF' && currentDefs < 5) { p.isStarter = true; added++; }
-    else if (p.pos === 'MID' && currentMids < 5) { p.isStarter = true; added++; }
-    else if (p.pos === 'FWD' && currentFwds < 3) { p.isStarter = true; added++; }
+    if (p.pos === 'DEF' && currentDefs < 5) { p.isStarter = true; }
+    else if (p.pos === 'MID' && currentMids < 5) { p.isStarter = true; }
+    else if (p.pos === 'FWD' && currentFwds < 3) { p.isStarter = true; }
   }
 
-  // Assign Bench Orders (Bench GKP = 0, Outfield Bench = 1, 2, 3)
-  const benchOutfield = mySquad.filter(p => !p.isStarter && p.pos !== 'GKP')
+  // 3. Assign Bench Orders (Bench GKP = 0, Outfield Bench = 1, 2, 3)
+  const benchOutfield = mySquad
+    .filter(p => !p.isStarter && p.pos !== 'GKP')
     .sort((a, b) => b.price - a.price);
+
   benchOutfield.forEach((p, idx) => { p.benchOrder = idx + 1; });
 
-  // Set Captain & Vice-Captain
+  // 4. Set Captain & Vice-Captain
   const starters = mySquad.filter(p => p.isStarter).sort((a, b) => b.price - a.price);
   if (starters.length > 0) {
     mySquad.forEach(p => { p.isCaptain = false; p.isViceCaptain = false; });
@@ -193,10 +194,13 @@ function loadData() {
       if (data.playerMarket) playerMarket = data.playerMarket;
       if (data.userLeagues) userLeagues = data.userLeagues;
       
-      if (!mySquad.some(p => p.isStarter)) {
-        autoAssignStarters();
+      const fwdsCount = mySquad.filter(p => p.pos === 'FWD').length;
+      if (mySquad.length < 15 || fwdsCount === 0) {
+        resetSquad();
+        return;
       }
 
+      autoAssignStarters();
       syncLeagueData();
       renderAll();
       return;
@@ -231,7 +235,15 @@ function syncLeagueData() {
 }
 
 function resetSquad() {
-  mySquad = playerMarket.slice(0, 15).map(p => ({
+  // Correctly select 15 FPL players: 2 GKPs, 5 DEFs, 5 MIDs, 3 FWDs
+  const initialGkps = playerMarket.filter(p => p.pos === 'GKP').slice(0, 2);
+  const initialDefs = playerMarket.filter(p => p.pos === 'DEF').slice(0, 5);
+  const initialMids = playerMarket.filter(p => p.pos === 'MID').slice(0, 5);
+  const initialFwds = playerMarket.filter(p => p.pos === 'FWD').slice(0, 3);
+
+  const initialSquadList = [...initialGkps, ...initialDefs, ...initialMids, ...initialFwds];
+
+  mySquad = initialSquadList.map(p => ({
     ...p,
     purchasePrice: p.price,
     isStarter: false,
@@ -380,7 +392,7 @@ function handleAutoPickUI() {
   autoAssignStarters();
   saveData();
   renderPitch();
-  showNotification("⚡ Starting XI auto-selected with strict FPL formation!");
+  showNotification("⚡ Starting 11 auto-selected with strict FPL formation!");
 }
 
 function renderPitch() {
@@ -405,7 +417,7 @@ function renderPitch() {
         `).join('')}
       </div>
       <button onclick="handleAutoPickUI()" class="w-full bg-fpl-purple text-fpl-green text-xs font-bold py-1.5 rounded shadow-sm hover:opacity-90">
-        ⚡ Auto-Pick Best Starting XI
+        ⚡ Auto-Pick Starting XI (11 Players)
       </button>
       ${activeChip ? `<div class="mt-2 text-center text-xs font-bold text-fpl-purple bg-fpl-green py-1 rounded">⚡ Active Chip: ${chipLabels[activeChip]}</div>` : ''}
     </div>
@@ -413,14 +425,14 @@ function renderPitch() {
     ${pendingSubId ? `<div class="bg-fpl-purple text-fpl-green text-xs p-2 text-center font-bold mb-3 rounded-lg shadow">🔄 Select player to swap with</div>` : ''}
     
     <!-- Pitch Graphic -->
-    <div class="football-pitch rounded-t-2xl p-3 flex flex-col justify-around min-h-[340px] mb-1">
+    <div class="football-pitch rounded-t-2xl p-3 flex flex-col justify-around min-h-[360px] mb-1">
       <div class="flex justify-center gap-1.5">${starters.filter(p => p.pos === 'GKP').map(cardHtml).join('')}</div>
       <div class="flex justify-center gap-1.5">${starters.filter(p => p.pos === 'DEF').map(cardHtml).join('')}</div>
       <div class="flex justify-center gap-1.5">${starters.filter(p => p.pos === 'MID').map(cardHtml).join('')}</div>
       <div class="flex justify-center gap-1.5">${starters.filter(p => p.pos === 'FWD').map(cardHtml).join('')}</div>
     </div>
 
-    <!-- Bench Container with FPL Sub Priorities -->
+    <!-- Bench Container -->
     <div class="bg-white rounded-b-2xl p-3 shadow-md border border-gray-200">
       <div class="text-[10px] text-fpl-purple font-black uppercase mb-2 flex justify-between px-1">
         <span>Substitutes (Auto-Sub Priority)</span>
@@ -432,7 +444,7 @@ function renderPitch() {
           <span class="text-[8px] font-bold text-gray-400 mb-1">GK</span>
           ${benchGkp ? cardHtml(benchGkp) : ''}
         </div>
-        <!-- Outfield Subs (Priority 1, 2, 3) -->
+        <!-- Outfield Subs -->
         ${benchOutfield.map((p, idx) => `
           <div class="flex flex-col items-center">
             <div class="flex items-center gap-1 mb-1">
@@ -511,13 +523,12 @@ function executeSwap(id1, id2) {
   if (!isValidFormation(mySquad.filter(p => p.isStarter))) {
     p1.isStarter = origP1Starter;
     p2.isStarter = origP2Starter;
-    showNotification("Invalid FPL formation! Must have 1 GKP, 3-5 DEF, 2-5 MID, 1-3 FWD.");
+    showNotification("Invalid FPL formation! Must have exactly 11 starters: 1 GKP, 3-5 DEF, 2-5 MID, 1-3 FWD.");
     pendingSubId = null;
     renderPitch();
     return;
   }
 
-  // Normalize bench orders for outfield subs
   const outfieldBench = mySquad.filter(x => !x.isStarter && x.pos !== 'GKP');
   outfieldBench.forEach((p, idx) => { p.benchOrder = idx + 1; });
 
@@ -702,7 +713,7 @@ function buyPlayer(id) {
       freeTransfers--;
     } else {
       transferCostPenalty += 4;
-      showNotification("⚠️ Extra transfer used! -4 point hit applied.");
+      showNotification("⚠️️ Extra transfer used! -4 point hit applied.");
     }
     transfersMade++;
   }
@@ -984,20 +995,18 @@ function simulateGameweek() {
     let yellow = 0;
     let minutes = 0;
 
-    // Roll player availability/minutes
     if (p.status === 'i' || p.status === 's') {
       minutes = 0;
     } else {
       const minRoll = Math.random();
-      if (minRoll > 0.15) minutes = 90; // 85% plays full match
-      else if (minRoll > 0.05) minutes = Math.floor(Math.random() * 59) + 1; // Sub appearance (<60 min)
-      else minutes = 0; // Unused sub / 0 mins
+      if (minRoll > 0.15) minutes = 90;
+      else if (minRoll > 0.05) minutes = Math.floor(Math.random() * 59) + 1;
+      else minutes = 0;
     }
 
     p.minutes = minutes;
 
     if (minutes > 0) {
-      // Roll Match Goals Conceded for Team
       goalsConceded = Math.floor(Math.random() * 3);
 
       if (p.pos === 'FWD') {
@@ -1015,33 +1024,26 @@ function simulateGameweek() {
 
       if (Math.random() > 0.8) yellow = 1;
 
-      // Event Ticker
       if (goals > 0) lastGwEvents.push(`⚽ GOAL! ${p.name} (${p.club}) scores ${goals > 1 ? 'a brace' : ''}!`);
       if (assists > 0) lastGwEvents.push(`🎯 ASSIST! ${p.name} (${p.club}) delivers a goal pass.`);
       if (yellow > 0) lastGwEvents.push(`🟨 YELLOW CARD for ${p.name} (${p.club}).`);
 
-      // FPL Point Calculations
       let pts = 0;
-      // Appearance points
       pts += (minutes >= 60 ? 2 : 1);
 
-      // Clean sheet points (only if played >= 60 mins)
       if (cleanSheet === 1) {
         if (p.pos === 'GKP' || p.pos === 'DEF') pts += 4;
         else if (p.pos === 'MID') pts += 1;
       }
 
-      // Goals Conceded Penalty (-1 per 2 goals conceded for DEF/GKP if >= 60 mins)
       if ((p.pos === 'GKP' || p.pos === 'DEF') && minutes >= 60) {
         pts -= Math.floor(goalsConceded / 2);
       }
 
-      // Goals Scored
       if (p.pos === 'GKP' || p.pos === 'DEF') pts += (goals * 6);
       else if (p.pos === 'MID') pts += (goals * 5);
       else if (p.pos === 'FWD') pts += (goals * 4);
 
-      // Assists & Cards
       pts += (assists * 3);
       pts -= (yellow * 1);
 
@@ -1057,7 +1059,6 @@ function simulateGameweek() {
 
   // 2. Official FPL Auto-Substitutions Process
   if (activeChip !== 'bb') {
-    // A. Goalkeeper Auto-Sub
     const starterGkp = mySquad.find(p => p.isStarter && p.pos === 'GKP');
     const benchGkp = mySquad.find(p => !p.isStarter && p.pos === 'GKP');
 
@@ -1067,7 +1068,6 @@ function simulateGameweek() {
       lastGwEvents.push(`🔄 AUTO-SUB: ${benchGkp.name} (${benchGkp.gwPoints} pts) replaced GKP ${starterGkp.name} (0 mins).`);
     }
 
-    // B. Outfield Auto-Subs (Strict Bench Priority 1 -> 2 -> 3 + Formation Check)
     const missingStarters = mySquad.filter(p => p.isStarter && p.pos !== 'GKP' && p.minutes === 0);
     const benchCandidates = mySquad.filter(p => !p.isStarter && p.pos !== 'GKP')
       .sort((a, b) => a.benchOrder - b.benchOrder);
@@ -1123,7 +1123,6 @@ function simulateGameweek() {
   totalPoints += gwTotal;
   gwHistory.push({ gameweek, points: gwTotal });
 
-  // Update Mini-Leagues Score & H2H Results
   userLeagues.forEach(l => {
     l.members.forEach(m => {
       m.p = (m.p || 0) + 1;
@@ -1143,12 +1142,10 @@ function simulateGameweek() {
 
   gameweek++;
 
-  // Accumulate free transfers up to a max of 5
   freeTransfers = Math.min(5, freeTransfers + 1);
   transfersMade = 0;
   transferCostPenalty = 0;
 
-  // Market updates for upcoming GW
   playerMarket.forEach(p => {
     let rand = Math.random();
     if (rand < 0.05) p.status = 'i';
@@ -1184,6 +1181,5 @@ function simulateGameweek() {
   showNotification(`Gameweek ${gameweek - 1} simulated! GW Total: ${gwTotal} pts`);
 }
 
-// Automatically load data on DOM readiness
 document.addEventListener('DOMContentLoaded', loadData);
 
