@@ -63,6 +63,12 @@ let freeTransfers = 1;
 let transfersMade = 0;
 let transferCostPenalty = 0;
 
+// Leagues State
+let userLeagues = [
+  { id: 'global', name: 'Ethiopian Premier League (Global)', code: 'GLOBAL', members: [{ name: managerName, team: 'Gulit FC', points: 0 }] }
+];
+let activeLeagueId = 'global';
+
 const defaultStarters = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
 
 function loadData() {
@@ -82,6 +88,9 @@ function loadData() {
       transfersMade = data.transfersMade ?? 0;
       transferCostPenalty = data.transferCostPenalty ?? 0;
       if (data.playerMarket) playerMarket = data.playerMarket;
+      if (data.userLeagues) userLeagues = data.userLeagues;
+      
+      syncGlobalLeaguePoints();
       renderAll();
       return;
     }
@@ -92,13 +101,26 @@ function loadData() {
 }
 
 function saveData() {
+  syncGlobalLeaguePoints();
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ 
       mySquad, preFreeHitSquad, bankBalance, totalPoints, gameweek, chipsUsed, activeChip, gwHistory,
-      freeTransfers, transfersMade, transferCostPenalty, playerMarket
+      freeTransfers, transfersMade, transferCostPenalty, playerMarket, userLeagues
     }));
   } catch (e) {
     console.warn("Could not save to localStorage", e);
+  }
+}
+
+function syncGlobalLeaguePoints() {
+  const globalLeague = userLeagues.find(l => l.id === 'global');
+  if (globalLeague) {
+    let member = globalLeague.members.find(m => m.name === managerName);
+    if (member) {
+      member.points = totalPoints;
+    } else {
+      globalLeague.members.push({ name: managerName, team: 'Gulit FC', points: totalPoints });
+    }
   }
 }
 
@@ -121,6 +143,9 @@ function resetSquad() {
   freeTransfers = 1;
   transfersMade = 0;
   transferCostPenalty = 0;
+  userLeagues = [
+    { id: 'global', name: 'Ethiopian Premier League (Global)', code: 'GLOBAL', members: [{ name: managerName, team: 'Gulit FC', points: 0 }] }
+  ];
   saveData();
   renderAll();
 }
@@ -309,7 +334,6 @@ function renderModal() {
   else if (p.status === 's') statusText = '<span class="text-amber-600 font-bold">⛔ Suspended</span>';
   else if (p.status === 'd') statusText = '<span class="text-yellow-600 font-bold">⚠️ Doubtful (75% Chance)</span>';
 
-  // FDR badge color mapping
   let fdrBg = 'bg-green-500 text-white';
   if (p.fdr >= 4) fdrBg = 'bg-red-600 text-white';
   else if (p.fdr === 3) fdrBg = 'bg-gray-400 text-white';
@@ -373,7 +397,7 @@ function setCap(id, isC) {
 }
 
 // ==========================================
-// 6. MARKET / TRANSFERS (WITH FDR BADGES)
+// 6. MARKET / TRANSFERS
 // ==========================================
 function renderMarket() {
   const container = document.getElementById('tab-transfers');
@@ -478,38 +502,134 @@ function sellPlayer(id) {
 }
 
 // ==========================================
-// 7. LEAGUES & POINTS
+// 7. MINI-LEAGUES & JOIN CODES
 // ==========================================
 function renderLeagues() {
   const container = document.getElementById('tab-leagues');
   if (!container) return;
 
+  const activeLeague = userLeagues.find(l => l.id === activeLeagueId) || userLeagues[0];
+  const sortedMembers = [...activeLeague.members].sort((a, b) => b.points - a.points);
+
   container.innerHTML = `
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-      <h2 class="font-black text-fpl-purple text-lg mb-4 border-b pb-2">Global Leagues</h2>
-      <div class="space-y-3">
-        <div class="flex items-center gap-3 p-3 bg-fpl-purple text-white rounded-lg shadow-sm">
-          <div class="font-black text-xl w-8">1</div>
-          <div class="flex-1">
-            <div class="font-bold text-sm text-fpl-green">Gulit FC (You)</div>
-            <div class="text-[10px] text-gray-300">Manager: ${managerName}</div>
+    <div class="space-y-4">
+      <!-- League Switcher & Actions -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-3 flex gap-2 overflow-x-auto">
+        ${userLeagues.map(l => `
+          <button onclick="switchLeague('${l.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${l.id === activeLeagueId ? 'bg-fpl-purple text-fpl-green shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}">
+            ${l.name}
+          </button>
+        `).join('')}
+      </div>
+
+      <!-- Active League Leaderboard -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <div class="flex justify-between items-center mb-3 border-b pb-2">
+          <div>
+            <h2 class="font-black text-fpl-purple text-base">${activeLeague.name}</h2>
+            <div class="text-[10px] text-gray-400 font-mono">Join Code: <span class="bg-gray-100 px-1 py-0.5 rounded text-fpl-dark font-bold">${activeLeague.code}</span></div>
           </div>
-          <div class="font-black">${totalPoints}</div>
-        </div>
-        
-        <div class="flex items-center gap-3 p-3 bg-gray-50 border rounded-lg">
-          <div class="font-bold text-gray-400 text-lg w-8">2</div>
-          <div class="flex-1">
-            <div class="font-bold text-sm text-fpl-dark">Addis Star XI</div>
-            <div class="text-[10px] text-gray-500">Manager: Dawit</div>
+          <div class="flex gap-2">
+            <button onclick="openCreateLeagueModal()" class="bg-fpl-green text-fpl-purple px-3 py-1.5 rounded-lg text-xs font-black shadow-sm">+ Create</button>
+            <button onclick="openJoinLeagueModal()" class="bg-gray-100 text-fpl-purple border border-gray-200 px-3 py-1.5 rounded-lg text-xs font-bold">Join</button>
           </div>
-          <div class="font-bold text-fpl-dark">${Math.max(0, totalPoints - 12)}</div>
         </div>
+
+        <div class="space-y-2">
+          ${sortedMembers.map((m, idx) => {
+            const isMe = m.name === managerName;
+            return `
+              <div class="flex items-center gap-3 p-3 rounded-lg border ${isMe ? 'bg-fpl-purple/5 border-fpl-purple/30' : 'bg-gray-50 border-gray-200'}">
+                <div class="font-black text-lg w-6 text-center ${idx === 0 ? 'text-amber-500' : idx === 1 ? 'text-gray-400' : idx === 2 ? 'text-amber-700' : 'text-gray-400'}">${idx + 1}</div>
+                <div class="flex-1">
+                  <div class="font-bold text-sm text-fpl-dark flex items-center gap-1.5">
+                    ${m.team}${isMe ? '<span class="text-[9px] bg-fpl-purple text-fpl-green px-1.5 py-0.2 rounded font-black">YOU</span>' : ''}
+                  </div>
+                  <div class="text-[10px] text-gray-500">Manager: ${m.name}</div>
+                </div>
+                <div class="font-black text-base text-fpl-purple">${m.points} pts</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+    ${renderLeagueModals()}
+  `;
+}
+
+function switchLeague(id) {
+  activeLeagueId = id;
+  renderLeagues();
+}
+
+let leagueModalType = null; // 'create' or 'join'
+function openCreateLeagueModal() { leagueModalType = 'create'; renderLeagues(); }
+function openJoinLeagueModal() { leagueModalType = 'join'; renderLeagues(); }
+function closeLeagueModal() { leagueModalType = null; renderLeagues(); }
+
+function handleCreateLeague(e) {
+  e.preventDefault();
+  const name = document.getElementById('new-league-name').value.trim();
+  if (!name) return;
+  const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const newLeague = {
+    id: 'league_' + Date.now(),
+    name: name,
+    code: code,
+    members: [{ name: managerName, team: 'Gulit FC', points: totalPoints }]
+  };
+  userLeagues.push(newLeague);
+  activeLeagueId = newLeague.id;
+  closeLeagueModal();
+  saveData();
+  showNotification(`League "${name}" created! Code: ${code}`);
+}
+
+function handleJoinLeague(e) {
+  e.preventDefault();
+  const code = document.getElementById('join-league-code').value.trim().toUpperCase();
+  const league = userLeagues.find(l => l.code === code);
+  if (!league) return showNotification("Invalid league code!");
+  if (league.members.some(m => m.name === managerName)) return showNotification("You are already in this league!");
+  
+  league.members.push({ name: managerName, team: 'Gulit FC', points: totalPoints });
+  activeLeagueId = league.id;
+  closeLeagueModal();
+  saveData();
+  showNotification(`Successfully joined ${league.name}!`);
+}
+
+function renderLeagueModals() {
+  if (!leagueModalType) return '';
+  return `
+    <div class="fixed inset-0 bg-fpl-dark/80 flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-xl p-5 w-80 shadow-2xl">
+        ${leagueModalType === 'create' ? `
+          <div class="font-black text-fpl-purple text-lg mb-3">Create Private League</div>
+          <form onsubmit="handleCreateLeague(event)">
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">League Name</label>
+            <input type="text" id="new-league-name" required placeholder="e.g. Addis Ballers" class="w-full border rounded-lg p-2 text-sm mb-4 focus:outline-none focus:border-fpl-purple">
+            <button type="submit" class="w-full bg-fpl-green text-fpl-purple py-2.5 rounded-lg text-sm font-black mb-2 shadow">Create League</button>
+            <button type="button" onclick="closeLeagueModal()" class="w-full bg-gray-100 text-gray-600 py-2 rounded-lg text-xs font-bold">Cancel</button>
+          </form>
+        ` : `
+          <div class="font-black text-fpl-purple text-lg mb-3">Join Private League</div>
+          <form onsubmit="handleJoinLeague(event)">
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Enter 6-Char Code</label>
+            <input type="text" id="join-league-code" required placeholder="e.g. AB72X9" class="w-full border rounded-lg p-2 text-sm uppercase mb-4 focus:outline-none focus:border-fpl-purple tracking-widest font-mono">
+            <button type="submit" class="w-full bg-fpl-purple text-fpl-green py-2.5 rounded-lg text-sm font-black mb-2 shadow">Join League</button>
+            <button type="button" onclick="closeLeagueModal()" class="w-full bg-gray-100 text-gray-600 py-2 rounded-lg text-xs font-bold">Cancel</button>
+          </form>
+        `}
       </div>
     </div>
   `;
 }
 
+// ==========================================
+// 8. POINTS & HISTORY TAB
+// ==========================================
 function renderPoints() {
   const container = document.getElementById('tab-points');
   if (!container) return;
@@ -539,7 +659,7 @@ function renderPoints() {
 }
 
 // ==========================================
-// 8. SIMULATION LOGIC (WITH FDR ROTATION)
+// 9. SIMULATION LOGIC (WITH FDR ROTATION)
 // ==========================================
 function simulateGameweek() {
   const fixturePool = [
@@ -638,7 +758,6 @@ function simulateGameweek() {
       p.price = parseFloat((p.price - 0.1).toFixed(1));
     }
 
-    // Rotate next fixture
     const nextFixture = fixturePool[Math.floor(Math.random() * fixturePool.length)];
     p.nextOpp = nextFixture.opp;
     p.fdr = nextFixture.fdr;
