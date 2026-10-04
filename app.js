@@ -11,13 +11,13 @@ if (window.Telegram && window.Telegram.WebApp) {
   tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
 }
 
-const managerName = tgUser ? `${tgUser.first_name} ${tgUser.last_name || ''}`.trim() : 'Nate';
+const managerName = tgUser ? `${tgUser.first_name} ${tgUser.last_name || ''}`.trim() : 'Nahom';
 document.getElementById('manager-name').innerText = managerName;
 
 // ==========================================
 // 2. STATE & STORAGE
 // ==========================================
-const STORAGE_KEY = 'efpl_gateway_v1';
+const STORAGE_KEY = 'efpl_gateway_v2';
 
 let appState = {
   bank: 100.0,
@@ -217,8 +217,16 @@ function selectPlayer(playerId) {
   const player = playerMarket.find(p => p.id === playerId);
   if (!player) return;
 
+  // Check budget limit
   if (appState.bank < player.price) {
     alert("Insufficient budget remaining!");
+    return;
+  }
+
+  // Check Max 3 Players per Club rule
+  const clubCount = appState.slots.filter(s => s.player && s.player.club === player.club).length;
+  if (clubCount >= 3) {
+    alert(`You can only select a maximum of 3 players from ${player.club}!`);
     return;
   }
 
