@@ -59,6 +59,11 @@ let chipConfirmModal = null;
 let gwHistory = [];
 let lastGwEvents = [];
 
+// Squad Constraints
+const SQUAD_LIMITS = { GKP: 2, DEF: 5, MID: 5, FWD: 3 };
+const MAX_PLAYERS_PER_CLUB = 3;
+const TOTAL_SQUAD_SIZE = 15;
+
 // Transfer Rules State
 let freeTransfers = 1;
 let transfersMade = 0;
@@ -421,7 +426,7 @@ function setCap(id, isC) {
 }
 
 // ==========================================
-// 6. MARKET / TRANSFERS (WITH PROFIT TAX)
+// 6. MARKET / TRANSFERS & STRICT RULES
 // ==========================================
 function renderMarket() {
   const container = document.getElementById('tab-transfers');
@@ -480,10 +485,35 @@ function renderMarket() {
   `;
 }
 
+function canAddPlayer(player) {
+  if (mySquad.some(p => p.id === player.id)) {
+    return { success: false, message: `${player.name} is already in your squad.` };
+  }
+  if (mySquad.length >= TOTAL_SQUAD_SIZE) {
+    return { success: false, message: "Your squad is full (maximum 15 players)." };
+  }
+  if (bankBalance < player.price && activeChip !== 'wc' && activeChip !== 'fh') {
+    return { success: false, message: "Insufficient budget remaining." };
+  }
+  const currentPosCount = mySquad.filter(p => p.pos === player.pos).length;
+  if (currentPosCount >= SQUAD_LIMITS[player.pos]) {
+    return { success: false, message: `Position limit reached for ${player.pos}s (Max: ${SQUAD_LIMITS[player.pos]}).` };
+  }
+  const currentClubCount = mySquad.filter(p => p.club === player.club).length;
+  if (currentClubCount >= MAX_PLAYERS_PER_CLUB) {
+    return { success: false, message: `Club limit reached for ${player.club} (Max: ${MAX_PLAYERS_PER_CLUB} players).` };
+  }
+  return { success: true };
+}
+
 function buyPlayer(id) {
   const p = playerMarket.find(x => x.id === id);
-  if (mySquad.length >= 15) return showNotification("Squad full (15/15)!");
-  if (bankBalance < p.price && activeChip !== 'wc' && activeChip !== 'fh') return showNotification("Not enough budget!");
+  if (!p) return;
+
+  const validation = canAddPlayer(p);
+  if (!validation.success) {
+    return showNotification(validation.message);
+  }
 
   if (activeChip !== 'wc' && activeChip !== 'fh') {
     if (freeTransfers > 0) {
@@ -504,7 +534,8 @@ function buyPlayer(id) {
     gwPoints: 0, 
     stats: { goals: 0, assists: 0, cleanSheet: 0, yellow: 0 } 
   });
-  if (bankBalance >= p.price && activeChip !== 'wc' && activeChip !== 'fh') {
+
+  if (activeChip !== 'wc' && activeChip !== 'fh') {
     bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
   }
   
@@ -799,7 +830,6 @@ function simulateGameweek() {
     }
     if (Math.random() > 0.8) yellow = 1;
 
-    // Log ticker events
     if (goals > 0) lastGwEvents.push(`⚽ GOAL! ${p.name} (${p.club}) scores ${goals > 1 ? 'a brace' : ''}!`);
     if (assists > 0) lastGwEvents.push(`🎯 ASSIST! ${p.name} (${p.club}) sets up a teammate.`);
     if (yellow > 0) lastGwEvents.push(`🟨 YELLOW CARD for ${p.name} (${p.club}).`);
@@ -846,18 +876,15 @@ function simulateGameweek() {
   totalPoints += gwTotal;
   gwHistory.push({ gameweek, points: gwTotal });
 
-  // Update H2H records for all leagues
   userLeagues.forEach(l => {
     l.members.forEach(m => {
       m.p = (m.p || 0) + 1;
-      // Simulated opponent score for H2H
       const oppScore = Math.floor(Math.random() * 40) + 35;
       if (m.name === managerName) {
         if (gwTotal > oppScore) { m.w = (m.w || 0) + 1; m.h2hPts = (m.h2hPts || 0) + 3; }
         else if (gwTotal === oppScore) { m.d = (m.d || 0) + 1; m.h2hPts = (m.h2hPts || 0) + 1; }
         else { m.l = (m.l || 0) + 1; }
       } else {
-        // Dummy opponents
         const dScore = Math.floor(Math.random() * 45) + 30;
         if (m.points > dScore) { m.w = (m.w || 0) + 1; m.h2hPts = (m.h2hPts || 0) + 3; }
         else if (m.points === dScore) { m.d = (m.d || 0) + 1; m.h2hPts = (m.h2hPts || 0) + 1; }
@@ -872,7 +899,6 @@ function simulateGameweek() {
   transfersMade = 0;
   transferCostPenalty = 0;
 
-  // Update Market, Prices, and Next Fixtures/FDR
   playerMarket.forEach(p => {
     let rand = Math.random();
     if (rand < 0.05) p.status = 'i';
