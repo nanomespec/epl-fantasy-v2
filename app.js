@@ -28,17 +28,17 @@ const clubColors = {
   "Mechal": { primary: "#006400", secondary: "#FFD700", accent: "#FFFFFF" } // Green & Yellow
 };
 
-const playerMarket = [
+let playerMarket = [
   { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, form: 5.2, status: 'a' },
   { id: 2, name: "A. Nuri", club: "Ethiopian Coffee", pos: "GKP", price: 5.0, form: 4.1, status: 'a' },
   { id: 3, name: "A. K. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, form: 6.0, status: 'a' },
-  { id: 4, name: "E. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, form: 5.8, status: 'i' }, // Injured example
+  { id: 4, name: "E. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, form: 5.8, status: 'i' },
   { id: 5, name: "A. Tefera", club: "Ethiopian Coffee", pos: "DEF", price: 5.0, form: 4.5, status: 'a' },
   { id: 6, name: "S. Bereket", club: "CBE SA", pos: "DEF", price: 5.0, form: 4.8, status: 'a' },
-  { id: 7, name: "Y. Endale", club: "Fasil Kenema", pos: "DEF", price: 5.0, form: 3.5, status: 's' }, // Suspended example
+  { id: 7, name: "Y. Endale", club: "Fasil Kenema", pos: "DEF", price: 5.0, form: 3.5, status: 's' },
   { id: 8, name: "B. Belay", club: "Saint George", pos: "MID", price: 7.0, form: 7.2, status: 'a' },
   { id: 9, name: "E. Tadesse", club: "Ethiopian Coffee", pos: "MID", price: 7.5, form: 7.8, status: 'a' },
-  { id: 10, name: "A. Gidey", club: "CBE SA", pos: "MID", price: 7.5, form: 6.9, status: 'd' }, // Doubtful example
+  { id: 10, name: "A. Gidey", club: "CBE SA", pos: "MID", price: 7.5, form: 6.9, status: 'd' },
   { id: 11, name: "G. Panom", club: "Mechal", pos: "MID", price: 7.0, form: 6.1, status: 'a' },
   { id: 12, name: "A. Okutu", club: "Saint George", pos: "FWD", price: 9.0, form: 8.5, status: 'a' },
   { id: 13, name: "H. Konkoni", club: "Ethiopian Coffee", pos: "FWD", price: 8.0, form: 7.0, status: 'a' },
@@ -81,6 +81,7 @@ function loadData() {
       freeTransfers = data.freeTransfers ?? 1;
       transfersMade = data.transfersMade ?? 0;
       transferCostPenalty = data.transferCostPenalty ?? 0;
+      if (data.playerMarket) playerMarket = data.playerMarket;
       renderAll();
       return;
     }
@@ -94,7 +95,7 @@ function saveData() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ 
       mySquad, preFreeHitSquad, bankBalance, totalPoints, gameweek, chipsUsed, activeChip, gwHistory,
-      freeTransfers, transfersMade, transferCostPenalty
+      freeTransfers, transfersMade, transferCostPenalty, playerMarket
     }));
   } catch (e) {
     console.warn("Could not save to localStorage", e);
@@ -248,7 +249,6 @@ function cardHtml(p) {
   let isCap = p.isCaptain ? '<div class="absolute -top-2 -right-1 bg-black text-fpl-green text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-fpl-green shadow z-10">C</div>' : '';
   let isVice = p.isViceCaptain ? '<div class="absolute -top-2 -right-1 bg-white text-black text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-black shadow z-10">V</div>' : '';
 
-  // Status flag badge
   let statusBadge = '';
   if (p.status === 'i') statusBadge = '<div class="absolute -bottom-1 -left-1 bg-red-600 text-white text-[7px] font-black px-1 rounded shadow z-10">INJ</div>';
   else if (p.status === 's') statusBadge = '<div class="absolute -bottom-1 -left-1 bg-amber-600 text-white text-[7px] font-black px-1 rounded shadow z-10">SUS</div>';
@@ -317,7 +317,6 @@ function renderModal() {
           <button onclick="activeModalId=null; renderPitch();" class="text-gray-400 font-bold text-xl">&times;</button>
         </div>
         
-        <!-- Status & Granular Breakdown Card -->
         <div class="bg-gray-50 border rounded-lg p-3 mb-3 text-xs space-y-2">
           <div class="flex justify-between items-center border-b pb-2">
             <span class="font-bold text-gray-500 uppercase text-[9px]">Match Status</span>
@@ -526,7 +525,7 @@ function renderPoints() {
 }
 
 // ==========================================
-// 8. SIMULATION LOGIC (WITH STATUS & STATS)
+// 8. SIMULATION LOGIC (WITH PRICE FLUCTUATIONS)
 // ==========================================
 function simulateGameweek() {
   mySquad.forEach(p => {
@@ -536,7 +535,6 @@ function simulateGameweek() {
     let yellow = 0;
     let pts = 0;
 
-    // If player is injured ('i') or suspended ('s'), they score 0 points
     if (p.status === 'i' || p.status === 's') {
       p.gwPoints = 0;
       p.stats = { goals: 0, assists: 0, cleanSheet: 0, yellow: 0 };
@@ -570,6 +568,7 @@ function simulateGameweek() {
 
     p.gwPoints = Math.max(0, pts);
     p.stats = { goals, assists, cleanSheet, yellow };
+    p.form = parseFloat(((p.form * 2 + p.gwPoints) / 3).toFixed(1)); // Update form dynamically
   });
 
   if (activeChip !== 'bb') {
@@ -593,25 +592,36 @@ function simulateGameweek() {
     if (p.isStarter || activeChip === 'bb') gwTotal += p.gwPoints * mult;
   });
 
-  // Deduct transfer hit penalties
   gwTotal -= transferCostPenalty;
 
   totalPoints += gwTotal;
   gwHistory.push({ gameweek, points: gwTotal });
   gameweek++;
 
-  // Reset transfer counts & update random statuses for realism
   freeTransfers = Math.min(2, freeTransfers + 1);
   transfersMade = 0;
   transferCostPenalty = 0;
 
-  // Randomly update status flags across player market for next GW
+  // Dynamic Market Price Fluctuations
   playerMarket.forEach(p => {
     let rand = Math.random();
-    if (rand < 0.05) p.status = 'i';       // 5% chance injury
-    else if (rand < 0.08) p.status = 's';  // 3% chance suspension
-    else if (rand < 0.12) p.status = 'd';  // 4% chance doubtful
-    else p.status = 'a';                   // Otherwise available
+    if (rand < 0.05) p.status = 'i';
+    else if (rand < 0.08) p.status = 's';
+    else if (rand < 0.12) p.status = 'd';
+    else p.status = 'a';
+
+    // Price rise/drop calculation based on form and performance
+    if (p.form >= 7.5 && Math.random() > 0.4) {
+      p.price = parseFloat((p.price + 0.1).toFixed(1));
+    } else if ((p.form <= 4.0 || p.status === 'i') && Math.random() > 0.5 && p.price > 4.5) {
+      p.price = parseFloat((p.price - 0.1).toFixed(1));
+    }
+  });
+
+  // Sync price changes to active squad members
+  mySquad.forEach(sMember => {
+    const marketMatch = playerMarket.find(m => m.id === sMember.id);
+    if (marketMatch) sMember.price = marketMatch.price;
   });
 
   if (activeChip === 'fh' && preFreeHitSquad) {
@@ -625,7 +635,7 @@ function simulateGameweek() {
   activeChip = null;
   saveData();
   renderAll();
-  showNotification(`Gameweek ${gameweek - 1} finished! You scored ${gwTotal} points.`);
+  showNotification(`Gameweek ${gameweek - 1} finished! You scored ${gwTotal} points. Player prices updated!`);
 }
 
 function updateHeader() {
