@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ethiopian Premier League Fantasy</title>
+    <title>BetKing Ethiopian Premier League Fantasy</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,16 +11,20 @@
     <!-- FPL Header Navbar -->
     <header class="fpl-header">
         <div class="nav-brand">
-            <h1>EPL FANTASY ETHIOPIA</h1>
+            <h1>FANTASY ETHIOPIAN PREMIER LEAGUE</h1>
         </div>
         <div class="nav-stats">
+            <div class="stat-box">
+                <span>Gameweek</span>
+                <strong id="gw-display">GW 1</strong>
+            </div>
             <div class="stat-box">
                 <span>Budget</span>
                 <strong id="budget-display">£100.0m</strong>
             </div>
             <div class="stat-box">
-                <span>Squad</span>
-                <strong id="squad-count">0/15</strong>
+                <span>Total Points</span>
+                <strong id="points-display">0</strong>
             </div>
         </div>
     </header>
@@ -28,17 +32,22 @@
     <!-- Main Navigation Tabs -->
     <nav class="sub-nav">
         <button class="tab-btn active" data-tab="pitch">Pick Team</button>
+        <button class="tab-btn" data-tab="points">Gameweek Live</button>
         <button class="tab-btn" data-tab="market">Transfer Market</button>
     </nav>
 
     <!-- Main Container -->
     <main class="container">
         
-        <!-- PITCH VIEW (Default Tab) -->
+        <!-- PITCH VIEW (Pick Team) -->
         <section id="pitch-tab" class="tab-content active">
+            <div class="pitch-controls-top">
+                <button id="sim-gw-btn" class="action-btn primary-action">Play / Simulate Gameweek</button>
+                <span class="hint-text">Click a player on the pitch to set Captain or swap with bench</span>
+            </div>
+
             <div class="pitch-container">
                 <div class="fpl-pitch">
-                    <!-- Rows rendered dynamically -->
                     <div id="row-gkp" class="pitch-row"></div>
                     <div id="row-def" class="pitch-row"></div>
                     <div id="row-mid" class="pitch-row"></div>
@@ -46,9 +55,20 @@
                 </div>
                 
                 <div class="bench-container">
-                    <h3>Substitutes</h3>
+                    <h3>Substitutes (Bench Priority)</h3>
                     <div id="row-bench" class="bench-row"></div>
                 </div>
+            </div>
+        </section>
+
+        <!-- GAMEWEEK / POINTS VIEW -->
+        <section id="points-tab" class="tab-content">
+            <div class="points-header">
+                <h2>Gameweek 1 Live Score</h2>
+                <p>Points earned by your starting XI and captain multiplier.</p>
+            </div>
+            <div id="points-breakdown" class="points-grid">
+                <!-- Populated dynamically -->
             </div>
         </section>
 
@@ -64,9 +84,7 @@
                     <button class="filter-btn" data-pos="FWD">FWD</button>
                 </div>
             </div>
-            <div id="market-list" class="market-grid">
-                <!-- Rendered dynamically -->
-            </div>
+            <div id="market-list" class="market-grid"></div>
         </section>
 
     </main>
