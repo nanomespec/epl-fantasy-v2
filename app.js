@@ -29,21 +29,21 @@ const clubColors = {
 };
 
 let playerMarket = [
-  { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, form: 5.2, status: 'a' },
-  { id: 2, name: "A. Nuri", club: "Ethiopian Coffee", pos: "GKP", price: 5.0, form: 4.1, status: 'a' },
-  { id: 3, name: "A. K. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, form: 6.0, status: 'a' },
-  { id: 4, name: "E. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, form: 5.8, status: 'i' },
-  { id: 5, name: "A. Tefera", club: "Ethiopian Coffee", pos: "DEF", price: 5.0, form: 4.5, status: 'a' },
-  { id: 6, name: "S. Bereket", club: "CBE SA", pos: "DEF", price: 5.0, form: 4.8, status: 'a' },
-  { id: 7, name: "Y. Endale", club: "Fasil Kenema", pos: "DEF", price: 5.0, form: 3.5, status: 's' },
-  { id: 8, name: "B. Belay", club: "Saint George", pos: "MID", price: 7.0, form: 7.2, status: 'a' },
-  { id: 9, name: "E. Tadesse", club: "Ethiopian Coffee", pos: "MID", price: 7.5, form: 7.8, status: 'a' },
-  { id: 10, name: "A. Gidey", club: "CBE SA", pos: "MID", price: 7.5, form: 6.9, status: 'd' },
-  { id: 11, name: "G. Panom", club: "Mechal", pos: "MID", price: 7.0, form: 6.1, status: 'a' },
-  { id: 12, name: "A. Okutu", club: "Saint George", pos: "FWD", price: 9.0, form: 8.5, status: 'a' },
-  { id: 13, name: "H. Konkoni", club: "Ethiopian Coffee", pos: "FWD", price: 8.0, form: 7.0, status: 'a' },
-  { id: 14, name: "D. Nathaniel", club: "CBE SA", pos: "FWD", price: 8.5, form: 7.4, status: 'a' },
-  { id: 15, name: "B. Gugsa", club: "Fasil Kenema", pos: "FWD", price: 8.0, form: 5.9, status: 'a' }
+  { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, form: 5.2, status: 'a', nextOpp: "CBE SA (H)", fdr: 3 },
+  { id: 2, name: "A. Nuri", club: "Ethiopian Coffee", pos: "GKP", price: 5.0, form: 4.1, status: 'a', nextOpp: "Mechal (A)", fdr: 4 },
+  { id: 3, name: "A. K. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, form: 6.0, status: 'a', nextOpp: "CBE SA (H)", fdr: 3 },
+  { id: 4, name: "E. Frimpong", club: "Saint George", pos: "DEF", price: 5.5, form: 5.8, status: 'i', nextOpp: "CBE SA (H)", fdr: 3 },
+  { id: 5, name: "A. Tefera", club: "Ethiopian Coffee", pos: "DEF", price: 5.0, form: 4.5, status: 'a', nextOpp: "Mechal (A)", fdr: 4 },
+  { id: 6, name: "S. Bereket", club: "CBE SA", pos: "DEF", price: 5.0, form: 4.8, status: 'a', nextOpp: "St. George (A)", fdr: 4 },
+  { id: 7, name: "Y. Endale", club: "Fasil Kenema", pos: "DEF", price: 5.0, form: 3.5, status: 's', nextOpp: "Coffee (H)", fdr: 2 },
+  { id: 8, name: "B. Belay", club: "Saint George", pos: "MID", price: 7.0, form: 7.2, status: 'a', nextOpp: "CBE SA (H)", fdr: 3 },
+  { id: 9, name: "E. Tadesse", club: "Ethiopian Coffee", pos: "MID", price: 7.5, form: 7.8, status: 'a', nextOpp: "Mechal (A)", fdr: 4 },
+  { id: 10, name: "A. Gidey", club: "CBE SA", pos: "MID", price: 7.5, form: 6.9, status: 'd', nextOpp: "St. George (A)", fdr: 4 },
+  { id: 11, name: "G. Panom", club: "Mechal", pos: "MID", price: 7.0, form: 6.1, status: 'a', nextOpp: "Coffee (H)", fdr: 2 },
+  { id: 12, name: "A. Okutu", club: "Saint George", pos: "FWD", price: 9.0, form: 8.5, status: 'a', nextOpp: "CBE SA (H)", fdr: 3 },
+  { id: 13, name: "H. Konkoni", club: "Ethiopian Coffee", pos: "FWD", price: 8.0, form: 7.0, status: 'a', nextOpp: "Mechal (A)", fdr: 4 },
+  { id: 14, name: "D. Nathaniel", club: "CBE SA", pos: "FWD", price: 8.5, form: 7.4, status: 'a', nextOpp: "St. George (A)", fdr: 4 },
+  { id: 15, name: "B. Gugsa", club: "Fasil Kenema", pos: "FWD", price: 8.0, form: 5.9, status: 'a', nextOpp: "Coffee (H)", fdr: 2 }
 ];
 
 let mySquad = [];
@@ -309,6 +309,11 @@ function renderModal() {
   else if (p.status === 's') statusText = '<span class="text-amber-600 font-bold">⛔ Suspended</span>';
   else if (p.status === 'd') statusText = '<span class="text-yellow-600 font-bold">⚠️ Doubtful (75% Chance)</span>';
 
+  // FDR badge color mapping
+  let fdrBg = 'bg-green-500 text-white';
+  if (p.fdr >= 4) fdrBg = 'bg-red-600 text-white';
+  else if (p.fdr === 3) fdrBg = 'bg-gray-400 text-white';
+
   return `
     <div class="fixed inset-0 bg-fpl-dark/80 flex items-end justify-center z-50">
       <div class="bg-white w-full rounded-t-2xl p-5 shadow-2xl animate-[slideUp_0.2s_ease-out]">
@@ -321,6 +326,10 @@ function renderModal() {
           <div class="flex justify-between items-center border-b pb-2">
             <span class="font-bold text-gray-500 uppercase text-[9px]">Match Status</span>
             <span>${statusText}</span>
+          </div>
+          <div class="flex justify-between items-center border-b pb-2">
+            <span class="font-bold text-gray-500 uppercase text-[9px]">Next Fixture (FDR)</span>
+            <span class="px-2 py-0.5 rounded font-black ${fdrBg}">${p.nextOpp} (FDR ${p.fdr})</span>
           </div>
           <div class="flex justify-around text-center pt-1">
             <div><div class="font-bold text-gray-400 text-[9px] uppercase">Goals</div><div class="font-black text-fpl-purple">${stats.goals}</div></div>
@@ -364,7 +373,7 @@ function setCap(id, isC) {
 }
 
 // ==========================================
-// 6. MARKET / TRANSFERS
+// 6. MARKET / TRANSFERS (WITH FDR BADGES)
 // ==========================================
 function renderMarket() {
   const container = document.getElementById('tab-transfers');
@@ -383,7 +392,7 @@ function renderMarket() {
       ${transferCostPenalty > 0 ? `<div class="bg-red-50 text-red-600 text-xs px-4 py-2 font-bold border-b border-red-100 flex justify-between items-center"><span>⚠️ Transfer Penalty Hit:</span><span>-${transferCostPenalty} pts</span></div>` : ''}
 
       <div class="p-2 bg-gray-50 text-xs text-gray-500 font-bold border-b flex justify-between px-4">
-        <span class="w-2/3">Player</span>
+        <span class="w-2/3">Player & Next Fixture</span>
         <span class="w-1/3 text-right">Price / Action</span>
       </div>
 
@@ -394,6 +403,10 @@ function renderMarket() {
           if (p.status === 'i') badge = '<span class="text-[9px] bg-red-100 text-red-600 font-bold px-1 rounded ml-1">INJ</span>';
           if (p.status === 's') badge = '<span class="text-[9px] bg-amber-100 text-amber-700 font-bold px-1 rounded ml-1">SUS</span>';
           
+          let fdrColor = 'bg-green-100 text-green-700';
+          if (p.fdr >= 4) fdrColor = 'bg-red-100 text-red-700';
+          else if (p.fdr === 3) fdrColor = 'bg-gray-200 text-gray-700';
+
           return `
             <div class="p-3 flex justify-between items-center bg-white hover:bg-gray-50">
               <div class="flex items-center gap-3">
@@ -401,6 +414,7 @@ function renderMarket() {
                 <div>
                   <div class="font-bold text-sm text-fpl-dark flex items-center">${p.name}${badge}</div>
                   <div class="text-[10px] text-gray-500">${p.club} • Form: ${p.form}</div>
+                  <div class="mt-1"><span class="text-[9px] px-1.5 py-0.5 rounded font-bold ${fdrColor}">vs ${p.nextOpp}</span></div>
                 </div>
               </div>
               <div class="flex flex-col items-end">
@@ -525,9 +539,17 @@ function renderPoints() {
 }
 
 // ==========================================
-// 8. SIMULATION LOGIC (WITH PRICE FLUCTUATIONS)
+// 8. SIMULATION LOGIC (WITH FDR ROTATION)
 // ==========================================
 function simulateGameweek() {
+  const fixturePool = [
+    { opp: "St. George (H)", fdr: 3 },
+    { opp: "Ethiopian Coffee (A)", fdr: 4 },
+    { opp: "CBE SA (H)", fdr: 2 },
+    { opp: "Fasil Kenema (A)", fdr: 4 },
+    { opp: "Mechal (H)", fdr: 2 }
+  ];
+
   mySquad.forEach(p => {
     let goals = 0;
     let assists = 0;
@@ -555,7 +577,7 @@ function simulateGameweek() {
     }
     if (Math.random() > 0.8) yellow = 1;
 
-    pts = 2; // Appearance points
+    pts = 2;
     if (p.pos === 'GKP' || p.pos === 'DEF') {
       pts += (goals * 6) + (cleanSheet * 4);
     } else if (p.pos === 'MID') {
@@ -568,7 +590,7 @@ function simulateGameweek() {
 
     p.gwPoints = Math.max(0, pts);
     p.stats = { goals, assists, cleanSheet, yellow };
-    p.form = parseFloat(((p.form * 2 + p.gwPoints) / 3).toFixed(1)); // Update form dynamically
+    p.form = parseFloat(((p.form * 2 + p.gwPoints) / 3).toFixed(1));
   });
 
   if (activeChip !== 'bb') {
@@ -602,7 +624,7 @@ function simulateGameweek() {
   transfersMade = 0;
   transferCostPenalty = 0;
 
-  // Dynamic Market Price Fluctuations
+  // Update Market, Prices, and Next Fixtures/FDR
   playerMarket.forEach(p => {
     let rand = Math.random();
     if (rand < 0.05) p.status = 'i';
@@ -610,18 +632,25 @@ function simulateGameweek() {
     else if (rand < 0.12) p.status = 'd';
     else p.status = 'a';
 
-    // Price rise/drop calculation based on form and performance
     if (p.form >= 7.5 && Math.random() > 0.4) {
       p.price = parseFloat((p.price + 0.1).toFixed(1));
     } else if ((p.form <= 4.0 || p.status === 'i') && Math.random() > 0.5 && p.price > 4.5) {
       p.price = parseFloat((p.price - 0.1).toFixed(1));
     }
+
+    // Rotate next fixture
+    const nextFixture = fixturePool[Math.floor(Math.random() * fixturePool.length)];
+    p.nextOpp = nextFixture.opp;
+    p.fdr = nextFixture.fdr;
   });
 
-  // Sync price changes to active squad members
   mySquad.forEach(sMember => {
     const marketMatch = playerMarket.find(m => m.id === sMember.id);
-    if (marketMatch) sMember.price = marketMatch.price;
+    if (marketMatch) {
+      sMember.price = marketMatch.price;
+      sMember.nextOpp = marketMatch.nextOpp;
+      sMember.fdr = marketMatch.fdr;
+    }
   });
 
   if (activeChip === 'fh' && preFreeHitSquad) {
@@ -635,7 +664,7 @@ function simulateGameweek() {
   activeChip = null;
   saveData();
   renderAll();
-  showNotification(`Gameweek ${gameweek - 1} finished! You scored ${gwTotal} points. Player prices updated!`);
+  showNotification(`Gameweek ${gameweek - 1} finished! Fixtures updated.`);
 }
 
 function updateHeader() {
