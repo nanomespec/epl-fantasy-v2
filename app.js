@@ -1,7 +1,23 @@
 // ==========================================
-// 1. STATE & INITIALIZATION
+// 1. TELEGRAM & USER INITIALIZATION
 // ==========================================
-const STORAGE_KEY = 'efpl_official_v1';
+let tgUser = null;
+if (window.Telegram && window.Telegram.WebApp) {
+  window.Telegram.WebApp.ready();
+  window.Telegram.WebApp.expand();
+  if (window.Telegram.WebApp.enableClosingConfirmation) {
+    window.Telegram.WebApp.enableClosingConfirmation();
+  }
+  tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
+}
+
+const managerName = tgUser ? `${tgUser.first_name} ${tgUser.last_name || ''}`.trim() : 'Nate';
+const managerId = tgUser?.id || 'local_user';
+
+// ==========================================
+// 2. STATE & STORAGE
+// ==========================================
+const STORAGE_KEY = 'efpl_official_v3';
 
 const playerMarket = [
   { id: 1, name: "S. Bahiru", club: "Saint George", pos: "GKP", price: 5.5, form: 5.2 },
@@ -36,27 +52,35 @@ let gwHistory = [];
 const defaultStarters = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
 
 function loadData() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    const data = JSON.parse(saved);
-    mySquad = data.mySquad || [];
-    preFreeHitSquad = data.preFreeHitSquad || null;
-    bankBalance = data.bankBalance ?? 1.0;
-    totalPoints = data.totalPoints ?? 0;
-    gameweek = data.gameweek ?? 1;
-    chipsUsed = data.chipsUsed || chipsUsed;
-    activeChip = data.activeChip || null;
-    gwHistory = data.gwHistory || [];
-  } else {
-    resetSquad();
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const data = JSON.parse(saved);
+      mySquad = data.mySquad || [];
+      preFreeHitSquad = data.preFreeHitSquad || null;
+      bankBalance = data.bankBalance ?? 1.0;
+      totalPoints = data.totalPoints ?? 0;
+      gameweek = data.gameweek ?? 1;
+      chipsUsed = data.chipsUsed || chipsUsed;
+      activeChip = data.activeChip || null;
+      gwHistory = data.gwHistory || [];
+      renderAll();
+      return;
+    }
+  } catch (e) {
+    console.warn("Storage restricted", e);
   }
-  renderAll();
+  resetSquad();
 }
 
 function saveData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ 
-    mySquad, preFreeHitSquad, bankBalance, totalPoints, gameweek, chipsUsed, activeChip, gwHistory 
-  }));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ 
+      mySquad, preFreeHitSquad, bankBalance, totalPoints, gameweek, chipsUsed, activeChip, gwHistory 
+    }));
+  } catch (e) {
+    console.warn("Could not save to localStorage", e);
+  }
 }
 
 function resetSquad() {
@@ -79,25 +103,28 @@ function resetSquad() {
 }
 
 // ==========================================
-// 2. TAB SWITCHING SYSTEM
+// 3. TAB NAVIGATION
 // ==========================================
 function switchTab(tabName) {
-  // Hide all sections
   ['pitch', 'transfers', 'leagues', 'points'].forEach(t => {
-    document.getElementById(`tab-${t}`).classList.add('hidden');
-    // Reset Nav styling
+    const section = document.getElementById(`tab-${t}`);
+    if (section) section.classList.add('hidden');
+    
     const navItem = document.getElementById(`nav-${t}`);
-    navItem.classList.remove('text-fpl-purple', 'border-t-2', 'border-fpl-purple');
-    navItem.classList.add('text-gray-500', 'border-transparent');
+    if (navItem) {
+      navItem.classList.remove('text-fpl-purple', 'border-t-2', 'border-fpl-purple');
+      navItem.classList.add('text-gray-500', 'border-transparent');
+    }
   });
 
-  // Show target
-  document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+  const activeSection = document.getElementById(`tab-${tabName}`);
+  if (activeSection) activeSection.classList.remove('hidden');
   
-  // Style active nav
   const activeNav = document.getElementById(`nav-${tabName}`);
-  activeNav.classList.remove('text-gray-500', 'border-transparent');
-  activeNav.classList.add('text-fpl-purple', 'border-t-2', 'border-fpl-purple');
+  if (activeNav) {
+    activeNav.classList.remove('text-gray-500', 'border-transparent');
+    activeNav.classList.add('text-fpl-purple', 'border-t-2', 'border-fpl-purple');
+  }
   
   renderAll();
 }
@@ -111,11 +138,11 @@ function renderAll() {
 }
 
 // ==========================================
-// 3. CHIPS & MODALS
+// 4. CHIPS & MODALS
 // ==========================================
 function promptChip(chipName) {
-  if (chipsUsed[chipName]) return alert(`You have already used the ${chipName.toUpperCase()} chip this season!`);
-  if (activeChip) return alert(`You already have an active chip (${activeChip.toUpperCase()}) for this gameweek!`);
+  if (chipsUsed[chipName]) return showNotification(`You used ${chipName.toUpperCase()} already!`);
+  if (activeChip) return showNotification(`Chip ${activeChip.toUpperCase()} is already active!`);
   chipConfirmModal = chipName;
   renderPitch();
 }
@@ -130,8 +157,16 @@ function confirmChipPlay() {
 
 function cancelChipPlay() { chipConfirmModal = null; renderPitch(); }
 
+function showNotification(msg) {
+  if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showAlert) {
+    window.Telegram.WebApp.showAlert(msg);
+  } else {
+    alert(msg);
+  }
+}
+
 // ==========================================
-// 4. PITCH & FORMATION (FPL THEME)
+// 5. PITCH & FORMATION
 // ==========================================
 function isValidFormation(starters) {
   if (starters.length !== 11) return false;
@@ -151,7 +186,6 @@ function renderPitch() {
   const chipLabels = { wc: 'Wildcard', tc: 'Triple Captain', bb: 'Bench Boost', fh: 'Free Hit' };
 
   container.innerHTML = `
-    <!-- Chips Row -->
     <div class="bg-white rounded-lg shadow-sm p-2 mb-3">
       <div class="flex gap-2">
         ${['wc', 'tc', 'bb', 'fh'].map(c => `
@@ -161,12 +195,11 @@ function renderPitch() {
           </button>
         `).join('')}
       </div>
-      ${activeChip ? `<div class="mt-2 text-center text-xs font-bold text-fpl-purple bg-fpl-green py-1 rounded">✅ Active: ${chipLabels[activeChip]}</div>` : ''}
+      ${activeChip ? `<div class="mt-2 text-center text-xs font-bold text-fpl-purple bg-fpl-green py-1 rounded">⚡ Active: ${chipLabels[activeChip]}</div>` : ''}
     </div>
 
     ${pendingSubId ? `<div class="bg-fpl-purple text-fpl-green text-xs p-2 text-center font-bold mb-3 rounded-lg shadow">🔄 Select a player to substitute</div>` : ''}
     
-    <!-- FPL Pitch -->
     <div class="fpl-pitch rounded-t-xl p-2 flex flex-col justify-around min-h-[320px] shadow-sm">
       <div class="flex justify-center gap-1">${starters.filter(p => p.pos === 'GKP').map(cardHtml).join('')}</div>
       <div class="flex justify-center gap-1">${starters.filter(p => p.pos === 'DEF').map(cardHtml).join('')}</div>
@@ -174,7 +207,6 @@ function renderPitch() {
       <div class="flex justify-center gap-1">${starters.filter(p => p.pos === 'FWD').map(cardHtml).join('')}</div>
     </div>
 
-    <!-- Bench -->
     <div class="bg-white border-x-4 border-b-4 border-[#ffffff] rounded-b-xl p-2 shadow-md">
       <div class="text-[10px] text-fpl-purple font-black uppercase mb-2 flex justify-between px-2">
         <span>Bench</span>
@@ -195,13 +227,8 @@ function cardHtml(p) {
   return `
     <div onclick="handleCardClick(${p.id})" class="relative text-center w-[72px] cursor-pointer group">
       ${isCap} ${isVice}
-      <!-- Shirt Icon Placeholder -->
       <div class="mx-auto w-10 h-10 bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23ffffff%22><path d=%22M15.53 2.47a1.25 1.25 0 00-1.77 0L12 4.24l-1.76-1.77a1.25 1.25 0 00-1.77 0l-3.5 3.5v14.5a1 1 0 001 1h12a1 1 0 001-1V5.97l-3.44-3.5z%22/></svg>')] bg-no-repeat bg-center bg-contain mb-1 drop-shadow-md group-hover:scale-110 transition-transform"></div>
-      
-      <!-- Player Name Box -->
       <div class="bg-fpl-dark text-white text-[9px] font-bold rounded-t-[3px] truncate px-1 py-0.5">${p.name.split(' ').pop()}</div>
-      
-      <!-- Player Price Box -->
       <div class="bg-white text-fpl-dark text-[9px] font-bold rounded-b-[3px] shadow-sm">${p.price}</div>
     </div>
   `;
@@ -228,7 +255,7 @@ function executeSwap(id1, id2) {
   if (!isValidFormation(mySquad.filter(p => p.isStarter))) {
     p2.isStarter = p1.isStarter;
     p1.isStarter = status1;
-    alert("Invalid formation! Must have 1 GKP, 3-5 DEF, 2-5 MID, 1-3 FWD.");
+    showNotification("Invalid formation! Must have 1 GKP, 3-5 DEF, 2-5 MID, 1-3 FWD.");
   }
   pendingSubId = null;
   saveData();
@@ -279,7 +306,7 @@ function setCap(id, isC) {
 }
 
 // ==========================================
-// 5. MARKET / TRANSFERS (FPL THEME)
+// 6. MARKET / TRANSFERS
 // ==========================================
 function renderMarket() {
   const container = document.getElementById('tab-transfers');
@@ -326,8 +353,8 @@ function renderMarket() {
 
 function buyPlayer(id) {
   const p = playerMarket.find(x => x.id === id);
-  if (mySquad.length >= 15) return alert("Squad full (15/15)!");
-  if (bankBalance < p.price && activeChip !== 'wc' && activeChip !== 'fh') return alert("Not enough budget!");
+  if (mySquad.length >= 15) return showNotification("Squad full (15/15)!");
+  if (bankBalance < p.price && activeChip !== 'wc' && activeChip !== 'fh') return showNotification("Not enough budget!");
 
   mySquad.push({ ...p, isStarter: mySquad.filter(s => s.isStarter).length < 11, isCaptain: false, isViceCaptain: false, gwPoints: 0 });
   if (bankBalance >= p.price && activeChip !== 'wc' && activeChip !== 'fh') bankBalance = parseFloat((bankBalance - p.price).toFixed(1));
@@ -337,7 +364,7 @@ function buyPlayer(id) {
 }
 
 function sellPlayer(id) {
-  if (mySquad.length <= 11) return alert("Must keep at least 11 players!");
+  if (mySquad.length <= 11) return showNotification("Must keep at least 11 players!");
   const p = mySquad.find(x => x.id === id);
   mySquad = mySquad.filter(x => x.id !== id);
   bankBalance = parseFloat((bankBalance + p.price).toFixed(1));
@@ -346,7 +373,7 @@ function sellPlayer(id) {
 }
 
 // ==========================================
-// 6. LEAGUES & POINTS (FPL THEME)
+// 7. LEAGUES & POINTS
 // ==========================================
 function renderLeagues() {
   const container = document.getElementById('tab-leagues');
@@ -360,7 +387,7 @@ function renderLeagues() {
           <div class="font-black text-xl w-8">1</div>
           <div class="flex-1">
             <div class="font-bold text-sm text-fpl-green">Gulit FC (You)</div>
-            <div class="text-[10px] text-gray-300">Manager: Nate</div>
+            <div class="text-[10px] text-gray-300">Manager: ${managerName}</div>
           </div>
           <div class="font-black">${totalPoints}</div>
         </div>
@@ -407,7 +434,7 @@ function renderPoints() {
 }
 
 // ==========================================
-// 7. SIMULATION LOGIC
+// 8. SIMULATION LOGIC
 // ==========================================
 function simulateGameweek() {
   mySquad.forEach(p => { p.gwPoints = Math.random() > 0.3 ? 2 + Math.floor(Math.random() * 6) : 0; });
@@ -448,7 +475,7 @@ function simulateGameweek() {
   activeChip = null;
   saveData();
   renderAll();
-  alert(`Gameweek ${gameweek - 1} finished! You scored ${gwTotal} points.`);
+  showNotification(`Gameweek ${gameweek - 1} finished! You scored ${gwTotal} points.`);
 }
 
 function updateHeader() {
@@ -460,4 +487,3 @@ function updateHeader() {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', loadData);
-
