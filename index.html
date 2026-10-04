@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BetKing Ethiopian Premier League Fantasy</title>
+    <title>Ethiopian Premier League Fantasy</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- FPL Header Navbar -->
     <header class="fpl-header">
         <div class="nav-brand">
-            <h1>FANTASY ETHIOPIAN PREMIER LEAGUE</h1>
+            <h1>ETHIOPIAN PREMIER LEAGUE FANTASY</h1>
         </div>
         <div class="nav-stats">
             <div class="stat-box">
@@ -29,21 +28,19 @@
         </div>
     </header>
 
-    <!-- Main Navigation Tabs -->
     <nav class="sub-nav">
         <button class="tab-btn active" data-tab="pitch">Pick Team</button>
         <button class="tab-btn" data-tab="points">Gameweek Live</button>
         <button class="tab-btn" data-tab="market">Transfer Market</button>
     </nav>
 
-    <!-- Main Container -->
     <main class="container">
         
-        <!-- PITCH VIEW (Pick Team) -->
+        <!-- PITCH / PICK TEAM VIEW -->
         <section id="pitch-tab" class="tab-content active">
             <div class="pitch-controls-top">
-                <button id="sim-gw-btn" class="action-btn primary-action">Play / Simulate Gameweek</button>
-                <span class="hint-text">Click a player on the pitch to set Captain or swap with bench</span>
+                <button id="sim-gw-btn" class="action-btn">Simulate Gameweek</button>
+                <span class="hint-text">Select a player to set Captain (C), Vice-Captain (VC), or manage squad</span>
             </div>
 
             <div class="pitch-container">
@@ -55,27 +52,25 @@
                 </div>
                 
                 <div class="bench-container">
-                    <h3>Substitutes (Bench Priority)</h3>
+                    <h3>Substitutes Bench</h3>
                     <div id="row-bench" class="bench-row"></div>
                 </div>
             </div>
         </section>
 
-        <!-- GAMEWEEK / POINTS VIEW -->
+        <!-- GAMEWEEK LIVE VIEW -->
         <section id="points-tab" class="tab-content">
             <div class="points-header">
-                <h2>Gameweek 1 Live Score</h2>
-                <p>Points earned by your starting XI and captain multiplier.</p>
+                <h2>Gameweek Live Scores</h2>
+                <p>Real-time performance break-down for your starting XI.</p>
             </div>
-            <div id="points-breakdown" class="points-grid">
-                <!-- Populated dynamically -->
-            </div>
+            <div id="points-breakdown" class="points-grid"></div>
         </section>
 
-        <!-- TRANSFER MARKET TAB -->
+        <!-- TRANSFER MARKET VIEW -->
         <section id="market-tab" class="tab-content">
             <div class="market-controls">
-                <h2>Player Market</h2>
+                <h2>Transfer Market</h2>
                 <div class="filters">
                     <button class="filter-btn active" data-pos="ALL">All</button>
                     <button class="filter-btn" data-pos="GKP">GKP</button>
